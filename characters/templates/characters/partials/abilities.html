@@ -1,0 +1,73 @@
+{% load character_tags %}
+<div class="section" id="section-abilities">
+  <h2>Ability Scores</h2>
+  <table>
+    <thead>
+      <tr><th>Ability</th><th>Score</th><th>Derived Stats</th></tr>
+    </thead>
+    <tbody>
+      {% for ability in ability_data %}
+      <tr>
+        <th>{{ ability.name|title }}</th>
+        <td>
+          {% unknown_or_value ability.base_score ability.field_name character.pk %}
+          {% if ability.name == "strength" and ability.base_score == 18 %}
+            {% if ability.percentile_strength is not None %}
+              /{{ ability.percentile_strength|stringformat:"02d" }}
+            {% else %}
+              <a href="#"
+                 hx-get="/character/{{ character.pk }}/edit-field/?field=percentile_strength"
+                 hx-target="closest td"
+                 hx-swap="innerHTML"
+                 style="font-size: 0.8rem;">(set %)</a>
+            {% endif %}
+          {% endif %}
+        </td>
+        <td>
+          {% if ability.base_score is not None %}
+            {% for stat in ability.derived %}
+              <span style="font-size: 0.85rem;">
+                {{ stat.label }}:
+                {% if stat.is_modifier %}
+                  <span class="{% if stat.value >= 0 %}modifier-positive{% else %}modifier-negative{% endif %}">
+                    {{ stat.value|format_modifier }}
+                  </span>
+                {% elif stat.is_pct %}
+                  {{ stat.value|format_pct }}
+                {% else %}
+                  {{ stat.value|default:"—" }}
+                {% endif %}
+              </span>
+              {% if not forloop.last %}<br>{% endif %}
+            {% endfor %}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if derived.base_attack_bonus is not None %}
+  <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+    <strong>BAB:</strong> {{ derived.base_attack_bonus }}
+    {% if derived.melee_attack_total is not None %}
+      | <strong>Melee:</strong> {{ derived.melee_attack_total|format_modifier }}
+    {% endif %}
+    {% if derived.ranged_attack_total is not None %}
+      | <strong>Ranged:</strong> {{ derived.ranged_attack_total|format_modifier }}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if derived.save_poison is not None %}
+  <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+    <strong>Saves:</strong>
+    Poison {{ derived.save_poison }} |
+    Para {{ derived.save_paralyse }} |
+    Poly {{ derived.save_polymorph }} |
+    Rod {{ derived.save_rod_staff_wand }} |
+    Breath {{ derived.save_breath }} |
+    Magic {{ derived.save_magic }}
+  </div>
+  {% endif %}
+</div>

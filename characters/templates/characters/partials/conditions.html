@@ -1,0 +1,49 @@
+{% load character_tags %}
+<div class="section" id="section-conditions">
+  <h2>Conditions</h2>
+  {% if conditions %}
+    {% for cond in conditions %}
+    <div class="item-row">
+      <span>
+        <strong>{{ cond.source }}</strong>:
+        {% if cond.modifier_type == "ability" %}
+          <span class="{% if cond.value >= 0 %}modifier-positive{% else %}modifier-negative{% endif %}">
+            {{ cond.value|format_modifier }}
+          </span> to {{ cond.target }}
+          {% if cond.scope %}<em>({{ cond.get_scope_display }} only)</em>{% endif %}
+        {% else %}
+          {{ cond.value|format_modifier }}
+        {% endif %}
+        {% if not cond.is_active %}<em>(inactive)</em>{% endif %}
+      </span>
+      <button hx-delete="/condition/{{ cond.pk }}/delete/"
+              hx-target="#section-conditions"
+              hx-swap="outerHTML"
+              hx-confirm="Remove condition?"
+              class="btn btn-danger btn-small">x</button>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p style="color: var(--text-muted); font-size: 0.9rem;">No active conditions.</p>
+  {% endif %}
+
+  <form hx-post="/character/{{ character.pk }}/add-condition/"
+        hx-target="#section-conditions"
+        hx-swap="outerHTML"
+        class="inline-form" style="margin-top: 0.5rem;">
+    {% csrf_token %}
+    <select name="modifier_type" required>
+      <option value="ability">Ability</option>
+      <option value="weight">Weight</option>
+      <option value="action_point">Action Point</option>
+    </select>
+    <input type="text" name="target" placeholder="Target (e.g. strength)" style="width: 8rem;">
+    <input type="number" name="value" placeholder="Value" style="width: 4rem;" required>
+    <input type="text" name="source" placeholder="Source" required>
+    <select name="scope">
+      <option value="">All (no scope)</option>
+      <option value="encumbrance">Encumbrance only</option>
+    </select>
+    <button type="submit" class="btn btn-small">Add</button>
+  </form>
+</div>

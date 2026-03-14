@@ -1,0 +1,16 @@
+{% if is_set %}
+<span class="field-value" id="field-{{ field_name }}"
+      hx-get="/character/{{ character_id }}/edit-field/?field={{ field_name }}"
+      hx-target="#field-{{ field_name }}"
+      hx-swap="outerHTML"
+      style="cursor: pointer;">{{ display_value }}</span>
+{% else %}
+<span class="field-unknown"
+      id="field-{{ field_name }}"
+      hx-get="/character/{{ character_id }}/edit-field/?field={{ field_name }}"
+      hx-target="#field-{{ field_name }}"
+      hx-swap="outerHTML"
+      style="cursor: pointer; color: #888; font-style: italic;">
+  Unknown (click to set)
+</span>
+{% endif %}

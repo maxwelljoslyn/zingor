@@ -1,0 +1,94 @@
+{% load character_tags %}
+<div class="section" id="section-hp">
+  <h2>Hit Points</h2>
+  <table>
+    <tr>
+      <th>Current HP</th>
+      <td>{% unknown_or_value character.current_hp "current_hp" character.pk %}</td>
+      <th>Max HP</th>
+      <td>{{ character.maximum_hp|default:"—" }}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 0.75rem; font-size: 0.95rem;">Bodymass Hit Die</h3>
+  {% if bodymass_die %}
+    <table>
+      <thead><tr><th>Die</th><th>Roll</th><th></th></tr></thead>
+      <tbody>
+        <tr>
+          <td>{{ bodymass_die.die_type }}</td>
+          <td>{{ bodymass_die.roll }}</td>
+          <td>
+            <button hx-delete="/hit-die/{{ bodymass_die.pk }}/delete/"
+                    hx-target="#section-hp"
+                    hx-swap="outerHTML"
+                    hx-confirm="Remove bodymass die?"
+                    class="btn btn-danger btn-small">x</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  {% else %}
+    <form hx-post="/character/{{ character.pk }}/add-hit-die/"
+          hx-target="#section-hp"
+          hx-swap="outerHTML"
+          class="inline-form" style="margin-top: 0.25rem;">
+      {% csrf_token %}
+      <input type="hidden" name="is_bodymass" value="true">
+      <select name="die_type" required>
+        <option value="d4">d4</option>
+        <option value="d6">d6</option>
+        <option value="d8" selected>d8</option>
+        <option value="d10">d10</option>
+        <option value="d12">d12</option>
+      </select>
+      <input type="number" name="roll" placeholder="Roll" style="width: 4rem;" required>
+      <button type="submit" class="btn btn-small">Set Bodymass Die</button>
+    </form>
+  {% endif %}
+
+  <h3 style="margin-top: 0.75rem; font-size: 0.95rem;">Level Hit Dice</h3>
+  {% if level_dice %}
+  <table>
+    <thead><tr><th>Level</th><th>Die</th><th>Roll</th><th>Con Bonus</th><th>Total</th><th></th></tr></thead>
+    <tbody>
+      {% for hd in level_dice %}
+      <tr>
+        <td>{{ hd.level }}</td>
+        <td>{{ hd.die_type }}</td>
+        <td>{{ hd.roll }}</td>
+        <td>{{ hd.con_bonus|format_modifier }}</td>
+        <td>{{ hd.roll|add:hd.con_bonus }}</td>
+        <td>
+          <button hx-delete="/hit-die/{{ hd.pk }}/delete/"
+                  hx-target="#section-hp"
+                  hx-swap="outerHTML"
+                  hx-confirm="Remove level {{ hd.level }} hit die?"
+                  class="btn btn-danger btn-small">x</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color: var(--text-muted); font-size: 0.9rem;">No level hit dice recorded.</p>
+  {% endif %}
+
+  <form hx-post="/character/{{ character.pk }}/add-hit-die/"
+        hx-target="#section-hp"
+        hx-swap="outerHTML"
+        class="inline-form" style="margin-top: 0.5rem;">
+    {% csrf_token %}
+    <input type="number" name="level" placeholder="Level" style="width: 4rem;" required>
+    <select name="die_type" required>
+      <option value="d4">d4</option>
+      <option value="d6">d6</option>
+      <option value="d8">d8</option>
+      <option value="d10" selected>d10</option>
+      <option value="d12">d12</option>
+    </select>
+    <input type="number" name="roll" placeholder="Roll" style="width: 4rem;" required>
+    <input type="number" name="con_bonus" placeholder="Con" style="width: 4rem;" value="0">
+    <button type="submit" class="btn btn-small">Add Level Die</button>
+  </form>
+</div>

@@ -1,0 +1,43 @@
+{% load character_tags %}
+<div class="section" id="section-inventory">
+  <h2>Inventory</h2>
+  <div style="margin-bottom: 0.5rem; font-size: 0.9rem;">
+    <strong>Encumbrance:</strong>
+    {{ character.weight_of_carried_items }} items
+    + {{ character.weight_of_money }} coins
+    = {{ character.current_encumbrance }}
+    {% if character.max_encumbrance %}
+      / {{ character.max_encumbrance }}
+      {% if character.percent_encumbered %}
+        ({{ character.percent_encumbered|floatformat:0 }}%)
+      {% endif %}
+    {% endif %}
+  </div>
+  <div style="margin-bottom: 0.5rem; font-size: 0.9rem;">
+    <strong>Action Points:</strong> {{ character.current_action_points }} / {{ character.BASE_AP }}
+    {% if character.ap_tiers %}
+      <span style="color: var(--text-muted);">
+        ({% for threshold, ap in character.ap_tiers %}{{ ap }} AP above {{ threshold|floatformat:1 }}{% if not forloop.last %}; {% endif %}{% endfor %})
+      </span>
+    {% endif %}
+  </div>
+
+  {% if items %}
+    {% for item in items %}
+      {% include "characters/partials/item.html" %}
+    {% endfor %}
+  {% else %}
+    <p style="color: var(--text-muted); font-size: 0.9rem;">No items.</p>
+  {% endif %}
+
+  <form hx-post="/character/{{ character.pk }}/add-item/"
+        hx-target="#section-inventory"
+        hx-swap="outerHTML"
+        class="inline-form" style="margin-top: 0.75rem;">
+    {% csrf_token %}
+    <input type="text" name="name" placeholder="Item name" required>
+    <input type="text" name="weight" placeholder="Weight (e.g. 5 lb)" style="width: 8rem;">
+    <label><input type="checkbox" name="is_worn"> Worn</label>
+    <button type="submit" class="btn btn-small">Add Item</button>
+  </form>
+</div>

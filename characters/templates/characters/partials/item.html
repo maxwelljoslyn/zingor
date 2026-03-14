@@ -1,0 +1,44 @@
+<div class="item-row" id="item-{{ item.pk }}">
+  <span>
+    <strong id="item-{{ item.pk }}-name"
+            hx-get="/item/{{ item.pk }}/edit-field/?field=name"
+            hx-target="#item-{{ item.pk }}-name"
+            hx-swap="outerHTML"
+            style="cursor: pointer;">{{ item.name }}</strong>
+    <span style="color: var(--text-muted); font-size: 0.85rem;">
+      (<span id="item-{{ item.pk }}-weight"
+             hx-get="/item/{{ item.pk }}/edit-field/?field=weight"
+             hx-target="#item-{{ item.pk }}-weight"
+             hx-swap="outerHTML"
+             style="cursor: pointer;">{{ item.adjusted_weight }}</span>)
+    </span>
+  </span>
+  <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
+    <form hx-post="/item/{{ item.pk }}/update-field/"
+          hx-target="#section-inventory"
+          hx-swap="outerHTML"
+          hx-trigger="change"
+          style="display: inline;">
+      {% csrf_token %}
+      <input type="hidden" name="field_name" value="is_worn">
+      <label style="font-size: 0.85rem;">
+        <input type="checkbox" name="value" {% if item.is_worn %}checked{% endif %}> Worn
+      </label>
+    </form>
+    {% if not item.is_carried %}<span style="color: var(--text-muted); font-size: 0.85rem;">[not carried]</span>{% endif %}
+    <button hx-delete="/item/{{ item.pk }}/delete/"
+            hx-target="#section-inventory"
+            hx-swap="outerHTML"
+            hx-confirm="Remove {{ item.name }}?"
+            class="btn btn-danger btn-small">x</button>
+  </span>
+</div>
+{% if item.contents.all %}
+<div class="contents">
+  {% for content in item.contents.all %}
+    {% with item=content %}
+      {% include "characters/partials/item.html" %}
+    {% endwith %}
+  {% endfor %}
+</div>
+{% endif %}

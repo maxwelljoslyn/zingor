@@ -1,0 +1,39 @@
+{% extends "characters/base.html" %}
+{% block title %}My Characters — Zingor{% endblock %}
+{% block content %}
+<h1>My Characters</h1>
+
+<form method="post" action="/character/create/" style="margin-bottom: 1rem;">
+  {% csrf_token %}
+  <button type="submit" class="btn">+ New Character</button>
+</form>
+
+{% if characters %}
+<div class="section">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Race</th>
+        <th>Class</th>
+        <th>Level</th>
+        <th>Last Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for char in characters %}
+      <tr>
+        <td><a href="/character/{{ char.pk }}/" style="color: var(--accent);">{{ char.name|default:"Unnamed" }}</a></td>
+        <td>{{ char.race|default:"—" }}</td>
+        <td>{{ char.char_class|default:"—" }}</td>
+        <td>{{ char.level|default:"—" }}</td>
+        <td>{{ char.updated_at|date:"M d, Y H:i" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p style="color: var(--text-muted);">No characters yet. Create one to get started.</p>
+{% endif %}
+{% endblock %}

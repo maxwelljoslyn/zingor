@@ -1,0 +1,43 @@
+{% load character_tags %}
+<div class="section" id="section-identity">
+  <h2>Identity</h2>
+  <table>
+    <tr>
+      <th>Name</th>
+      <td>{% unknown_or_value character.name "name" character.pk %}</td>
+      <th>Race</th>
+      <td>{% unknown_or_value character.race "race" character.pk %}</td>
+    </tr>
+    <tr>
+      <th>Class</th>
+      <td>{% unknown_or_value character.char_class "char_class" character.pk %}</td>
+      <th>Sex</th>
+      <td>{% unknown_or_value character.sex "sex" character.pk %}</td>
+    </tr>
+    <tr>
+      <th>Level</th>
+      <td>{% unknown_or_value character.level "level" character.pk %}</td>
+      <th>XP</th>
+      <td>
+        {% unknown_or_value character.xp "xp" character.pk %}
+        {% if derived.xp_for_next_level %}
+          <span style="color: var(--text-muted);"> / {{ derived.xp_for_next_level }}</span>
+        {% endif %}
+      </td>
+    </tr>
+    <tr>
+      <th>Height</th>
+      <td>{% unknown_or_value character.height "height" character.pk %}</td>
+      <th>Weight</th>
+      <td>{% unknown_or_value character.weight "weight" character.pk %}</td>
+    </tr>
+    <tr>
+      <th>Money</th>
+      <td colspan="3">
+        {% unknown_or_value character.gp "gp" character.pk character.gp.magnitude %} gp,
+        {% unknown_or_value character.sp "sp" character.pk character.sp.magnitude %} sp,
+        {% unknown_or_value character.cp "cp" character.pk character.cp.magnitude %} cp
+      </td>
+    </tr>
+  </table>
+</div>

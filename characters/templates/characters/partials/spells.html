@@ -1,0 +1,35 @@
+{% load character_tags %}
+<div class="section" id="section-spells">
+  <h2>Spells</h2>
+  {% if spells_by_level %}
+    {% for level, spell_list in spells_by_level.items %}
+    <div style="margin-bottom: 0.5rem;">
+      <strong>Level {{ level }}</strong>
+      <ul class="spell-list">
+        {% for spell in spell_list %}
+        <li class="item-row">
+          <span>{{ spell.name }}</span>
+          <button hx-delete="/spell/{{ spell.pk }}/delete/"
+                  hx-target="#section-spells"
+                  hx-swap="outerHTML"
+                  hx-confirm="Remove {{ spell.name }}?"
+                  class="btn btn-danger btn-small">x</button>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p style="color: var(--text-muted); font-size: 0.9rem;">No spells known.</p>
+  {% endif %}
+
+  <form hx-post="/character/{{ character.pk }}/add-spell/"
+        hx-target="#section-spells"
+        hx-swap="outerHTML"
+        class="inline-form" style="margin-top: 0.5rem;">
+    {% csrf_token %}
+    <input type="text" name="name" placeholder="Spell name" required>
+    <input type="number" name="level" placeholder="Level" style="width: 4rem;" required min="1" max="9">
+    <button type="submit" class="btn btn-small">Add</button>
+  </form>
+</div>

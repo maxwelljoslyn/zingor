@@ -1,0 +1,31 @@
+<form class="inline-form"
+      hx-post="/character/{{ character_id }}/update-field/"
+      hx-target="#section-{{ section }}"
+      hx-swap="outerHTML"
+      id="field-{{ field_name }}">
+  {% csrf_token %}
+  <input type="hidden" name="field_name" value="{{ field_name }}">
+  {% if is_pint_split %}
+    <input type="number" name="value" value="{{ pint_magnitude }}" autofocus style="width: 6rem;">
+    <input type="hidden" name="pint_unit" value="{{ pint_unit }}">
+    <span>{{ pint_unit_display }}</span>
+  {% elif field_type == "textarea" %}
+    <textarea name="value" rows="3" cols="40" autofocus>{{ current_value|default:"" }}</textarea>
+  {% elif field_type == "select" %}
+    <select name="value" autofocus>
+      <option value="">—</option>
+      {% for choice in choices %}
+        <option value="{{ choice }}" {% if choice == current_value %}selected{% endif %}>{{ choice }}</option>
+      {% endfor %}
+    </select>
+  {% elif field_type == "number" %}
+    <input type="number" name="value" value="{{ current_value|default:"" }}" autofocus style="width: 6rem;">
+  {% else %}
+    <input type="text" name="value" value="{{ current_value|default:"" }}" autofocus style="width: 10rem;">
+  {% endif %}
+  <button type="submit" class="btn btn-small">Save</button>
+  <button type="button" class="btn btn-secondary btn-small"
+          onclick="this.closest('form').outerHTML='<span class=\'field-unknown\' hx-get=\'/character/{{ character_id }}/edit-field/?field={{ field_name }}\' hx-target=\'#field-{{ field_name }}\' hx-swap=\'outerHTML\' id=\'field-{{ field_name }}\' style=\'cursor: pointer; color: #888; font-style: italic;\'>{{ current_value|default:"Unknown (click to set)" }}</span>'">
+    Cancel
+  </button>
+</form>

@@ -1,0 +1,28 @@
+# shorthand notation
+@alias square_inch = sqin
+@alias square_foot = sqft
+@alias square_yard = sqyd
+@alias square_mile = sqmi
+@alias cubic_inch = cuin
+@alias cubic_foot = cuft
+@alias cubic_centimeter = cucm
+
+# money
+copper_piece = [money] = cp
+silver_piece = 25 * copper_piece = sp
+gold_piece = 8 * silver_piece = gp
+
+# custom units
+head = [creatures]
+item = [objects]
+gold_leaf = [gold_leaves]
+ell = 18 * inch
+cubic_meter = 1000000 cubic_centimeter = cumt
+use = [applications]
+night = 1 * day
+page = [book_length]
+quire = page * 16
+ream = quire * 20
+
+# redefinitions of existing units
+board_foot = ft * ft * inch = board_feet
