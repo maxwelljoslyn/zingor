@@ -87,4 +87,25 @@ urlpatterns = [
         views.wiki_export,
         name="wiki_export",
     ),
+    # Sage knowledge
+    path(
+        "character/<int:pk>/sage/chosen-field/form/",
+        views.sage_chosen_field_form,
+        name="sage_chosen_field_form",
+    ),
+    path(
+        "character/<int:pk>/sage/chosen-field/",
+        views.sage_chosen_field,
+        name="sage_chosen_field",
+    ),
+    path(
+        "character/<int:pk>/sage/study/<int:study_pk>/points/",
+        views.sage_study_points,
+        name="sage_study_points",
+    ),
+    path(
+        "character/<int:pk>/sage/study/add/",
+        views.sage_study_add,
+        name="sage_study_add",
+    ),
 ]

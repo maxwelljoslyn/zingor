@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from . import rules
-from .models import Action, Character, Condition, HitDie, Item, Spell
+from .models import Action, Character, Condition, HitDie, Item, SageStudyPoints, Spell
 from .units import D, u
 
 
@@ -716,6 +716,122 @@ def delete_spell(request, spell_id):
 
     spell.delete()
     return _render_section(request, character, "spells")
+
+
+# --- Sage knowledge ---
+
+
+def _build_sage_context(character):
+    """Build template context for the sage.html partial."""
+    import json
+    from .sage import sage_fields, sage_studies, sort_sage_entries
+
+    rows = {r.study: r for r in character.sage_studies.all()}
+    sorted_entries = sort_sage_entries({study: row.points for study, row in rows.items()})
+    for entry in sorted_entries:
+        entry["pk"] = rows[entry["name"]].pk
+    return {
+        "character": character,
+        "sage_studies_sorted": sorted_entries,
+        "sage_fields": sage_fields,
+        "sage_fields_json": json.dumps(sage_fields),
+        "all_study_names": sorted(sage_studies.keys()),
+    }
+
+
+@login_required
+def sage_chosen_field_form(request, pk):
+    """Return the inline form snippet for editing chosen field/study."""
+    import json
+    from .sage import sage_fields
+
+    character = get_object_or_404(Character, pk=pk, user=request.user)
+    return render(
+        request,
+        "characters/partials/sage_field_form.html",
+        {
+            "character": character,
+            "sage_fields": sage_fields,
+            "sage_fields_json": json.dumps(sage_fields),
+        },
+    )
+
+
+@login_required
+@require_POST
+def sage_chosen_field(request, pk):
+    """Save chosen field/study and bulk-create class study rows."""
+    from .sage import sage_fields, CLASS_FIELDS
+
+    character = get_object_or_404(Character, pk=pk, user=request.user)
+    chosen_field = request.POST.get("chosen_field", "")
+    chosen_study = request.POST.get("chosen_study", "")
+
+    if chosen_field not in sage_fields:
+        return HttpResponse("Invalid field", status=400)
+    if chosen_study not in sage_fields[chosen_field]["studies"]:
+        return HttpResponse("Invalid study for field", status=400)
+
+    character.chosen_field = chosen_field
+    character.chosen_study = chosen_study
+    character.save(update_fields=["chosen_field", "chosen_study", "updated_at"])
+
+    char_class = character.char_class
+    if char_class in CLASS_FIELDS:
+        all_studies = list(
+            dict.fromkeys(
+                s
+                for field_name in CLASS_FIELDS[char_class]
+                for s in sage_fields[field_name]["studies"]
+            )
+        )
+        SageStudyPoints.objects.bulk_create(
+            [
+                SageStudyPoints(character=character, study=s, points=0)
+                for s in all_studies
+            ],
+            ignore_conflicts=True,
+        )
+
+    return render(request, "characters/partials/sage.html", _build_sage_context(character))
+
+
+@login_required
+@require_POST
+def sage_study_points(request, pk, study_pk):
+    """Update points for a single study row."""
+    character = get_object_or_404(Character, pk=pk, user=request.user)
+    row = get_object_or_404(SageStudyPoints, pk=study_pk, character=character)
+
+    raw = request.POST.get("points")
+    try:
+        points = int(raw)
+        if points < 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return HttpResponse("Points must be a non-negative integer", status=400)
+
+    row.points = points
+    row.save(update_fields=["points"])
+    return render(request, "characters/partials/sage.html", _build_sage_context(character))
+
+
+@login_required
+@require_POST
+def sage_study_add(request, pk):
+    """Add a new study row to the character's sage table."""
+    from .sage import sage_studies
+
+    character = get_object_or_404(Character, pk=pk, user=request.user)
+    study = request.POST.get("study", "")
+
+    if study not in sage_studies:
+        return HttpResponse("Unknown study", status=400)
+
+    SageStudyPoints.objects.get_or_create(
+        character=character, study=study, defaults={"points": 0}
+    )
+    return render(request, "characters/partials/sage.html", _build_sage_context(character))
 
 
 # --- Wiki export ---
