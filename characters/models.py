@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 
 from .fields import PintField
@@ -57,6 +58,10 @@ class Character(models.Model):
     notes = models.TextField(blank=True, default="")
     background = models.TextField(blank=True, default="")
     appearance = models.TextField(blank=True, default="")
+
+    # Sage knowledge
+    chosen_field = models.CharField(max_length=200, null=True, blank=True, default=None)
+    chosen_study = models.CharField(max_length=200, null=True, blank=True, default=None)
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -422,3 +427,20 @@ class Action(models.Model):
             reverse_data=reverse_data,
             **kwargs,
         )
+
+
+class SageStudyPoints(models.Model):
+    """Knowledge point total for one study on a character."""
+
+    character = models.ForeignKey(
+        Character, on_delete=models.CASCADE, related_name="sage_studies"
+    )
+    study = models.CharField(max_length=200)
+    points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+
+    class Meta:
+        unique_together = ("character", "study")
+        ordering = ["study"]
+
+    def __str__(self):
+        return f"{self.study}: {self.points} pts"

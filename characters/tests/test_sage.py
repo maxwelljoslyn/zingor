@@ -66,3 +66,34 @@ class ClassFieldsTests(TestCase):
                     field_name, sage_fields,
                     f"Class {cls!r}: field {field_name!r} missing from sage_fields"
                 )
+
+
+from django.db import IntegrityError
+from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User
+from characters.models import Character, SageStudyPoints
+
+
+class SageStudyPointsModelTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="sage_tester", password="pass")
+        self.character = Character.objects.create(user=self.user, name="Rask")
+
+    def test_duplicate_character_study_raises_integrity_error(self):
+        SageStudyPoints.objects.create(character=self.character, study="Forgery", points=10)
+        with self.assertRaises(IntegrityError):
+            SageStudyPoints.objects.create(character=self.character, study="Forgery", points=5)
+
+    def test_negative_points_raises_validation_error(self):
+        row = SageStudyPoints(character=self.character, study="Forgery", points=-1)
+        with self.assertRaises(ValidationError):
+            row.full_clean()
+
+    def test_zero_points_is_valid(self):
+        row = SageStudyPoints(character=self.character, study="Forgery", points=0)
+        row.full_clean()  # should not raise
+
+    def test_chosen_field_defaults_none(self):
+        char = Character.objects.create(user=self.user, name="Empty")
+        self.assertIsNone(char.chosen_field)
+        self.assertIsNone(char.chosen_study)
