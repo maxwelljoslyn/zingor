@@ -34,8 +34,14 @@ urlpatterns = [
     # Items
     path("character/<int:pk>/add-item/", views.add_item, name="add_item"),
     path("item/<int:item_id>/delete/", views.delete_item, name="delete_item"),
-    path("item/<int:item_id>/edit-field/", views.edit_item_field, name="edit_item_field"),
-    path("item/<int:item_id>/update-field/", views.update_item_field, name="update_item_field"),
+    path(
+        "item/<int:item_id>/edit-field/", views.edit_item_field, name="edit_item_field"
+    ),
+    path(
+        "item/<int:item_id>/update-field/",
+        views.update_item_field,
+        name="update_item_field",
+    ),
     # Conditions
     path(
         "character/<int:pk>/add-condition/",

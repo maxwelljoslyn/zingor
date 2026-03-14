@@ -219,10 +219,7 @@ class Character(models.Model):
             return None
         num_tiers = self.BASE_AP
         tier_size = max_enc / num_tiers
-        return [
-            (tier_size * i, self.BASE_AP - i)
-            for i in range(1, num_tiers)
-        ]
+        return [(tier_size * i, self.BASE_AP - i) for i in range(1, num_tiers)]
 
     # --- Undo/Redo ---
 
