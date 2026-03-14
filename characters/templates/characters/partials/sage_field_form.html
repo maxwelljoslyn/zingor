@@ -1,5 +1,6 @@
 <span id="sage-chosen-field">
-  <script>window.SAGE_FIELDS = {{ sage_fields_json|escapejs }};</script>
+  {{ sage_fields_json|json_script:"sage-fields-data" }}
+  <script>window.SAGE_FIELDS = JSON.parse(document.getElementById('sage-fields-data').textContent);</script>
   <form
     hx-post="{% url 'characters:sage_chosen_field' character.pk %}"
     hx-target="#section-sage"

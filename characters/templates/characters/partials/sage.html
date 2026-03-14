@@ -1,7 +1,8 @@
 <div class="section" id="section-sage" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <h2>Sage Knowledge</h2>
 
-  <script>window.SAGE_FIELDS = {{ sage_fields_json|escapejs }};</script>
+  {{ sage_fields_json|json_script:"sage-fields-data" }}
+  <script>window.SAGE_FIELDS = JSON.parse(document.getElementById('sage-fields-data').textContent);</script>
 
   <table>
     <tr>
