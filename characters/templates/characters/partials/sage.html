@@ -6,7 +6,7 @@
 
   <table>
     <tr>
-      <th>Chosen Field</th>
+      <th>Chosen Field &amp; Study</th>
       <td>
         <span
           id="sage-chosen-field"
@@ -16,50 +16,51 @@
           hx-trigger="click"
           style="cursor: pointer;"
         >
-          {% if character.chosen_field %}{{ character.chosen_field }}{% else %}Not set{% endif %}
+          {% if character.chosen_field %}
+            {{ character.chosen_field }}{% if character.chosen_study %} / {{ character.chosen_study }}{% endif %}
+          {% else %}
+            Not set
+          {% endif %}
         </span>
-      </td>
-    </tr>
-    <tr>
-      <th>Chosen Study</th>
-      <td>
-        {% if character.chosen_study %}{{ character.chosen_study }}{% else %}Not set{% endif %}
       </td>
     </tr>
   </table>
 
   <h3>Studies</h3>
-  {% if sage_studies_sorted %}
-    <table>
-      <thead>
-        <tr>
-          <th>Study</th>
-          <th>Points</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for entry in sage_studies_sorted %}
+  {% if sage_studies_by_field %}
+    {% for group in sage_studies_by_field %}
+      <h4>{{ group.field }}</h4>
+      <table>
+        <thead>
           <tr>
-            <td>{{ entry.name }}</td>
-            <td>
-              <input
-                type="number"
-                name="points"
-                value="{{ entry.points }}"
-                min="0"
-                hx-post="{% url 'characters:sage_study_points' character.pk entry.pk %}"
-                hx-target="#section-sage"
-                hx-swap="outerHTML"
-                hx-trigger="blur"
-                style="width: 5em;"
-              >
-            </td>
-            <td>{{ entry.rank }}</td>
+            <th>Study</th>
+            <th>Points</th>
+            <th>Status</th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {% for entry in group.entries %}
+            <tr>
+              <td>{{ entry.name }}</td>
+              <td>
+                <input
+                  type="number"
+                  name="points"
+                  value="{{ entry.points }}"
+                  min="0"
+                  hx-post="{% url 'characters:sage_study_points' character.pk entry.pk %}"
+                  hx-target="#section-sage"
+                  hx-swap="outerHTML"
+                  hx-trigger="blur"
+                  style="width: 5em;"
+                >
+              </td>
+              <td>{{ entry.rank }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endfor %}
   {% else %}
     <p>No studies tracked yet.</p>
   {% endif %}

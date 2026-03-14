@@ -2,7 +2,12 @@
 
 from django.test import TestCase
 
-from characters.sage import rank_for_points, sort_sage_entries, CLASS_FIELDS, sage_fields
+from characters.sage import (
+    rank_for_points,
+    sort_sage_entries,
+    CLASS_FIELDS,
+    sage_fields,
+)
 
 
 class RankForPointsTests(TestCase):
@@ -57,14 +62,17 @@ class SortSageEntriesTests(TestCase):
 class ClassFieldsTests(TestCase):
     def test_fighter_fields_exist_in_sage_fields(self):
         for field_name in CLASS_FIELDS["fighter"]:
-            self.assertIn(field_name, sage_fields, f"{field_name} missing from sage_fields")
+            self.assertIn(
+                field_name, sage_fields, f"{field_name} missing from sage_fields"
+            )
 
     def test_all_class_fields_exist_in_sage_fields(self):
         for cls, fields in CLASS_FIELDS.items():
             for field_name in fields:
                 self.assertIn(
-                    field_name, sage_fields,
-                    f"Class {cls!r}: field {field_name!r} missing from sage_fields"
+                    field_name,
+                    sage_fields,
+                    f"Class {cls!r}: field {field_name!r} missing from sage_fields",
                 )
 
 
@@ -80,9 +88,13 @@ class SageStudyPointsModelTests(TestCase):
         self.character = Character.objects.create(user=self.user, name="Rask")
 
     def test_duplicate_character_study_raises_integrity_error(self):
-        SageStudyPoints.objects.create(character=self.character, study="Forgery", points=10)
+        SageStudyPoints.objects.create(
+            character=self.character, study="Forgery", points=10
+        )
         with self.assertRaises(IntegrityError):
-            SageStudyPoints.objects.create(character=self.character, study="Forgery", points=5)
+            SageStudyPoints.objects.create(
+                character=self.character, study="Forgery", points=5
+            )
 
     def test_negative_points_raises_validation_error(self):
         row = SageStudyPoints(character=self.character, study="Forgery", points=-1)
@@ -140,11 +152,10 @@ class SageChosenFieldViewTests(TestCase):
 
     def test_chosen_field_bulk_creates_fighter_studies(self):
         from characters.sage import CLASS_FIELDS, sage_fields
+
         expected_count = len(
             dict.fromkeys(
-                s
-                for f in CLASS_FIELDS["fighter"]
-                for s in sage_fields[f]["studies"]
+                s for f in CLASS_FIELDS["fighter"] for s in sage_fields[f]["studies"]
             )
         )
         self.client.post(

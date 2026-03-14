@@ -726,15 +726,36 @@ def delete_spell(request, spell_id):
 
 def _build_sage_context(character):
     """Build template context for the sage.html partial."""
-    from .sage import sage_fields, sage_studies, sort_sage_entries
+    from .sage import sage_fields, sage_studies, sort_sage_entries, CLASS_FIELDS
 
     rows = {r.study: r for r in character.sage_studies.all()}
-    sorted_entries = sort_sage_entries({study: row.points for study, row in rows.items()})
+    sorted_entries = sort_sage_entries(
+        {study: row.points for study, row in rows.items()},
+        sort_keys=["name"],
+    )
     for entry in sorted_entries:
         entry["pk"] = rows[entry["name"]].pk
+
+    # Group entries by field using the character's class fields.
+    char_class = (character.char_class or "").lower()
+    class_fields = set(CLASS_FIELDS.get(char_class, []))
+    field_map = {}
+    for entry in sorted_entries:
+        study_info = sage_studies.get(entry["name"], {})
+        study_fields = study_info.get("fields", [])
+        # Use whichever of this study's fields are in the character's class fields.
+        matching = [f for f in study_fields if f in class_fields]
+        field = (
+            matching[0] if matching else (study_fields[0] if study_fields else "Other")
+        )
+        field_map.setdefault(field, []).append(entry)
+    sage_studies_by_field = [
+        {"field": f, "entries": field_map[f]} for f in sorted(field_map)
+    ]
+
     return {
         "character": character,
-        "sage_studies_sorted": sorted_entries,
+        "sage_studies_by_field": sage_studies_by_field,
         "sage_fields": sage_fields,
         "sage_fields_json": json.dumps(sage_fields),
         "all_study_names": sorted(sage_studies.keys()),
@@ -748,6 +769,10 @@ def sage_chosen_field_form(request, pk):
     from .sage import sage_fields
 
     character = get_object_or_404(Character, pk=pk, user=request.user)
+    initial_field = character.chosen_field or next(iter(sage_fields))
+    initial_studies = (
+        sage_fields[initial_field]["studies"] if initial_field in sage_fields else []
+    )
     return render(
         request,
         "characters/partials/sage_field_form.html",
@@ -755,7 +780,25 @@ def sage_chosen_field_form(request, pk):
             "character": character,
             "sage_fields": sage_fields,
             "sage_fields_json": json.dumps(sage_fields),
+            "initial_field": initial_field,
+            "initial_studies": initial_studies,
         },
+    )
+
+
+@login_required
+@require_GET
+def sage_study_options(request, pk):
+    """Return <option> tags for the studies in the given field (used by HTMX field-select)."""
+    from .sage import sage_fields
+
+    get_object_or_404(Character, pk=pk, user=request.user)
+    field_name = request.GET.get("chosen_field", "")
+    studies = sage_fields.get(field_name, {}).get("studies", [])
+    return render(
+        request,
+        "characters/partials/sage_study_options.html",
+        {"studies": studies},
     )
 
 
@@ -795,7 +838,9 @@ def sage_chosen_field(request, pk):
             ignore_conflicts=True,
         )
 
-    return render(request, "characters/partials/sage.html", _build_sage_context(character))
+    return render(
+        request, "characters/partials/sage.html", _build_sage_context(character)
+    )
 
 
 @login_required
@@ -815,7 +860,9 @@ def sage_study_points(request, pk, study_pk):
 
     row.points = points
     row.save(update_fields=["points"])
-    return render(request, "characters/partials/sage.html", _build_sage_context(character))
+    return render(
+        request, "characters/partials/sage.html", _build_sage_context(character)
+    )
 
 
 @login_required
@@ -833,7 +880,9 @@ def sage_study_add(request, pk):
     SageStudyPoints.objects.get_or_create(
         character=character, study=study, defaults={"points": 0}
     )
-    return render(request, "characters/partials/sage.html", _build_sage_context(character))
+    return render(
+        request, "characters/partials/sage.html", _build_sage_context(character)
+    )
 
 
 # --- Wiki export ---

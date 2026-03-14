@@ -422,11 +422,29 @@ sage_fields = {
 # ---------------------------------------------------------------------------
 
 CLASS_FIELDS = {
-    "assassin": ["Animal Training (Assassin)", "Grace", "Mastery at Arms", "Skulduggery"],
+    "assassin": [
+        "Animal Training (Assassin)",
+        "Grace",
+        "Mastery at Arms",
+        "Skulduggery",
+    ],
     "bard": [
-        "Architecture", "Art World", "Ceramics", "Circus", "Dance", "Drama",
-        "Fine Art", "Gastronomy", "Leatherwork", "Literature", "Metalwork",
-        "Music", "Puppetry", "Salon", "Textiles", "Woodworking",
+        "Architecture",
+        "Art World",
+        "Ceramics",
+        "Circus",
+        "Dance",
+        "Drama",
+        "Fine Art",
+        "Gastronomy",
+        "Leatherwork",
+        "Literature",
+        "Metalwork",
+        "Music",
+        "Puppetry",
+        "Salon",
+        "Textiles",
+        "Woodworking",
     ],
     "cleric": ["Legends and Folklore", "Power", "The Church", "Theology and Customs"],
     "druid": ["Animal Life", "Earth and Sky", "Plant Life"],
@@ -434,7 +452,10 @@ CLASS_FIELDS = {
     "illusionist": ["Civitas (Illusionist)", "Humanities", "Reality", "Unreality"],
     "mage": ["Civitas (Mage)", "Humanities", "Black Magic", "Science"],
     "monk": [
-        "Way of the Heart", "Way of the Spirit", "Way of the Stick", "Way of the Stone"
+        "Way of the Heart",
+        "Way of the Spirit",
+        "Way of the Stick",
+        "Way of the Stone",
     ],
     "paladin": ["Animal Training", "Mastery at Arms", "Leadership", "Reverence"],
     "ranger": ["Animal Training", "Mastery at Arms", "Training", "Wilderland"],
@@ -445,6 +466,7 @@ CLASS_FIELDS = {
 # ---------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------
+
 
 def alexisify(text: str) -> str:
     """Return the wiki's canonical spelling for a study/field name."""

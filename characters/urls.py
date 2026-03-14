@@ -99,6 +99,11 @@ urlpatterns = [
         name="sage_chosen_field",
     ),
     path(
+        "character/<int:pk>/sage/study-options/",
+        views.sage_study_options,
+        name="sage_study_options",
+    ),
+    path(
         "character/<int:pk>/sage/study/<int:study_pk>/points/",
         views.sage_study_points,
         name="sage_study_points",
