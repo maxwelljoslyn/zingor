@@ -5,8 +5,6 @@ validation; sage_studies provides reverse lookups.
 """
 
 import re
-from typing import Callable, Generator, Iterable
-
 
 # ---------------------------------------------------------------------------
 # Rank thresholds (descending). rank_for_points returns the first name
@@ -58,6 +56,7 @@ sage_studies = {
     "Beachcomber": {"fields": ["Wilderland"]},
     "Beasts": {"fields": ["Legends and Folklore", "Reverence"]},
     "Birds": {"fields": ["Animal Life"]},
+    "Blightlander": {"fields": ["Wilderland"]},
     "Black Market": {"fields": ["Art World"]},
     "Blood": {"fields": ["Way of the Heart"]},
     "Breath": {"fields": ["Way of the Heart"]},
