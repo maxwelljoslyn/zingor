@@ -1,1 +1,80 @@
-<div class="section" id="section-sage"></div>
+<div class="section" id="section-sage">
+  <h2>Sage Knowledge</h2>
+
+  <script>window.SAGE_FIELDS = {{ sage_fields_json|escapejs }};</script>
+
+  <table>
+    <tr>
+      <th>Chosen Field</th>
+      <td>
+        <span
+          id="sage-chosen-field"
+          hx-get="{% url 'characters:sage_chosen_field_form' character.pk %}"
+          hx-target="#sage-chosen-field"
+          hx-swap="outerHTML"
+          hx-trigger="click"
+          style="cursor: pointer;"
+        >
+          {% if character.chosen_field %}{{ character.chosen_field }}{% else %}Not set{% endif %}
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <th>Chosen Study</th>
+      <td>
+        {% if character.chosen_study %}{{ character.chosen_study }}{% else %}Not set{% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <h3>Studies</h3>
+  {% if sage_studies_sorted %}
+    <table>
+      <thead>
+        <tr>
+          <th>Study</th>
+          <th>Points</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in sage_studies_sorted %}
+          <tr>
+            <td>{{ entry.name }}</td>
+            <td>
+              <input
+                type="number"
+                name="points"
+                value="{{ entry.points }}"
+                min="0"
+                hx-post="{% url 'characters:sage_study_points' character.pk entry.pk %}"
+                hx-target="#section-sage"
+                hx-swap="outerHTML"
+                hx-trigger="blur"
+                style="width: 5em;"
+              >
+            </td>
+            <td>{{ entry.rank }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No studies tracked yet.</p>
+  {% endif %}
+
+  <h3>Add Study</h3>
+  <form
+    hx-post="{% url 'characters:sage_study_add' character.pk %}"
+    hx-target="#section-sage"
+    hx-swap="outerHTML"
+  >
+    {% csrf_token %}
+    <select name="study">
+      {% for study_name in all_study_names %}
+        <option value="{{ study_name }}">{{ study_name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Add Study</button>
+  </form>
+</div>

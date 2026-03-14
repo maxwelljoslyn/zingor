@@ -1,1 +1,60 @@
-<span id="sage-chosen-field">{{ character.chosen_field }}<select name="chosen_field"></select><select name="chosen_study"></select></span>
+<span id="sage-chosen-field">
+  <script>window.SAGE_FIELDS = {{ sage_fields_json|escapejs }};</script>
+  <form
+    hx-post="{% url 'characters:sage_chosen_field' character.pk %}"
+    hx-target="#section-sage"
+    hx-swap="outerHTML"
+  >
+    {% csrf_token %}
+    <label>
+      Field:
+      <select
+        name="chosen_field"
+        id="sage-field-select"
+        onchange="
+          var studies = window.SAGE_FIELDS[this.value] ? window.SAGE_FIELDS[this.value].studies : [];
+          var sel = document.getElementById('sage-study-select');
+          sel.innerHTML = '';
+          studies.forEach(function(s) {
+            var opt = document.createElement('option');
+            opt.value = s; opt.textContent = s;
+            sel.appendChild(opt);
+          });
+        "
+      >
+        {% for field_name in sage_fields.keys %}
+          <option value="{{ field_name }}"{% if field_name == character.chosen_field %} selected{% endif %}>
+            {{ field_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      Study:
+      <select name="chosen_study" id="sage-study-select">
+        {% if character.chosen_study %}
+          <option value="{{ character.chosen_study }}" selected>{{ character.chosen_study }}</option>
+        {% endif %}
+      </select>
+    </label>
+    <button type="submit">Save</button>
+    <script>
+      // Populate study select on page load for the current chosen field
+      (function() {
+        var fieldSel = document.getElementById('sage-field-select');
+        var studySel = document.getElementById('sage-study-select');
+        var currentStudy = "{{ character.chosen_study|escapejs }}";
+        if (fieldSel && window.SAGE_FIELDS) {
+          var studies = window.SAGE_FIELDS[fieldSel.value] ? window.SAGE_FIELDS[fieldSel.value].studies : [];
+          studySel.innerHTML = '';
+          studies.forEach(function(s) {
+            var opt = document.createElement('option');
+            opt.value = s; opt.textContent = s;
+            if (s === currentStudy) opt.selected = true;
+            studySel.appendChild(opt);
+          });
+        }
+      })();
+    </script>
+  </form>
+</span>

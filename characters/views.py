@@ -84,7 +84,7 @@ def _sheet_context(character):
     for spell in spells:
         spells_by_level.setdefault(spell.level, []).append(spell)
 
-    return {
+    ctx = {
         "character": character,
         "derived": derived,
         "ability_data": ability_data,
@@ -94,6 +94,8 @@ def _sheet_context(character):
         "conditions": conditions,
         "spells_by_level": spells_by_level,
     }
+    ctx.update(_build_sage_context(character))
+    return ctx
 
 
 def _render_sheet_body(request, character):
