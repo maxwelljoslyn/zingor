@@ -1,5 +1,6 @@
 """Views for the characters app."""
 
+import json
 from collections import OrderedDict
 
 from django.contrib.auth import login
@@ -7,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from . import rules
 from .models import Action, Character, Condition, HitDie, Item, SageStudyPoints, Spell
@@ -723,7 +724,6 @@ def delete_spell(request, spell_id):
 
 def _build_sage_context(character):
     """Build template context for the sage.html partial."""
-    import json
     from .sage import sage_fields, sage_studies, sort_sage_entries
 
     rows = {r.study: r for r in character.sage_studies.all()}
@@ -740,9 +740,9 @@ def _build_sage_context(character):
 
 
 @login_required
+@require_GET
 def sage_chosen_field_form(request, pk):
     """Return the inline form snippet for editing chosen field/study."""
-    import json
     from .sage import sage_fields
 
     character = get_object_or_404(Character, pk=pk, user=request.user)
