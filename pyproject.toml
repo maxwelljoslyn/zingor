@@ -9,3 +9,8 @@ dependencies = [
     "pint>=0.24",
     "attrs>=24.0",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.9",
+]
