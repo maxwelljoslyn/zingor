@@ -23,6 +23,15 @@ def format_pct(value):
     return f"{value}%"
 
 
+@register.filter
+def floordiv(value, arg):
+    """Integer division: {{ value|floordiv:4 }}"""
+    try:
+        return int(value) // int(arg)
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+
+
 @register.inclusion_tag("characters/partials/unknown_or_value.html")
 def unknown_or_value(value, field_name, character_id, display_value=None):
     """Render a value or a clickable 'Unknown' placeholder."""
