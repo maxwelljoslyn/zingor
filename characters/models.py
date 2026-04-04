@@ -223,7 +223,10 @@ class Character(models.Model):
         if max_enc is None:
             return None
         num_tiers = self.BASE_AP
-        tier_size = max_enc / num_tiers
+        # max_enc is a pint Quantity; extract plain float so arithmetic produces plain numbers
+        max_enc_val = float(max_enc.magnitude)
+        tier_size = max_enc_val / num_tiers
+        # at each tier boundary, character loses one AP
         return [(tier_size * i, self.BASE_AP - i) for i in range(1, num_tiers)]
 
     # --- Undo/Redo ---
