@@ -3,6 +3,7 @@
 from collections import OrderedDict
 
 from .models import Character
+from .sage import rank_for_points, sage_studies as SAGE_STUDIES
 
 
 def character_to_wiki(character):
@@ -76,6 +77,32 @@ def character_to_wiki(character):
         lines.append(f"* Level {hd.level}: {hd.die_type} → {hd.roll}{bonus}")
     lines.append("")
 
+    # --- Encumbrance ---
+    lines.append("== Encumbrance ==")
+    item_wt = character.weight_of_carried_items
+    coin_wt = character.weight_of_money
+    total_wt = character.current_encumbrance
+    max_enc = character.max_encumbrance
+    current_ap = character.current_action_points
+    lines.append(f"* '''Item weight:''' {_fmt_weight(item_wt)}")
+    lines.append(f"* '''Coin weight:''' {_fmt_weight(coin_wt)}")
+    lines.append(f"* '''Total carried:''' {_fmt_weight(total_wt)}")
+    lines.append(
+        f"* '''Max encumbrance:''' {_fmt_weight(max_enc) if max_enc is not None else '?'}"
+    )
+    lines.append(f"* '''Current AP:''' {current_ap}")
+    tiers = character.ap_tiers
+    if tiers:
+        lines.append("")
+        lines.append("=== AP Loss Thresholds ===")
+        lines.append('{| class="wikitable"')
+        lines.append("! Weight (lb) !! AP")
+        for weight_lb, ap in tiers:
+            lines.append("|-")
+            lines.append(f"| {weight_lb:.2f} || {ap}")
+        lines.append("|}")
+    lines.append("")
+
     # --- Inventory (wikitable) ---
     lines.append("== Inventory ==")
     items = list(character.inventory.filter(container__isnull=True))
@@ -123,6 +150,44 @@ def character_to_wiki(character):
         lines.append("No spells known.")
     lines.append("")
 
+    # --- Sage Knowledge ---
+    lines.append("== Sage Knowledge ==")
+    if character.chosen_field or character.chosen_study:
+        lines.append(f"* '''Chosen Field:''' {character.chosen_field or '?'}")
+        lines.append(f"* '''Chosen Study:''' {character.chosen_study or '?'}")
+        lines.append("")
+    sage_rows = list(character.sage_studies.order_by("study"))
+    if sage_rows:
+        # Group by field (first field listed for the study, preferring class fields)
+        from .sage import CLASS_FIELDS
+
+        char_class = (character.char_class or "").lower()
+        class_fields = set(CLASS_FIELDS.get(char_class, []))
+        field_map = {}
+        for row in sage_rows:
+            study_info = SAGE_STUDIES.get(row.study, {})
+            study_fields = study_info.get("fields", [])
+            matching = [f for f in study_fields if f in class_fields]
+            field = (
+                matching[0]
+                if matching
+                else (study_fields[0] if study_fields else "Other")
+            )
+            field_map.setdefault(field, []).append(row)
+        for field in sorted(field_map):
+            lines.append(f"=== {field} ===")
+            lines.append('{| class="wikitable"')
+            lines.append("! Study !! Points !! Rank")
+            for row in sorted(field_map[field], key=lambda r: r.study):
+                rank = rank_for_points(row.points)
+                lines.append("|-")
+                lines.append(f"| {row.study} || {row.points} || {rank}")
+            lines.append("|}")
+            lines.append("")
+    else:
+        lines.append("No sage studies.")
+        lines.append("")
+
     # --- Notes ---
     lines.append("== Notes ==")
     if character.background:
@@ -139,6 +204,11 @@ def character_to_wiki(character):
         lines.append("")
 
     return "\n".join(lines)
+
+
+def _fmt_weight(qty):
+    """Format a Pint weight Quantity as a short string."""
+    return f"{qty.magnitude:.2f} {qty.units}"
 
 
 def _item_status(item):
