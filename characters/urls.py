@@ -42,6 +42,16 @@ urlpatterns = [
         views.update_item_field,
         name="update_item_field",
     ),
+    path(
+        "item/<int:container_id>/put-in-container/",
+        views.put_in_container,
+        name="put_in_container",
+    ),
+    path(
+        "item/<int:item_id>/remove-from-container/",
+        views.remove_from_container,
+        name="remove_from_container",
+    ),
     # Conditions
     path(
         "character/<int:pk>/add-condition/",

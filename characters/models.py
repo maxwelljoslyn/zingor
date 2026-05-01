@@ -346,6 +346,8 @@ class Item(models.Model):
     container = models.ForeignKey(
         "self", on_delete=models.CASCADE, null=True, blank=True, related_name="contents"
     )
+    is_container = models.BooleanField(default=False)
+    capacity = PintField(null=True, blank=True)
     is_carried = models.BooleanField(default=True)
     is_worn = models.BooleanField(default=False)
     props = models.JSONField(default=dict, blank=True)

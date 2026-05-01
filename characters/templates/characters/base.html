@@ -19,6 +19,63 @@
         }
       }
     });
+
+    // Drag-and-drop for inventory containers
+    window._zingorDragId = null;
+    window._zingorEnterCounts = {};
+
+    window.zingorDragStart = function(event) {
+      window._zingorDragId = event.currentTarget.dataset.itemId;
+      event.dataTransfer.effectAllowed = 'move';
+      event.currentTarget.style.opacity = '0.5';
+    };
+
+    window.zingorDragEnd = function(event) {
+      event.currentTarget.style.opacity = '';
+    };
+
+    window.zingorDragOver = function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = 'move';
+    };
+
+    window.zingorDragEnter = function(event) {
+      event.stopPropagation();
+      var el = event.currentTarget;
+      var key = el.dataset.itemId;
+      window._zingorEnterCounts[key] = (window._zingorEnterCounts[key] || 0) + 1;
+      el.classList.add('drop-target');
+    };
+
+    window.zingorDragLeave = function(event) {
+      event.stopPropagation();
+      var el = event.currentTarget;
+      var key = el.dataset.itemId;
+      window._zingorEnterCounts[key] = (window._zingorEnterCounts[key] || 0) - 1;
+      if (window._zingorEnterCounts[key] <= 0) {
+        window._zingorEnterCounts[key] = 0;
+        el.classList.remove('drop-target');
+      }
+    };
+
+    window.zingorDrop = function(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      var el = event.currentTarget;
+      var key = el.dataset.itemId;
+      window._zingorEnterCounts[key] = 0;
+      el.classList.remove('drop-target');
+      var containerId = el.dataset.itemId;
+      var itemId = window._zingorDragId;
+      window._zingorDragId = null;
+      if (!itemId || itemId === containerId) return;
+      htmx.ajax('POST', '/item/' + containerId + '/put-in-container/', {
+        target: '#section-inventory',
+        swap: 'outerHTML',
+        values: { item_id: itemId }
+      });
+    };
   </script>
   <style>
     :root {
@@ -115,9 +172,10 @@
     .htmx-indicator { display: none; }
     .htmx-request .htmx-indicator { display: inline; }
     .flash { padding: 0.5rem; background: var(--surface-alt); border-radius: 4px; margin-bottom: 0.5rem; }
-    .item-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; }
-    .item-row + .item-row { border-top: 1px solid var(--border); }
+    .item-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; cursor: grab; }
+    .item-wrapper + .item-wrapper { border-top: 1px solid var(--border); }
     .contents { margin-left: 1.5rem; border-left: 2px solid var(--border); padding-left: 0.75rem; }
+    .drop-target { outline: 2px dashed var(--accent); border-radius: 4px; background: var(--surface-alt); }
   </style>
 </head>
 <body>

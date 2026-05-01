@@ -13,6 +13,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
+    "pytest-django>=4.12.0",
     "ruff>=0.15.9",
 ]
 
@@ -21,3 +22,6 @@ select = ["I"] # sort imports
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "zingor.settings"

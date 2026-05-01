@@ -422,6 +422,13 @@ def edit_item_field(request, item_id):
         pint_unit_display = PINT_UNIT_DISPLAY.get(pint_unit, pint_unit)
         current_value = weight_str
         is_pint_split = True
+    elif field_name == "capacity":
+        cap = item.capacity
+        current_value = str(cap) if cap is not None else ""
+        is_pint_split = False
+        pint_magnitude = None
+        pint_unit = None
+        pint_unit_display = None
     else:
         return HttpResponse("Invalid field", status=400)
 
@@ -459,10 +466,58 @@ def update_item_field(request, item_id):
         item.weight = str(D(q.magnitude) * q.units)
     elif field_name == "is_worn":
         item.is_worn = raw_value == "on"
+    elif field_name == "is_container":
+        item.is_container = raw_value == "on"
+        if not item.is_container:
+            item.contents.update(container=None)
+    elif field_name == "capacity":
+        if raw_value:
+            q = u(raw_value)
+            item.capacity = str(D(q.magnitude) * q.units)
+        else:
+            item.capacity = None
     else:
         return HttpResponse("Invalid field", status=400)
 
     item.save(update_fields=[field_name])
+    return _render_section(request, item.owner, "inventory")
+
+
+# --- Container operations ---
+
+
+def _would_create_cycle(container, item):
+    current = container
+    while current is not None:
+        if current.pk == item.pk:
+            return True
+        current = current.container
+    return False
+
+
+@login_required
+@require_POST
+def put_in_container(request, container_id):
+    container = get_object_or_404(Item, pk=container_id, owner__user=request.user)
+    if not container.is_container:
+        return HttpResponse("Item is not a container", status=400)
+    item_id = request.POST.get("item_id")
+    item = get_object_or_404(Item, pk=item_id, owner=container.owner)
+    if item.pk == container.pk:
+        return HttpResponse("Cannot put item in itself", status=400)
+    if _would_create_cycle(container, item):
+        return HttpResponse("Cannot create container cycle", status=400)
+    item.container = container
+    item.save(update_fields=["container"])
+    return _render_section(request, container.owner, "inventory")
+
+
+@login_required
+@require_POST
+def remove_from_container(request, item_id):
+    item = get_object_or_404(Item, pk=item_id, owner__user=request.user)
+    item.container = None
+    item.save(update_fields=["container"])
     return _render_section(request, item.owner, "inventory")
 
 
