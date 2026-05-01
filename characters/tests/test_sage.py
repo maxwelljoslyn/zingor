@@ -3,10 +3,10 @@
 from django.test import TestCase
 
 from characters.sage import (
-    rank_for_points,
-    sort_sage_entries,
     CLASS_FIELDS,
+    rank_for_points,
     sage_fields,
+    sort_sage_entries,
 )
 
 
@@ -76,9 +76,10 @@ class ClassFieldsTests(TestCase):
                 )
 
 
-from django.db import IntegrityError
-from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+
 from characters.models import Character, SageStudyPoints
 
 

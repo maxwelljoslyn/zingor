@@ -1,7 +1,7 @@
 """Tests for the views."""
 
 from django.contrib.auth.models import User
-from django.test import Client, TestCase
+from django.test import TestCase
 
 from characters.models import Action, Character, Condition, HitDie, Item, Spell
 

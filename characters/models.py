@@ -7,7 +7,6 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from .fields import PintField
-from .jsonize import my_decoder, my_encoder
 from .units import D, u
 
 

@@ -14,7 +14,6 @@ from . import rules
 from .models import Action, Character, Condition, HitDie, Item, SageStudyPoints, Spell
 from .units import D, u
 
-
 # --- Helpers ---
 
 
@@ -731,7 +730,7 @@ def delete_spell(request, spell_id):
 
 def _build_sage_context(character):
     """Build template context for the sage.html partial."""
-    from .sage import sage_fields, sage_studies, sort_sage_entries, CLASS_FIELDS
+    from .sage import CLASS_FIELDS, sage_fields, sage_studies, sort_sage_entries
 
     rows = {r.study: r for r in character.sage_studies.all()}
     sorted_entries = sort_sage_entries(
@@ -811,7 +810,7 @@ def sage_study_options(request, pk):
 @require_POST
 def sage_chosen_field(request, pk):
     """Save chosen field/study and bulk-create class study rows."""
-    from .sage import sage_fields, CLASS_FIELDS
+    from .sage import CLASS_FIELDS, sage_fields
 
     character = get_object_or_404(Character, pk=pk, user=request.user)
     chosen_field = request.POST.get("chosen_field", "")

@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 
 from characters.models import Action, Character, Condition, HitDie, Item, Spell
-from characters.units import D, u
+from characters.units import D
 
 
 class CharacterModelTests(TestCase):
