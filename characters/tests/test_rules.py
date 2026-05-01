@@ -1,13 +1,8 @@
 """Tests for the rules module."""
 
-from decimal import Decimal
-
 from django.test import TestCase
 
 from characters.rules import (
-    abilities,
-    action_points,
-    base_attack_bonus,
     calculate_derived_stats,
     cha_max_henchmen,
     cha_morale_adj,
@@ -20,17 +15,18 @@ from characters.rules import (
     dex_ranged_attacks_mod,
     effective_strength,
     int_max_mage_illusionist_spell_level,
-    int_spell_capability_chance,
     int_min_capable_spells,
+    int_spell_capability_chance,
     maximum_encumbrance,
     maximum_hp,
     str_attack_mod,
     str_damage_mod,
+    thac0,
     total_xp_for_next_level,
     wis_charm_illusion_save_mod,
     wis_cleric_spell_success_percent,
 )
-from characters.units import D, u
+from characters.units import D
 
 
 class StrengthModTests(TestCase):
@@ -312,18 +308,18 @@ class CharismaTests(TestCase):
         self.assertEqual(cha_morale_adj(18), -3)
 
 
-class BaseAttackBonusTests(TestCase):
-    def test_fighter_bab(self):
-        self.assertEqual(base_attack_bonus("fighter", 1), 1)
-        self.assertEqual(base_attack_bonus("fighter", 5), 5)
-        self.assertEqual(base_attack_bonus("fighter", 10), 10)
+class THAC0Tests(TestCase):
+    def test_fighter_thac0(self):
+        self.assertEqual(thac0("fighter", 1), 20)
+        self.assertEqual(thac0("fighter", 5), 16)
+        self.assertEqual(thac0("fighter", 10), 12)
 
-    def test_mage_bab(self):
-        self.assertEqual(base_attack_bonus("mage", 1), 0)
-        self.assertEqual(base_attack_bonus("mage", 5), 1)
+    def test_mage_thac0(self):
+        self.assertEqual(thac0("mage", 1), 21)
+        self.assertEqual(thac0("mage", 5), 20)
 
     def test_none_class(self):
-        self.assertEqual(base_attack_bonus(None, 1), 0)
+        self.assertEqual(thac0(None, 1), 21)
 
 
 class MaximumHPTests(TestCase):
@@ -439,7 +435,7 @@ class DerivedStatsTests(TestCase):
         stats = calculate_derived_stats({"strength": 15})
         self.assertEqual(stats["melee attack modifier"], 0)
         self.assertIsNone(stats["AC modifier"])
-        self.assertIsNone(stats["base_attack_bonus"])
+        self.assertIsNone(stats["thac0"])
 
     def test_full_data(self):
         stats = calculate_derived_stats(
@@ -455,8 +451,7 @@ class DerivedStatsTests(TestCase):
             }
         )
         self.assertEqual(stats["melee attack modifier"], 0)
-        self.assertEqual(stats["base_attack_bonus"], 3)
-        self.assertEqual(stats["melee_attack_total"], 3)
+        self.assertEqual(stats["thac0"], 18)
         self.assertEqual(stats["xp_for_next_level"], 8001)
         self.assertEqual(stats["save_poison"], 15)
 

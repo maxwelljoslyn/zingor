@@ -47,15 +47,9 @@
     </tbody>
   </table>
 
-  {% if derived.base_attack_bonus is not None %}
+  {% if derived.thac0 is not None %}
   <div style="margin-top: 0.5rem; font-size: 0.9rem;">
-    <strong>BAB:</strong> {{ derived.base_attack_bonus }}
-    {% if derived.melee_attack_total is not None %}
-      | <strong>Melee:</strong> {{ derived.melee_attack_total|format_modifier }}
-    {% endif %}
-    {% if derived.ranged_attack_total is not None %}
-      | <strong>Ranged:</strong> {{ derived.ranged_attack_total|format_modifier }}
-    {% endif %}
+    <strong>THAC0:</strong> {{ derived.thac0 }}
   </div>
   {% endif %}
 

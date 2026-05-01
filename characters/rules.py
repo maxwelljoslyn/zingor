@@ -4,9 +4,6 @@ No model imports — takes primitives, returns values. Easy to test and tweak.
 Ported from dnd/characters.py.
 """
 
-import math
-from decimal import Decimal
-
 from .units import D, u
 
 # --- Inclusive range helper ---
@@ -644,20 +641,20 @@ classes = {
         "bonus_xp_minimums": {},
         "levels": {
             1: {"min XP": 0, "proficiencies": 3},
-            2: {"base attack bonus": 1, "min XP": 1_751},
+            2: {"min XP": 1_751},
             3: {"min XP": 3_501},
-            4: {"base attack bonus": 2, "min XP": 7_501},
-            5: {"base attack bonus": 3, "min XP": 15_001, "proficiencies": 4},
+            4: {"min XP": 7_501},
+            5: {"min XP": 15_001, "proficiencies": 4},
             6: {"min XP": 30_001},
-            7: {"base attack bonus": 4, "min XP": 60_001},
+            7: {"min XP": 60_001},
             8: {"min XP": 115_001},
-            9: {"base attack bonus": 5, "min XP": 230_001, "proficiencies": 5},
-            10: {"base attack bonus": 6, "min XP": 425_001},
+            9: {"min XP": 230_001, "proficiencies": 5},
+            10: {"min XP": 425_001},
             11: {"min XP": 650_001},
-            12: {"base attack bonus": 7, "min XP": 850_001},
+            12: {"min XP": 850_001},
             13: {"min XP": 1_050_001, "proficiencies": 6},
-            14: {"base attack bonus": 8, "min XP": 1_275_001},
-            15: {"base attack bonus": 9, "min XP": 1_750_001},
+            14: {"min XP": 1_275_001},
+            15: {"min XP": 1_750_001},
         },
     },
     "bard": {
@@ -675,22 +672,22 @@ classes = {
         "levels": {
             1: {"min XP": 0, "proficiencies": 2},
             2: {"min XP": 2_001},
-            3: {"base attack bonus": 1, "min XP": 4_001},
+            3: {"min XP": 4_001},
             4: {"min XP": 8_001},
             5: {"min XP": 16_001},
-            6: {"base attack bonus": 2, "min XP": 30_001, "proficiencies": 3},
+            6: {"min XP": 30_001, "proficiencies": 3},
             7: {"min XP": 55_001},
             8: {"min XP": 100_001},
-            9: {"base attack bonus": 3, "min XP": 180_001},
+            9: {"min XP": 180_001},
             10: {"min XP": 300_001},
             11: {"min XP": 480_001, "proficiencies": 4},
-            12: {"base attack bonus": 4, "min XP": 660_001},
+            12: {"min XP": 660_001},
             13: {"min XP": 840_001},
             14: {"min XP": 1_020_001},
-            15: {"base attack bonus": 5, "min XP": 1_200_001},
+            15: {"min XP": 1_200_001},
             16: {"min XP": 1_380_001, "proficiencies": 5},
             17: {"min XP": 1_560_001},
-            18: {"base attack bonus": 6, "min XP": 1_740_001},
+            18: {"min XP": 1_740_001},
             19: {"min XP": 1_920_001},
             20: {"min XP": 2_100_001},
             21: {"min XP": 2_280_001},
@@ -712,21 +709,21 @@ classes = {
         "levels": {
             1: {"min XP": 0, "proficiencies": 2},
             2: {"min XP": 1_501},
-            3: {"base attack bonus": 1, "min XP": 3_001},
+            3: {"min XP": 3_001},
             4: {"min XP": 6_001},
-            5: {"base attack bonus": 2, "min XP": 13_001, "proficiencies": 3},
+            5: {"min XP": 13_001, "proficiencies": 3},
             6: {"min XP": 27_501},
-            7: {"base attack bonus": 3, "min XP": 55_001},
+            7: {"min XP": 55_001},
             8: {"min XP": 110_001},
-            9: {"base attack bonus": 4, "min XP": 225_001, "proficiencies": 4},
+            9: {"min XP": 225_001, "proficiencies": 4},
             10: {"min XP": 450_001},
-            11: {"base attack bonus": 5, "min XP": 675_001},
+            11: {"min XP": 675_001},
             12: {"min XP": 900_001},
-            13: {"base attack bonus": 6, "min XP": 1_125_001, "proficiencies": 5},
+            13: {"min XP": 1_125_001, "proficiencies": 5},
             14: {"min XP": 1_350_001},
-            15: {"base attack bonus": 7, "min XP": 1_575_001},
+            15: {"min XP": 1_575_001},
             16: {"min XP": 1_800_001},
-            17: {"base attack bonus": 8, "min XP": 2_025_001, "proficiencies": 6},
+            17: {"min XP": 2_025_001, "proficiencies": 6},
             18: {"min XP": 2_250_001},
             19: {"min XP": 2_475_001},
             20: {"min XP": 2_700_001},
@@ -747,21 +744,21 @@ classes = {
         "levels": {
             1: {"min XP": 0, "proficiencies": 2},
             2: {"min XP": 2_401},
-            3: {"base attack bonus": 1, "min XP": 4_751},
+            3: {"min XP": 4_751},
             4: {"min XP": 9_001},
-            5: {"base attack bonus": 2, "min XP": 15_001},
+            5: {"min XP": 15_001},
             6: {"min XP": 24_001, "proficiencies": 3},
-            7: {"base attack bonus": 3, "min XP": 42_001},
+            7: {"min XP": 42_001},
             8: {"min XP": 72_001},
-            9: {"base attack bonus": 4, "min XP": 110_001},
+            9: {"min XP": 110_001},
             10: {"min XP": 150_001},
-            11: {"base attack bonus": 5, "min XP": 240_001, "proficiencies": 4},
+            11: {"min XP": 240_001, "proficiencies": 4},
             12: {"min XP": 360_001},
-            13: {"base attack bonus": 6, "min XP": 750_001},
+            13: {"min XP": 750_001},
             14: {"min XP": 1_500_001},
-            15: {"base attack bonus": 7, "min XP": 2_250_001},
+            15: {"min XP": 2_250_001},
             16: {"min XP": 3_000_001, "proficiencies": 5},
-            17: {"base attack bonus": 8, "min XP": 3_500_001},
+            17: {"min XP": 3_500_001},
             18: {"min XP": 3_900_001},
             19: {"min XP": 4_300_001},
             20: {"min XP": 4_700_001},
@@ -782,22 +779,22 @@ classes = {
         },
         "bonus_xp_minimums": {"strength": 16},
         "levels": {
-            1: {"base attack bonus": 1, "min XP": 0, "proficiencies": 4},
-            2: {"base attack bonus": 2, "min XP": 2_001},
-            3: {"base attack bonus": 3, "min XP": 4_001},
-            4: {"base attack bonus": 4, "min XP": 8_001, "proficiencies": 5},
-            5: {"base attack bonus": 5, "min XP": 18_001},
-            6: {"base attack bonus": 6, "min XP": 35_001},
-            7: {"base attack bonus": 7, "min XP": 70_001, "proficiencies": 6},
-            8: {"base attack bonus": 8, "min XP": 125_001},
-            9: {"base attack bonus": 9, "min XP": 250_001},
-            10: {"base attack bonus": 10, "min XP": 500_001, "proficiencies": 7},
-            11: {"base attack bonus": 11, "min XP": 750_001},
-            12: {"base attack bonus": 12, "min XP": 1_000_001},
-            13: {"base attack bonus": 13, "min XP": 1_250_001, "proficiencies": 8},
-            14: {"base attack bonus": 14, "min XP": 1_500_001},
-            15: {"base attack bonus": 15, "min XP": 1_750_001},
-            16: {"base attack bonus": 16, "min XP": 2_000_001, "proficiencies": 9},
+            1: {"min XP": 0, "proficiencies": 4},
+            2: {"min XP": 2_001},
+            3: {"min XP": 4_001},
+            4: {"min XP": 8_001, "proficiencies": 5},
+            5: {"min XP": 18_001},
+            6: {"min XP": 35_001},
+            7: {"min XP": 70_001, "proficiencies": 6},
+            8: {"min XP": 125_001},
+            9: {"min XP": 250_001},
+            10: {"min XP": 500_001, "proficiencies": 7},
+            11: {"min XP": 750_001},
+            12: {"min XP": 1_000_001},
+            13: {"min XP": 1_250_001, "proficiencies": 8},
+            14: {"min XP": 1_500_001},
+            15: {"min XP": 1_750_001},
+            16: {"min XP": 2_000_001, "proficiencies": 9},
             17: {"min XP": 2_250_001},
             18: {"min XP": 2_500_001},
             19: {"min XP": 2_750_001, "proficiencies": 10},
@@ -820,19 +817,19 @@ classes = {
             2: {"min XP": 2_251},
             3: {"min XP": 4_501},
             4: {"min XP": 9_001},
-            5: {"base attack bonus": 1, "min XP": 18_001},
+            5: {"min XP": 18_001},
             6: {"min XP": 35_001},
             7: {"min XP": 60_001, "proficiencies": 2},
             8: {"min XP": 96_001},
-            9: {"base attack bonus": 2, "min XP": 145_001},
+            9: {"min XP": 145_001},
             10: {"min XP": 220_001},
             11: {"min XP": 440_001},
             12: {"min XP": 660_001},
-            13: {"base attack bonus": 3, "min XP": 880_001, "proficiencies": 3},
+            13: {"min XP": 880_001, "proficiencies": 3},
             14: {"min XP": 1_100_001},
             15: {"min XP": 1_320_001},
             16: {"min XP": 1_540_001},
-            17: {"base attack bonus": 4, "min XP": 1_760_001},
+            17: {"min XP": 1_760_001},
             18: {"min XP": 1_980_001},
             19: {"min XP": 2_200_001, "proficiencies": 4},
             20: {"min XP": 2_420_001},
@@ -854,19 +851,19 @@ classes = {
             2: {"min XP": 2_501},
             3: {"min XP": 5_001},
             4: {"min XP": 10_001},
-            5: {"base attack bonus": 1, "min XP": 22_501},
+            5: {"min XP": 22_501},
             6: {"min XP": 40_001},
             7: {"min XP": 60_001, "proficiencies": 2},
             8: {"min XP": 90_001},
-            9: {"base attack bonus": 2, "min XP": 135_001},
+            9: {"min XP": 135_001},
             10: {"min XP": 250_001},
             11: {"min XP": 375_001},
             12: {"min XP": 750_001},
-            13: {"base attack bonus": 3, "min XP": 1_125_001, "proficiencies": 3},
+            13: {"min XP": 1_125_001, "proficiencies": 3},
             14: {"min XP": 1_500_001},
             15: {"min XP": 1_875_001},
             16: {"min XP": 2_250_001},
-            17: {"base attack bonus": 4, "min XP": 2_625_001},
+            17: {"min XP": 2_625_001},
             18: {"min XP": 3_000_001},
             19: {"min XP": 3_375_001, "proficiencies": 4},
             20: {"min XP": 3_750_001},
@@ -887,21 +884,21 @@ classes = {
         "levels": {
             1: {"min XP": 0, "proficiencies": 2},
             2: {"min XP": 2_251},
-            3: {"base attack bonus": 1, "min XP": 4_751, "proficiencies": 3},
+            3: {"min XP": 4_751, "proficiencies": 3},
             4: {"min XP": 10_001},
-            5: {"base attack bonus": 2, "min XP": 22_501, "proficiencies": 4},
+            5: {"min XP": 22_501, "proficiencies": 4},
             6: {"min XP": 47_501},
-            7: {"base attack bonus": 3, "min XP": 98_001, "proficiencies": 5},
+            7: {"min XP": 98_001, "proficiencies": 5},
             8: {"min XP": 200_001},
-            9: {"base attack bonus": 4, "min XP": 350_001, "proficiencies": 6},
+            9: {"min XP": 350_001, "proficiencies": 6},
             10: {"min XP": 500_001},
-            11: {"base attack bonus": 5, "min XP": 700_001, "proficiencies": 7},
+            11: {"min XP": 700_001, "proficiencies": 7},
             12: {"min XP": 950_001},
-            13: {"base attack bonus": 6, "min XP": 1_250_001, "proficiencies": 8},
+            13: {"min XP": 1_250_001, "proficiencies": 8},
             14: {"min XP": 1_750_001},
-            15: {"base attack bonus": 7, "min XP": 2_250_001, "proficiencies": 9},
+            15: {"min XP": 2_250_001, "proficiencies": 9},
             16: {"min XP": 2_750_001},
-            17: {"base attack bonus": 8, "min XP": 3_250_001, "proficiencies": 10},
+            17: {"min XP": 3_250_001, "proficiencies": 10},
         },
     },
     "paladin": {
@@ -917,22 +914,22 @@ classes = {
         },
         "bonus_xp_minimums": {"strength": 16, "wisdom": 16},
         "levels": {
-            1: {"base attack bonus": 1, "min XP": 0, "proficiencies": 3},
-            2: {"base attack bonus": 2, "min XP": 2_751},
-            3: {"base attack bonus": 3, "min XP": 5_501},
-            4: {"base attack bonus": 4, "min XP": 12_001, "proficiencies": 4},
-            5: {"base attack bonus": 5, "min XP": 24_001},
-            6: {"base attack bonus": 6, "min XP": 45_001},
-            7: {"base attack bonus": 7, "min XP": 95_001, "proficiencies": 5},
-            8: {"base attack bonus": 8, "min XP": 175_001},
-            9: {"base attack bonus": 9, "min XP": 350_001},
-            10: {"base attack bonus": 10, "min XP": 700_001, "proficiencies": 6},
-            11: {"base attack bonus": 11, "min XP": 1_050_001},
-            12: {"base attack bonus": 12, "min XP": 1_400_001},
-            13: {"base attack bonus": 13, "min XP": 1_750_001, "proficiencies": 7},
-            14: {"base attack bonus": 14, "min XP": 2_100_001},
-            15: {"base attack bonus": 15, "min XP": 2_450_001},
-            16: {"base attack bonus": 16, "min XP": 2_800_001, "proficiencies": 8},
+            1: {"min XP": 0, "proficiencies": 3},
+            2: {"min XP": 2_751},
+            3: {"min XP": 5_501},
+            4: {"min XP": 12_001, "proficiencies": 4},
+            5: {"min XP": 24_001},
+            6: {"min XP": 45_001},
+            7: {"min XP": 95_001, "proficiencies": 5},
+            8: {"min XP": 175_001},
+            9: {"min XP": 350_001},
+            10: {"min XP": 700_001, "proficiencies": 6},
+            11: {"min XP": 1_050_001},
+            12: {"min XP": 1_400_001},
+            13: {"min XP": 1_750_001, "proficiencies": 7},
+            14: {"min XP": 2_100_001},
+            15: {"min XP": 2_450_001},
+            16: {"min XP": 2_800_001, "proficiencies": 8},
             17: {"min XP": 3_150_001},
             18: {"min XP": 3_500_001},
             19: {"min XP": 3_850_001, "proficiencies": 9},
@@ -952,22 +949,22 @@ classes = {
         },
         "bonus_xp_minimums": {"strength": 16, "intelligence": 16},
         "levels": {
-            1: {"base attack bonus": 1, "min XP": 0, "proficiencies": 3},
-            2: {"base attack bonus": 2, "min XP": 2_251},
-            3: {"base attack bonus": 3, "min XP": 4_501},
-            4: {"base attack bonus": 4, "min XP": 10_001, "proficiencies": 4},
-            5: {"base attack bonus": 5, "min XP": 20_001},
-            6: {"base attack bonus": 6, "min XP": 40_001},
-            7: {"base attack bonus": 7, "min XP": 90_001, "proficiencies": 5},
-            8: {"base attack bonus": 8, "min XP": 150_001},
-            9: {"base attack bonus": 9, "min XP": 225_001},
-            10: {"base attack bonus": 10, "min XP": 325_001, "proficiencies": 6},
-            11: {"base attack bonus": 11, "min XP": 650_001},
-            12: {"base attack bonus": 12, "min XP": 975_001},
-            13: {"base attack bonus": 13, "min XP": 1_300_001, "proficiencies": 7},
-            14: {"base attack bonus": 14, "min XP": 1_625_001},
-            15: {"base attack bonus": 15, "min XP": 1_950_001},
-            16: {"base attack bonus": 16, "min XP": 2_275_001, "proficiencies": 8},
+            1: {"min XP": 0, "proficiencies": 3},
+            2: {"min XP": 2_251},
+            3: {"min XP": 4_501},
+            4: {"min XP": 10_001, "proficiencies": 4},
+            5: {"min XP": 20_001},
+            6: {"min XP": 40_001},
+            7: {"min XP": 90_001, "proficiencies": 5},
+            8: {"min XP": 150_001},
+            9: {"min XP": 225_001},
+            10: {"min XP": 325_001, "proficiencies": 6},
+            11: {"min XP": 650_001},
+            12: {"min XP": 975_001},
+            13: {"min XP": 1_300_001, "proficiencies": 7},
+            14: {"min XP": 1_625_001},
+            15: {"min XP": 1_950_001},
+            16: {"min XP": 2_275_001, "proficiencies": 8},
             17: {"min XP": 2_600_001},
             18: {"min XP": 2_925_001},
             19: {"min XP": 3_250_001, "proficiencies": 9},
@@ -988,21 +985,21 @@ classes = {
         "levels": {
             1: {"min XP": 0, "proficiencies": 2},
             2: {"min XP": 1_251},
-            3: {"base attack bonus": 1, "min XP": 2_501},
+            3: {"min XP": 2_501},
             4: {"min XP": 5_001},
-            5: {"base attack bonus": 2, "min XP": 10_001, "proficiencies": 3},
+            5: {"min XP": 10_001, "proficiencies": 3},
             6: {"min XP": 20_001},
-            7: {"base attack bonus": 3, "min XP": 42_501},
+            7: {"min XP": 42_501},
             8: {"min XP": 70_001},
-            9: {"base attack bonus": 4, "min XP": 110_001, "proficiencies": 4},
+            9: {"min XP": 110_001, "proficiencies": 4},
             10: {"min XP": 160_001},
-            11: {"base attack bonus": 5, "min XP": 220_001},
+            11: {"min XP": 220_001},
             12: {"min XP": 440_001},
-            13: {"base attack bonus": 6, "min XP": 660_001, "proficiencies": 5},
+            13: {"min XP": 660_001, "proficiencies": 5},
             14: {"min XP": 880_001},
-            15: {"base attack bonus": 7, "min XP": 1_100_001},
+            15: {"min XP": 1_100_001},
             16: {"min XP": 1_320_001},
-            17: {"base attack bonus": 8, "min XP": 1_540_001, "proficiencies": 6},
+            17: {"min XP": 1_540_001, "proficiencies": 6},
             18: {"min XP": 1_760_001},
             19: {"min XP": 1_980_001},
             20: {"min XP": 2_200_001},
@@ -1050,15 +1047,30 @@ races = {
 # --- Core game functions ---
 
 
-def base_attack_bonus(klass, level):
-    """Base attack bonus for a character of class klass at level."""
-    if klass is None or klass not in classes:
-        return 0
-    for x in range(level, 0, -1):
-        bab = classes[klass]["levels"][x].get("base attack bonus")
-        if bab is not None:
-            return bab
-    return 0
+_THAC0_TABLE = {
+    "assassin": (20, 19, 19, 18, 17, 16, 15, 15, 14, 13, 12, 11, 11, 10, 10),
+    "bard": (21, 20, 20, 20, 19, 18, 18, 17, 17, 16, 16, 15, 15, 14, 14, 13),
+    "cleric": (20, 20, 19, 18, 18, 17, 16, 16, 15, 14, 14, 13, 12, 12, 11, 11),
+    "druid": (20, 20, 19, 19, 18, 18, 17, 16, 16, 15, 14, 14, 13, 13, 12, 12),
+    "fighter": (20, 19, 18, 17, 16, 15, 14, 13, 12, 12, 11, 10, 10, 9, 8, 8),
+    "paladin": (20, 19, 18, 17, 16, 15, 14, 13, 12, 12, 11, 10, 10, 9, 8, 8),
+    "ranger": (20, 19, 18, 17, 16, 15, 14, 13, 12, 12, 11, 10, 10, 9, 8, 8),
+    "illusionist": (21, 21, 20, 20, 20, 19, 19, 18, 18, 17, 17, 16, 16, 15, 15, 14),
+    "mage": (21, 21, 20, 20, 20, 19, 19, 18, 18, 17, 17, 16, 16, 15, 15, 14),
+    "monk": (20, 19, 19, 18, 17, 17, 16, 15, 14, 13, 12, 12, 11, 10, 10, 9),
+    "thief": (21, 21, 20, 20, 19, 19, 18, 18, 17, 16, 16, 15, 14, 14, 13, 13),
+}
+
+_DEFAULT_THAC0 = 21  # Commoner / no class
+
+
+def thac0(klass, level):
+    """THAC0 (to-hit armor class 0) for a character of class klass at level."""
+    row = _THAC0_TABLE.get(klass)
+    if row is None:
+        return _DEFAULT_THAC0
+    idx = min(level, len(row)) - 1
+    return row[idx]
 
 
 def maximum_hp(hit_dice_list, char_class=None):
@@ -1227,21 +1239,12 @@ def calculate_derived_stats(char_data):
             for stat_name in derived_stats:
                 result[stat_name] = None
 
-    # Base attack bonus
+    # THAC0
     level = char_data.get("level")
     if char_class and level:
-        result["base_attack_bonus"] = base_attack_bonus(char_class, level)
-        str_score = char_data.get("strength")
-        dex_score = char_data.get("dexterity")
-        bab = result["base_attack_bonus"]
-        if str_score is not None:
-            result["melee_attack_total"] = bab + str_attack_mod(str_score, str_pct)
-        if dex_score is not None:
-            result["ranged_attack_total"] = bab + dex_ranged_attacks_mod(dex_score)
+        result["thac0"] = thac0(char_class, level)
     else:
-        result["base_attack_bonus"] = None
-        result["melee_attack_total"] = None
-        result["ranged_attack_total"] = None
+        result["thac0"] = None
 
     # XP for next level
     if char_class and level is not None:
