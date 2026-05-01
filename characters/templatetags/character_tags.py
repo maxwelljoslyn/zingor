@@ -32,6 +32,16 @@ def floordiv(value, arg):
         return None
 
 
+@register.filter
+def ceildiv(value, arg):
+    """Ceiling division: {{ value|ceildiv:4 }}"""
+    try:
+        v, a = int(value), int(arg)
+        return -(-v // a)
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+
+
 @register.inclusion_tag("characters/partials/unknown_or_value.html")
 def unknown_or_value(value, field_name, character_id, display_value=None):
     """Render a value or a clickable 'Unknown' placeholder."""
