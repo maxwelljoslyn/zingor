@@ -5,6 +5,22 @@ from django.db import models
 from .units import D, Quantity, u
 
 
+class PintDescriptor:
+    """Ensures PintField attribute access always returns a Quantity (or None)."""
+
+    def __init__(self, field):
+        self.field = field
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        val = instance.__dict__.get(self.field.attname)
+        return self.field.to_python(val)
+
+    def __set__(self, instance, value):
+        instance.__dict__[self.field.attname] = value
+
+
 class PintField(models.TextField):
     """Stores Pint Quantities as TEXT in the database.
 
@@ -13,6 +29,10 @@ class PintField(models.TextField):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def contribute_to_class(self, cls, name):
+        super().contribute_to_class(cls, name)
+        setattr(cls, self.attname, PintDescriptor(self))
 
     def from_db_value(self, value, expression, connection):
         if value is None or value == "":
