@@ -426,6 +426,10 @@ def edit_item_field(request, item_id):
     else:
         return HttpResponse("Invalid field", status=400)
 
+    pint_unit_choices = None
+    if field_name == "weight":
+        pint_unit_choices = [("pound", "lb"), ("ounce", "oz")]
+
     ctx = {
         "item": item,
         "field_name": field_name,
@@ -434,6 +438,7 @@ def edit_item_field(request, item_id):
         "pint_magnitude": pint_magnitude,
         "pint_unit": pint_unit,
         "pint_unit_display": pint_unit_display,
+        "pint_unit_choices": pint_unit_choices,
     }
     return render(request, "characters/partials/item_edit_field.html", ctx)
 
