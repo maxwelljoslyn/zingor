@@ -47,7 +47,7 @@ def unknown_or_value(value, field_name, character_id, display_value=None):
     """Render a value or a clickable 'Unknown' placeholder."""
     return {
         "value": value,
-        "display_value": display_value or value,
+        "display_value": value if display_value is None else display_value,
         "field_name": field_name,
         "character_id": character_id,
         "is_set": value is not None and value != "",

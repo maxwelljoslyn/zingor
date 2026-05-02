@@ -466,6 +466,7 @@ def update_item_field(request, item_id):
         item.weight = str(D(q.magnitude) * q.units)
     elif field_name == "is_worn":
         item.is_worn = raw_value == "on"
+        item.is_carried = item.is_worn
     elif field_name == "is_container":
         item.is_container = raw_value == "on"
         if not item.is_container:
@@ -479,7 +480,10 @@ def update_item_field(request, item_id):
     else:
         return HttpResponse("Invalid field", status=400)
 
-    item.save(update_fields=[field_name])
+    save_fields = (
+        [field_name, "is_carried"] if field_name == "is_worn" else [field_name]
+    )
+    item.save(update_fields=save_fields)
     return _render_section(request, item.owner, "inventory")
 
 
