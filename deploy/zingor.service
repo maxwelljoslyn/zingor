@@ -1,0 +1,14 @@
+[Unit]
+Description=Zingor Django App (gunicorn)
+After=network.target
+
+[Service]
+User=maxwell
+Group=maxwell
+WorkingDirectory=/home/maxwell/zingor
+ExecStart=/home/maxwell/zingor/.venv/bin/gunicorn zingor.wsgi:application --bind 127.0.0.1:8000 --workers 2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

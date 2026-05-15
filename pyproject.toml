@@ -8,6 +8,8 @@ dependencies = [
     "django>=5.1",
     "pint>=0.24",
     "attrs>=24.0",
+    "gunicorn>=26.0.0",
+    "python-dotenv>=1.2.2",
 ]
 
 [dependency-groups]

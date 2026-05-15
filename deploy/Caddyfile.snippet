@@ -1,0 +1,11 @@
+zingor.maxwelljoslyn.com {
+	handle /static/* {
+		root * /home/maxwell/zingor/staticfiles
+		uri strip_prefix /static
+		file_server
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8000
+	}
+}
