@@ -185,7 +185,10 @@
     <nav>
       {% if user.is_authenticated %}
         <span>{{ user.username }}</span>
-        <a href="/logout/">Logout</a>
+        <form method="post" action="{% url 'logout' %}" style="display:inline">
+          {% csrf_token %}
+          <button type="submit">Logout</button>
+        </form>
       {% else %}
         <a href="/login/">Login</a>
         <a href="/register/">Register</a>
