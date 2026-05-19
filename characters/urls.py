@@ -12,6 +12,22 @@ urlpatterns = [
     path("login/", auth_views.LoginView.as_view(), name="login"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("register/", views.register, name="register"),
+    path("register/pending/", views.register_pending, name="register_pending"),
+    path(
+        "register/confirm/<uidb64>/<token>/",
+        views.register_confirm,
+        name="register_confirm",
+    ),
+    path(
+        "email-confirmation/resend/",
+        views.resend_confirmation,
+        name="resend_confirmation",
+    ),
+    path(
+        "email-confirmation/",
+        views.email_confirmation_status,
+        name="email_confirmation_status",
+    ),
     # Character list
     path("", views.character_list, name="character_list"),
     path("character/create/", views.character_create, name="character_create"),

@@ -201,6 +201,12 @@
         <div class="flash">{{ message }}</div>
       {% endfor %}
     {% endif %}
+    {% if user.is_authenticated and not user.profile.email_confirmed %}
+      <div class="flash">
+        Your email is not confirmed.
+        <a href="{% url 'characters:email_confirmation_status' %}" style="color: var(--accent);">Confirm it now.</a>
+      </div>
+    {% endif %}
     {% block content %}{% endblock %}
   </div>
 </body>

@@ -3,15 +3,31 @@
 import json
 from collections import OrderedDict
 
+from django.conf import settings as django_settings
+from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_GET, require_POST
 
 from . import rules
-from .models import Action, Character, Condition, HitDie, Item, SageStudyPoints, Spell
+from .auth_emails import send_confirmation_email
+from .forms import RegistrationForm
+from .models import (
+    Action,
+    Character,
+    Condition,
+    HitDie,
+    Item,
+    Profile,
+    SageStudyPoints,
+    Spell,
+)
 from .units import D, u
 
 # --- Helpers ---
@@ -191,14 +207,63 @@ SECTION_FOR_FIELD = {
 
 def register(request):
     if request.method == "POST":
-        form = UserCreationForm(request.POST)
+        form = RegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
-            return redirect("/")
+            Profile.objects.create(user=user, email_confirmed=False)
+            send_confirmation_email(user, request)
+            if not django_settings.EMAIL_CONFIRMATION_REQUIRED:
+                login(request, user)
+                messages.success(request, "Email auto-confirmed in dev.")
+                return redirect("/")
+            else:
+                return redirect("characters:register_pending")
     else:
-        form = UserCreationForm()
+        form = RegistrationForm()
     return render(request, "registration/register.html", {"form": form})
+
+
+def register_pending(request):
+    return render(request, "registration/register_pending.html")
+
+
+def register_confirm(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        user.profile.email_confirmed = True
+        user.profile.save(update_fields=["email_confirmed"])
+        login(request, user)
+        messages.success(request, "Your email has been confirmed.")
+        return redirect("/")
+    return render(request, "registration/register_confirm_invalid.html")
+
+
+@login_required
+@require_POST
+def resend_confirmation(request):
+    send_confirmation_email(request.user, request)
+    if request.user.profile.email_confirmed:
+        messages.success(request, "Email auto-confirmed in dev.")
+    else:
+        messages.success(request, "Confirmation email sent.")
+    return redirect("characters:email_confirmation_status")
+
+
+@login_required
+def email_confirmation_status(request):
+    if request.method == "POST":
+        new_email = request.POST.get("email", "").strip()
+        if new_email:
+            request.user.email = new_email
+            request.user.save(update_fields=["email"])
+            messages.success(request, "Email address updated.")
+        return redirect("characters:email_confirmation_status")
+    return render(request, "registration/email_confirmation_status.html")
 
 
 # --- Character list ---

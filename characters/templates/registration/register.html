@@ -20,6 +20,11 @@
         <input type="text" name="username" id="id_username" required autofocus style="width: 100%;">
       </div>
       <div style="margin-bottom: 0.75rem;">
+        <label for="id_email">Email</label><br>
+        <input type="email" name="email" id="id_email" required style="width: 100%;"
+               value="{{ form.email.value|default:'' }}">
+      </div>
+      <div style="margin-bottom: 0.75rem;">
         <label for="id_password1">Password</label><br>
         <input type="password" name="password1" id="id_password1" required style="width: 100%;">
       </div>
