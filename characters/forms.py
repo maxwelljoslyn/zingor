@@ -16,3 +16,18 @@ class RegistrationForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+class FeedbackForm(forms.Form):
+    title = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={"placeholder": "Brief summary of the issue"}),
+    )
+    description = forms.CharField(
+        widget=forms.Textarea(
+            attrs={
+                "rows": 6,
+                "placeholder": "What happened? What did you expect instead?",
+            }
+        ),
+    )

@@ -106,3 +106,6 @@ EMAIL_CONFIRMATION_REQUIRED = (
     os.environ.get("EMAIL_CONFIRMATION_REQUIRED", "false" if DEBUG else "true").lower()
     == "true"
 )
+
+GITHUB_FEEDBACK_REPO = os.environ.get("GITHUB_FEEDBACK_REPO", "")
+GITHUB_FEEDBACK_TOKEN = os.environ.get("GITHUB_FEEDBACK_TOKEN", "")

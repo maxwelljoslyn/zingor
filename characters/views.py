@@ -1,7 +1,9 @@
 """Views for the characters app."""
 
 import json
+import logging
 from collections import OrderedDict
+from urllib.request import Request, urlopen
 
 from django.conf import settings as django_settings
 from django.contrib import messages
@@ -17,7 +19,9 @@ from django.views.decorators.http import require_GET, require_POST
 
 from . import rules
 from .auth_emails import send_confirmation_email
-from .forms import RegistrationForm
+from .forms import FeedbackForm, RegistrationForm
+
+logger = logging.getLogger(__name__)
 from .models import (
     Action,
     Character,
@@ -1025,3 +1029,59 @@ def wiki_export(request, pk):
     return render(
         request, "characters/partials/wiki_modal.html", {"wiki_text": wiki_text}
     )
+
+
+# --- Feedback ---
+
+
+@login_required
+def feedback(request):
+    if request.method == "POST":
+        form = FeedbackForm(request.POST)
+        if form.is_valid():
+            user = request.user
+            body = (
+                f"{form.cleaned_data['description']}"
+                f"\n\n---\n*Submitted by {user.username} ({user.email})*"
+            )
+
+            repo = django_settings.GITHUB_FEEDBACK_REPO
+            token = django_settings.GITHUB_FEEDBACK_TOKEN
+            if not repo or not token:
+                logger.error("GITHUB_FEEDBACK_REPO or GITHUB_FEEDBACK_TOKEN not set")
+                messages.error(
+                    request,
+                    "Feedback system is not configured. Please contact the developer.",
+                )
+                return redirect("characters:feedback")
+
+            payload = json.dumps(
+                {
+                    "title": form.cleaned_data["title"],
+                    "body": body,
+                    "labels": ["user-feedback"],
+                }
+            ).encode()
+            req = Request(
+                f"https://api.github.com/repos/{repo}/issues",
+                data=payload,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/vnd.github+json",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            try:
+                urlopen(req)
+                messages.success(request, "Thanks! Your feedback has been submitted.")
+            except Exception:
+                logger.exception("Failed to create GitHub issue")
+                messages.error(
+                    request,
+                    "Something went wrong submitting your feedback. Please try again.",
+                )
+            return redirect("characters:feedback")
+    else:
+        form = FeedbackForm()
+    return render(request, "characters/feedback.html", {"form": form})

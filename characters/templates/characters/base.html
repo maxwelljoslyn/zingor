@@ -184,6 +184,7 @@
     <a href="/">Zingor</a>
     <nav>
       {% if user.is_authenticated %}
+        <a href="{% url 'characters:feedback' %}">Feedback</a>
         <span>{{ user.username }}</span>
         <form method="post" action="{% url 'characters:logout' %}" style="display:inline">
           {% csrf_token %}
