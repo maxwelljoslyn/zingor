@@ -3,10 +3,22 @@
 import os
 from pathlib import Path
 
+import sentry_sdk
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
+
+sentry_sdk.init(
+    dsn=os.environ.get("SENTRY_DSN", ""),
+    # Add data like request headers and IP for users.
+    # See https://docs.sentry.io/platforms/python/data-management/data-collected/
+    send_default_pii=True,
+    enable_logs=True,
+    traces_sample_rate=1.0,  # 1.0 captures 100% of transactions for tracing
+    profile_session_sample_rate=1.0,  # 1.0 captures 100% of profile sessions
+    profile_lifecycle="trace",  # "trace" automatically runs the profiler during an active transaction
+)
 
 SECRET_KEY = os.environ["SECRET_KEY"]
 
