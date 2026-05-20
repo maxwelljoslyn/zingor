@@ -8,7 +8,7 @@
       <ul class="spell-list">
         {% for spell in spell_list %}
         <li class="item-row">
-          <span>{{ spell.name }}</span>
+          <a href="https://wiki.alexissmolensk.com/index.php/{{ spell.name }}_(spell)" target="_blank">{{ spell.name }}</a>
           <button hx-delete="/spell/{{ spell.pk }}/delete/"
                   hx-target="#section-spells"
                   hx-swap="outerHTML"
