@@ -2,6 +2,8 @@
 
 from django import template
 
+from characters.wiki_links import linkify_field, linkify_spell, linkify_study
+
 register = template.Library()
 
 
@@ -40,6 +42,24 @@ def ceildiv(value, arg):
         return -(-v // a)
     except (TypeError, ValueError, ZeroDivisionError):
         return None
+
+
+@register.filter
+def spell_url(name: str) -> str:
+    """Return the wiki URL for a spell."""
+    return linkify_spell(name)
+
+
+@register.filter
+def study_url(name: str) -> str:
+    """Return the wiki URL for a sage study."""
+    return linkify_study(name)
+
+
+@register.filter
+def field_url(name: str) -> str:
+    """Return the wiki URL for a sage field."""
+    return linkify_field(name)
 
 
 @register.inclusion_tag("characters/partials/unknown_or_value.html")
