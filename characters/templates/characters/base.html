@@ -81,9 +81,10 @@
     :root {
       --bg: #1a1a2e;
       --surface: #16213e;
-      --surface-alt: #0f3460;
+      --surface-alt: #646e7a;
+      --surface-alt-2: #877359;
       --text: #e0e0e0;
-      --text-muted: #888;
+      --text-muted: #c5a3a3;
       --accent: #e94560;
       --accent-hover: #ff6b81;
       --border: #333;
@@ -174,10 +175,13 @@
     .flash { padding: 0.5rem; background: var(--surface-alt); border-radius: 4px; margin-bottom: 0.5rem; }
     .item-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; cursor: grab; }
     .spell-row { display: flex; align-items: center; padding: 0.3rem 0; gap: 1rem; }
-    .spell-row:nth-child(even) { background: var(--surface-alt); }
-    .item-wrapper:nth-child(even) { background: var(--surface-alt); }
+    .spell-row:nth-child(odd) { background: var(--surface-alt); }
+    .spell-row:nth-child(even) { background: var(--surface-alt-2); }
+    .item-wrapper:nth-child(odd) { background: var(--surface-alt); }
+    .item-wrapper:nth-child(even) { background: var(--surface-alt-2); }
     .item-wrapper + .item-wrapper { border-top: 1px solid var(--border); }
-    #section-sage tbody tr:nth-child(even) { background: var(--surface-alt); }
+    #section-sage tbody tr:nth-child(odd) { background: var(--surface-alt); }
+    #section-sage tbody tr:nth-child(even) { background: var(--surface-alt-2); }
     .contents { margin-left: 1.5rem; border-left: 2px solid var(--border); padding-left: 0.75rem; }
     .drop-target { outline: 2px dashed var(--accent); border-radius: 4px; background: var(--surface-alt); }
   </style>
