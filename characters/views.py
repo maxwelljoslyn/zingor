@@ -872,6 +872,16 @@ def delete_spell(request, spell_id):
     return _render_section(request, character, "spells")
 
 
+@login_required
+def toggle_spell_memorized(request, spell_id: int) -> HttpResponse:
+    if request.method != "POST":
+        return HttpResponse(status=405)
+    spell = get_object_or_404(Spell, pk=spell_id, character__user=request.user)
+    spell.is_memorized = "value" in request.POST
+    spell.save(update_fields=["is_memorized"])
+    return _render_section(request, spell.character, "spells")
+
+
 # --- Sage knowledge ---
 
 

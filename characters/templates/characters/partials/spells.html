@@ -7,8 +7,18 @@
       <strong>Level {{ level }}</strong>
       <ul class="spell-list">
         {% for spell in spell_list %}
-        <li class="item-row">
-          <a href="https://wiki.alexissmolensk.com/index.php/{{ spell.name }}_(spell)" target="_blank">{{ spell.name }}</a>
+        <li class="spell-row">
+          <a href="https://wiki.alexissmolensk.com/index.php/{{ spell.name }}_(spell)" target="_blank" style="flex: 1;">{{ spell.name }}</a>
+          <form hx-post="/spell/{{ spell.pk }}/toggle-memorized/"
+                hx-target="#section-spells"
+                hx-swap="outerHTML"
+                hx-trigger="change"
+                style="display: inline; flex-shrink: 0;">
+            {% csrf_token %}
+            <label style="font-size: 0.85rem;">
+              <input type="checkbox" name="value" {% if spell.is_memorized %}checked{% endif %}> Memorized
+            </label>
+          </form>
           <button hx-delete="/spell/{{ spell.pk }}/delete/"
                   hx-target="#section-spells"
                   hx-swap="outerHTML"

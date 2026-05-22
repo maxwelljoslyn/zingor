@@ -136,6 +136,7 @@ def character_to_wiki(character):
     lines.append("")
 
     # --- Spells ---
+    # is_memorized is too granular for the wiki export; omitted intentionally.
     lines.append("== Spells ==")
     spells = character.spells.all()
     if spells.exists():

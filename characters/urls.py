@@ -101,6 +101,11 @@ urlpatterns = [
         views.delete_spell,
         name="delete_spell",
     ),
+    path(
+        "spell/<int:spell_id>/toggle-memorized/",
+        views.toggle_spell_memorized,
+        name="toggle_spell_memorized",
+    ),
     # Section refreshes
     path(
         "character/<int:pk>/section/<str:section>/",

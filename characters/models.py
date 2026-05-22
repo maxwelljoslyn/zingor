@@ -302,6 +302,7 @@ class Spell(models.Model):
     )
     name = models.CharField(max_length=200)
     level = models.IntegerField()
+    is_memorized = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ("character", "name")
