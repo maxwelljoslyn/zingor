@@ -619,6 +619,10 @@ def add_item(request, pk):
     name = request.POST.get("name", "")
     weight_str = request.POST.get("weight", "0 oz")
     is_worn = request.POST.get("is_worn") == "on"
+    try:
+        quantity = max(1, min(100, int(request.POST.get("quantity", 1))))
+    except (TypeError, ValueError):
+        quantity = 1
 
     if weight_str:
         try:
@@ -629,24 +633,24 @@ def add_item(request, pk):
     else:
         weight = D(0) * u.oz
 
-    item = Item.objects.create(
-        owner=character,
-        name=name,
-        weight=str(weight),
-        is_worn=is_worn,
-    )
-
-    Action.record(
-        character=character,
-        action_type="add_item",
-        forward_data={"name": name, "weight": str(weight), "is_worn": is_worn},
-        reverse_data={
-            "item_id": item.pk,
-            "name": name,
-            "weight": str(weight),
-            "is_worn": is_worn,
-        },
-    )
+    for _ in range(quantity):
+        item = Item.objects.create(
+            owner=character,
+            name=name,
+            weight=str(weight),
+            is_worn=is_worn,
+        )
+        Action.record(
+            character=character,
+            action_type="add_item",
+            forward_data={"name": name, "weight": str(weight), "is_worn": is_worn},
+            reverse_data={
+                "item_id": item.pk,
+                "name": name,
+                "weight": str(weight),
+                "is_worn": is_worn,
+            },
+        )
 
     return _render_section(request, character, "inventory")
 

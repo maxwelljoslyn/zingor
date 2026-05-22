@@ -37,6 +37,7 @@
     {% csrf_token %}
     <input type="text" name="name" placeholder="Item name" required>
     <input type="text" name="weight" placeholder="Weight (e.g. 5 lb)" style="width: 8rem;">
+    <input type="number" name="quantity" value="1" min="1" max="100" style="width: 4rem;" title="Quantity">
     <label><input type="checkbox" name="is_worn"> Worn</label>
     <button type="submit" class="btn btn-small">Add Item</button>
   </form>

@@ -123,6 +123,17 @@ class ItemCRUDTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Item.objects.filter(owner=self.character).count(), 1)
 
+    def test_add_item_with_quantity(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/add-item/",
+            {"name": "Arrow", "weight": "1 oz", "quantity": "5"},
+        )
+        self.assertEqual(response.status_code, 200)
+        items = Item.objects.filter(owner=self.character, name="Arrow")
+        self.assertEqual(items.count(), 5)
+        for item in items:
+            self.assertEqual(str(item.weight), "1 ounce")
+
     def test_delete_item(self):
         item = Item.objects.create(owner=self.character, name="Sword", weight="3 lb")
         response = self.client.delete(f"/item/{item.pk}/delete/")
