@@ -1,0 +1,11 @@
+<!-- Undo/redo buttons from character_sheet.html toolbar -->
+<button hx-post="/character/{{ character.pk }}/undo/"
+        hx-target="#sheet-body"
+        hx-swap="innerHTML"
+        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+        class="btn btn-secondary btn-small">Undo</button>
+<button hx-post="/character/{{ character.pk }}/redo/"
+        hx-target="#sheet-body"
+        hx-swap="innerHTML"
+        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+        class="btn btn-secondary btn-small">Redo</button>

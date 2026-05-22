@@ -44,9 +44,6 @@ urlpatterns = [
         views.update_field,
         name="update_field",
     ),
-    # Undo/Redo
-    path("character/<int:pk>/undo/", views.undo, name="undo"),
-    path("character/<int:pk>/redo/", views.redo, name="redo"),
     # Items
     path("character/<int:pk>/add-item/", views.add_item, name="add_item"),
     path("item/<int:item_id>/delete/", views.delete_item, name="delete_item"),

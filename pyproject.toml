@@ -30,3 +30,4 @@ combine-as-imports = true
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "zingor.settings"
+testpaths = ["characters/tests"]

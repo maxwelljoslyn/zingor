@@ -23,7 +23,6 @@ from .forms import FeedbackForm, RegistrationForm
 
 logger = logging.getLogger(__name__)
 from .models import (
-    Action,
     Character,
     Condition,
     HitDie,
@@ -115,12 +114,6 @@ def _sheet_context(character):
     }
     ctx.update(_build_sage_context(character))
     return ctx
-
-
-def _render_sheet_body(request, character):
-    """Render just the sheet body partials (for HTMX swaps)."""
-    ctx = _sheet_context(character)
-    return render(request, "characters/partials/sheet_body.html", ctx)
 
 
 # --- Field type mapping ---
@@ -364,7 +357,7 @@ def edit_field(request, pk):
 @login_required
 @require_POST
 def update_field(request, pk):
-    """Generic field updater. Creates an Action for undo/redo."""
+    """Generic field updater."""
     character = get_object_or_404(Character, pk=pk, user=request.user)
     field_name = request.POST.get("field_name", "")
     raw_value = request.POST.get("value", "")
@@ -393,17 +386,6 @@ def update_field(request, pk):
 
     setattr(character, field_name, new_value)
     character.save(update_fields=[field_name, "updated_at"])
-
-    # Record action for undo/redo
-    # Store old/new as strings for JSON serializability
-    old_str = str(old_value) if old_value is not None else None
-    new_str = str(new_value) if new_value is not None else None
-    Action.record(
-        character=character,
-        action_type="set_field",
-        forward_data={field_name: new_str},
-        reverse_data={field_name: old_str},
-    )
 
     # Return the updated section, with OOB updates for cross-section dependencies
     section = SECTION_FOR_FIELD.get(field_name, "identity")
@@ -460,27 +442,6 @@ def _render_section(request, character, section, oob_sections=None):
 def section_refresh(request, pk, section):
     character = get_object_or_404(Character, pk=pk, user=request.user)
     return _render_section(request, character, section)
-
-
-# --- Undo/Redo ---
-
-
-@login_required
-@require_POST
-def undo(request, pk):
-    character = get_object_or_404(Character, pk=pk, user=request.user)
-    character.undo()
-    character.refresh_from_db()
-    return _render_sheet_body(request, character)
-
-
-@login_required
-@require_POST
-def redo(request, pk):
-    character = get_object_or_404(Character, pk=pk, user=request.user)
-    character.redo()
-    character.refresh_from_db()
-    return _render_sheet_body(request, character)
 
 
 # --- Item field editing ---
@@ -634,22 +595,11 @@ def add_item(request, pk):
         weight = D(0) * u.oz
 
     for _ in range(quantity):
-        item = Item.objects.create(
+        Item.objects.create(
             owner=character,
             name=name,
             weight=str(weight),
             is_worn=is_worn,
-        )
-        Action.record(
-            character=character,
-            action_type="add_item",
-            forward_data={"name": name, "weight": str(weight), "is_worn": is_worn},
-            reverse_data={
-                "item_id": item.pk,
-                "name": name,
-                "weight": str(weight),
-                "is_worn": is_worn,
-            },
         )
 
     return _render_section(request, character, "inventory")
@@ -661,19 +611,6 @@ def delete_item(request, item_id):
         return HttpResponse(status=405)
     item = get_object_or_404(Item, pk=item_id, owner__user=request.user)
     character = item.owner
-
-    Action.record(
-        character=character,
-        action_type="remove_item",
-        forward_data={"item_id": item.pk},
-        reverse_data={
-            "name": item.name,
-            "weight": str(item.weight),
-            "is_worn": item.is_worn,
-            "is_carried": item.is_carried,
-        },
-    )
-
     item.delete()
     return _render_section(request, character, "inventory")
 
@@ -691,7 +628,7 @@ def add_condition(request, pk):
     source = request.POST.get("source", "")
     scope = request.POST.get("scope", "") or None
 
-    condition = Condition.objects.create(
+    Condition.objects.create(
         character=character,
         modifier_type=modifier_type,
         target=target,
@@ -699,27 +636,6 @@ def add_condition(request, pk):
         source=source,
         scope=scope,
     )
-
-    Action.record(
-        character=character,
-        action_type="add_condition",
-        forward_data={
-            "modifier_type": modifier_type,
-            "target": target,
-            "value": value,
-            "source": source,
-            "scope": scope,
-        },
-        reverse_data={
-            "condition_id": condition.pk,
-            "modifier_type": modifier_type,
-            "target": target,
-            "value": value,
-            "source": source,
-            "scope": scope,
-        },
-    )
-
     return _render_section(
         request,
         character,
@@ -736,19 +652,6 @@ def delete_condition(request, condition_id):
         Condition, pk=condition_id, character__user=request.user
     )
     character = condition.character
-
-    Action.record(
-        character=character,
-        action_type="remove_condition",
-        forward_data={"condition_id": condition.pk},
-        reverse_data={
-            "modifier_type": condition.modifier_type,
-            "target": condition.target,
-            "value": condition.value,
-            "source": condition.source,
-        },
-    )
-
     condition.delete()
     return _render_section(
         request,
@@ -776,7 +679,7 @@ def add_hit_die(request, pk):
         level = int(request.POST.get("level", 1))
         con_bonus = int(request.POST.get("con_bonus", 0))
 
-    hd = HitDie.objects.create(
+    HitDie.objects.create(
         character=character,
         level=level,
         die_type=die_type,
@@ -784,27 +687,6 @@ def add_hit_die(request, pk):
         con_bonus=con_bonus,
         is_bodymass=is_bodymass,
     )
-
-    Action.record(
-        character=character,
-        action_type="add_hit_die",
-        forward_data={
-            "level": level,
-            "die_type": die_type,
-            "roll": roll,
-            "con_bonus": con_bonus,
-            "is_bodymass": is_bodymass,
-        },
-        reverse_data={
-            "hit_die_id": hd.pk,
-            "level": level,
-            "die_type": die_type,
-            "roll": roll,
-            "con_bonus": con_bonus,
-            "is_bodymass": is_bodymass,
-        },
-    )
-
     return _render_section(request, character, "hp")
 
 
@@ -814,20 +696,6 @@ def delete_hit_die(request, hit_die_id):
         return HttpResponse(status=405)
     hd = get_object_or_404(HitDie, pk=hit_die_id, character__user=request.user)
     character = hd.character
-
-    Action.record(
-        character=character,
-        action_type="remove_hit_die",
-        forward_data={"hit_die_id": hd.pk},
-        reverse_data={
-            "level": hd.level,
-            "die_type": hd.die_type,
-            "roll": hd.roll,
-            "con_bonus": hd.con_bonus,
-            "is_bodymass": hd.is_bodymass,
-        },
-    )
-
     hd.delete()
     return _render_section(request, character, "hp")
 
@@ -842,15 +710,7 @@ def add_spell(request, pk):
     name = request.POST.get("name", "")
     level = int(request.POST.get("level", 1))
 
-    spell = Spell.objects.create(character=character, name=name, level=level)
-
-    Action.record(
-        character=character,
-        action_type="add_spell",
-        forward_data={"name": name, "level": level},
-        reverse_data={"spell_id": spell.pk, "name": name, "level": level},
-    )
-
+    Spell.objects.create(character=character, name=name, level=level)
     return _render_section(request, character, "spells")
 
 
@@ -860,14 +720,6 @@ def delete_spell(request, spell_id):
         return HttpResponse(status=405)
     spell = get_object_or_404(Spell, pk=spell_id, character__user=request.user)
     character = spell.character
-
-    Action.record(
-        character=character,
-        action_type="remove_spell",
-        forward_data={"spell_id": spell.pk},
-        reverse_data={"name": spell.name, "level": spell.level},
-    )
-
     spell.delete()
     return _render_section(request, character, "spells")
 

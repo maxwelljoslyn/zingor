@@ -6,16 +6,6 @@
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
   <h1>{{ character.name|default:"Unnamed Character" }}</h1>
   <div class="toolbar">
-    <button hx-post="/character/{{ character.pk }}/undo/"
-            hx-target="#sheet-body"
-            hx-swap="innerHTML"
-            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-            class="btn btn-secondary btn-small">Undo</button>
-    <button hx-post="/character/{{ character.pk }}/redo/"
-            hx-target="#sheet-body"
-            hx-swap="innerHTML"
-            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-            class="btn btn-secondary btn-small">Redo</button>
     <button hx-get="/character/{{ character.pk }}/wiki-export/"
             hx-target="#wiki-modal"
             hx-swap="innerHTML"

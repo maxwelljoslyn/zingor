@@ -3,7 +3,7 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from characters.models import Action, Character, Condition, HitDie, Item, Spell
+from characters.models import Character, Condition, HitDie, Item, Spell
 
 
 class AuthViewTests(TestCase):
@@ -86,13 +86,6 @@ class FieldUpdateTests(TestCase):
         self.character.refresh_from_db()
         self.assertEqual(self.character.strength, 15)
 
-    def test_update_creates_action(self):
-        self.client.post(
-            f"/character/{self.character.pk}/update-field/",
-            {"field_name": "strength", "value": "15"},
-        )
-        self.assertEqual(Action.objects.filter(character=self.character).count(), 1)
-
     def test_update_race(self):
         self.client.post(
             f"/character/{self.character.pk}/update-field/",
@@ -139,36 +132,6 @@ class ItemCRUDTests(TestCase):
         response = self.client.delete(f"/item/{item.pk}/delete/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Item.objects.filter(owner=self.character).count(), 0)
-
-
-class UndoRedoViewTests(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="testpass")
-        self.client.login(username="testuser", password="testpass")
-        self.character = Character.objects.create(
-            user=self.user, name="Thorn", strength=10
-        )
-
-    def test_undo_redo_via_post(self):
-        # Set strength
-        self.client.post(
-            f"/character/{self.character.pk}/update-field/",
-            {"field_name": "strength", "value": "15"},
-        )
-        self.character.refresh_from_db()
-        self.assertEqual(self.character.strength, 15)
-
-        # Undo
-        response = self.client.post(f"/character/{self.character.pk}/undo/")
-        self.assertEqual(response.status_code, 200)
-        self.character.refresh_from_db()
-        self.assertEqual(self.character.strength, 10)
-
-        # Redo
-        response = self.client.post(f"/character/{self.character.pk}/redo/")
-        self.assertEqual(response.status_code, 200)
-        self.character.refresh_from_db()
-        self.assertEqual(self.character.strength, 15)
 
 
 class ConditionViewTests(TestCase):
