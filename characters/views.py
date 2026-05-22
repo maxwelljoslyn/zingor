@@ -18,7 +18,7 @@ from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_GET, require_POST
 
 from . import rules
-from .auth_emails import send_confirmation_email
+from .auth_emails import EmailSendError, send_confirmation_email
 from .forms import FeedbackForm, RegistrationForm
 
 logger = logging.getLogger(__name__)
@@ -215,7 +215,16 @@ def register(request):
         if form.is_valid():
             user = form.save()
             Profile.objects.create(user=user, email_confirmed=False)
-            send_confirmation_email(user, request)
+            try:
+                send_confirmation_email(user, request)
+            except EmailSendError:
+                login(request, user)
+                messages.error(
+                    request,
+                    "Account created, but we couldn't send a confirmation email."
+                    " You can resend it from your profile.",
+                )
+                return redirect("characters:email_confirmation_status")
             if not django_settings.EMAIL_CONFIRMATION_REQUIRED:
                 login(request, user)
                 messages.success(request, "Email auto-confirmed in dev.")
@@ -250,7 +259,13 @@ def register_confirm(request, uidb64, token):
 @login_required
 @require_POST
 def resend_confirmation(request):
-    send_confirmation_email(request.user, request)
+    try:
+        send_confirmation_email(request.user, request)
+    except EmailSendError:
+        messages.error(
+            request, "Could not send confirmation email. Please try again later."
+        )
+        return redirect("characters:email_confirmation_status")
     if request.user.profile.email_confirmed:
         messages.success(request, "Email auto-confirmed in dev.")
     else:
