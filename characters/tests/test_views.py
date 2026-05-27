@@ -64,11 +64,12 @@ class CharacterSheetViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Thorn")
 
-    def test_other_users_character_404(self):
+    def test_other_users_character_viewable(self):
         other_user = User.objects.create_user(username="other", password="testpass")
-        other_char = Character.objects.create(user=other_user, name="Enemy")
+        other_char = Character.objects.create(user=other_user, name="Ally")
         response = self.client.get(f"/character/{other_char.pk}/")
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ally")
 
 
 class FieldUpdateTests(TestCase):

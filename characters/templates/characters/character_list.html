@@ -1,19 +1,18 @@
 {% extends "characters/base.html" %}
-{% block title %}My Characters — Zingor{% endblock %}
+{% block title %}Zingor{% endblock %}
 {% block content %}
-<h1>My Characters</h1>
-
+<h1>Characters</h1>
 <form method="post" action="/character/create/" style="margin-bottom: 1rem;">
   {% csrf_token %}
   <button type="submit" class="btn">+ New Character</button>
 </form>
-
 {% if characters %}
 <div class="section">
   <table>
     <thead>
       <tr>
         <th>Name</th>
+        <th>Player</th>
         <th>Race</th>
         <th>Class</th>
         <th>Level</th>
@@ -24,6 +23,7 @@
       {% for char in characters %}
       <tr>
         <td><a href="/character/{{ char.pk }}/" style="color: var(--accent);">{{ char.name|default:"Unnamed" }}</a></td>
+        <td>{{ char.user.username }}</td>
         <td>{{ char.race|default:"—" }}</td>
         <td>{{ char.char_class|default:"—" }}</td>
         <td>{{ char.level|default:"—" }}</td>
@@ -35,5 +35,34 @@
 </div>
 {% else %}
 <p style="color: var(--text-muted);">No characters yet. Create one to get started.</p>
+{% endif %}
+<h1 style="margin-top: 2rem;">Social Inventory</h1>
+{% if all_items %}
+<div class="section">
+  <table>
+    <thead>
+      <tr>
+        <th>Owner</th>
+        <th>Item</th>
+        <th>Weight</th>
+        <th>Worn</th>
+        <th>Carried</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in all_items %}
+      <tr>
+        <td><a href="/character/{{ item.owner.pk }}/" style="color: var(--accent);">{{ item.owner.name|default:"Unnamed" }}</a></td>
+        <td>{{ item.name }}</td>
+        <td>{{ item.adjusted_weight }}</td>
+        <td>{% if item.is_worn %}Yes{% else %}—{% endif %}</td>
+        <td>{% if item.is_carried %}Yes{% else %}No{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p style="color: var(--text-muted);">No items yet.</p>
 {% endif %}
 {% endblock %}

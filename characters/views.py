@@ -1,5 +1,6 @@
 """Views for the characters app."""
 
+import functools
 import json
 import logging
 from collections import OrderedDict
@@ -11,7 +12,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
@@ -32,6 +33,47 @@ from .models import (
     Spell,
 )
 from .units import D, u
+
+
+def character_owner_required(view_func):
+    """Reject requests where the logged-in user doesn't own the character.
+
+    Works with views whose URL has a `pk` kwarg pointing to a Character,
+    and with views whose URL has an `item_id`, `condition_id`, `hit_die_id`,
+    or `spell_id` kwarg pointing to a related object.
+    """
+
+    @functools.wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if "pk" in kwargs:
+            char = get_object_or_404(Character, pk=kwargs["pk"])
+            owner = char.user
+        elif "item_id" in kwargs:
+            item = get_object_or_404(Item, pk=kwargs["item_id"])
+            owner = item.owner.user
+        elif "container_id" in kwargs:
+            item = get_object_or_404(Item, pk=kwargs["container_id"])
+            owner = item.owner.user
+        elif "condition_id" in kwargs:
+            cond = get_object_or_404(Condition, pk=kwargs["condition_id"])
+            owner = cond.character.user
+        elif "hit_die_id" in kwargs:
+            hd = get_object_or_404(HitDie, pk=kwargs["hit_die_id"])
+            owner = hd.character.user
+        elif "spell_id" in kwargs:
+            spell = get_object_or_404(Spell, pk=kwargs["spell_id"])
+            owner = spell.character.user
+        elif "study_pk" in kwargs:
+            row = get_object_or_404(SageStudyPoints, pk=kwargs["study_pk"])
+            owner = row.character.user
+        else:
+            return HttpResponseForbidden("Cannot determine character ownership.")
+        if request.user != owner:
+            return HttpResponseForbidden("You do not own this character.")
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
+
 
 # --- Helpers ---
 
@@ -283,8 +325,19 @@ def email_confirmation_status(request):
 
 @login_required
 def character_list(request):
-    characters = request.user.characters.all()
-    return render(request, "characters/character_list.html", {"characters": characters})
+    characters = Character.objects.select_related("user").order_by(
+        "user__username", "name"
+    )
+    all_items = (
+        Item.objects.select_related("owner", "owner__user")
+        .filter(container__isnull=True)
+        .order_by("owner__name", "name")
+    )
+    return render(
+        request,
+        "characters/character_list.html",
+        {"characters": characters, "all_items": all_items},
+    )
 
 
 @login_required
@@ -299,8 +352,9 @@ def character_create(request):
 
 @login_required
 def character_sheet(request, pk):
-    character = get_object_or_404(Character, pk=pk, user=request.user)
+    character = get_object_or_404(Character, pk=pk)
     ctx = _sheet_context(character)
+    ctx["is_owner"] = character.user == request.user
     return render(request, "characters/character_sheet.html", ctx)
 
 
@@ -308,9 +362,10 @@ def character_sheet(request, pk):
 
 
 @login_required
+@character_owner_required
 def edit_field(request, pk):
     """Return an inline edit form for a single field."""
-    character = get_object_or_404(Character, pk=pk, user=request.user)
+    character = get_object_or_404(Character, pk=pk)
     field_name = request.GET.get("field", "")
     field_type = FIELD_TYPES.get(field_name, "text")
     current_value = getattr(character, field_name, None)
@@ -355,10 +410,11 @@ def edit_field(request, pk):
 
 
 @login_required
+@character_owner_required
 @require_POST
 def update_field(request, pk):
     """Generic field updater."""
-    character = get_object_or_404(Character, pk=pk, user=request.user)
+    character = get_object_or_404(Character, pk=pk)
     field_name = request.POST.get("field_name", "")
     raw_value = request.POST.get("value", "")
 
@@ -411,6 +467,7 @@ def _render_section(request, character, section, oob_sections=None):
     oob_sections: list of additional section names to include as hx-swap-oob.
     """
     ctx = _sheet_context(character)
+    ctx["is_owner"] = character.user == request.user
     template_name = f"characters/partials/{section}.html"
     response = render(request, template_name, ctx)
 
@@ -440,7 +497,7 @@ def _render_section(request, character, section, oob_sections=None):
 
 @login_required
 def section_refresh(request, pk, section):
-    character = get_object_or_404(Character, pk=pk, user=request.user)
+    character = get_object_or_404(Character, pk=pk)
     return _render_section(request, character, section)
 
 
@@ -448,9 +505,10 @@ def section_refresh(request, pk, section):
 
 
 @login_required
+@character_owner_required
 def edit_item_field(request, item_id):
     """Return an inline edit form for a single item field."""
-    item = get_object_or_404(Item, pk=item_id, owner__user=request.user)
+    item = get_object_or_404(Item, pk=item_id)
     field_name = request.GET.get("field", "")
 
     if field_name == "name":
@@ -495,10 +553,11 @@ def edit_item_field(request, item_id):
 
 
 @login_required
+@character_owner_required
 @require_POST
 def update_item_field(request, item_id):
     """Update a single field on an item."""
-    item = get_object_or_404(Item, pk=item_id, owner__user=request.user)
+    item = get_object_or_404(Item, pk=item_id)
     field_name = request.POST.get("field_name", "")
     raw_value = request.POST.get("value", "")
 
@@ -545,9 +604,10 @@ def _would_create_cycle(container, item):
 
 
 @login_required
+@character_owner_required
 @require_POST
 def put_in_container(request, container_id):
-    container = get_object_or_404(Item, pk=container_id, owner__user=request.user)
+    container = get_object_or_404(Item, pk=container_id)
     if not container.is_container:
         return HttpResponse("Item is not a container", status=400)
     item_id = request.POST.get("item_id")
@@ -562,9 +622,10 @@ def put_in_container(request, container_id):
 
 
 @login_required
+@character_owner_required
 @require_POST
 def remove_from_container(request, item_id):
-    item = get_object_or_404(Item, pk=item_id, owner__user=request.user)
+    item = get_object_or_404(Item, pk=item_id)
     item.container = None
     item.save(update_fields=["container"])
     return _render_section(request, item.owner, "inventory")
@@ -574,9 +635,10 @@ def remove_from_container(request, item_id):
 
 
 @login_required
+@character_owner_required
 @require_POST
 def add_item(request, pk):
-    character = get_object_or_404(Character, pk=pk, user=request.user)
+    character = get_object_or_404(Character, pk=pk)
     name = request.POST.get("name", "")
     weight_str = request.POST.get("weight", "0 oz")
     is_worn = request.POST.get("is_worn") == "on"
@@ -606,10 +668,11 @@ def add_item(request, pk):
 
 
 @login_required
+@character_owner_required
 def delete_item(request, item_id):
     if request.method != "DELETE":
         return HttpResponse(status=405)
-    item = get_object_or_404(Item, pk=item_id, owner__user=request.user)
+    item = get_object_or_404(Item, pk=item_id)
     character = item.owner
     item.delete()
     return _render_section(request, character, "inventory")
@@ -619,9 +682,10 @@ def delete_item(request, item_id):
 
 
 @login_required
+@character_owner_required
 @require_POST
 def add_condition(request, pk):
-    character = get_object_or_404(Character, pk=pk, user=request.user)
+    character = get_object_or_404(Character, pk=pk)
     modifier_type = request.POST.get("modifier_type", "ability")
     target = request.POST.get("target", "") or None
     value = int(request.POST.get("value", 0))
@@ -645,12 +709,11 @@ def add_condition(request, pk):
 
 
 @login_required
+@character_owner_required
 def delete_condition(request, condition_id):
     if request.method != "DELETE":
         return HttpResponse(status=405)
-    condition = get_object_or_404(
-        Condition, pk=condition_id, character__user=request.user
-    )
+    condition = get_object_or_404(Condition, pk=condition_id)
     character = condition.character
     condition.delete()
     return _render_section(
@@ -665,9 +728,10 @@ def delete_condition(request, condition_id):
 
 
 @login_required
+@character_owner_required
 @require_POST
 def add_hit_die(request, pk):
-    character = get_object_or_404(Character, pk=pk, user=request.user)
+    character = get_object_or_404(Character, pk=pk)
     is_bodymass = request.POST.get("is_bodymass") == "true"
     die_type = request.POST.get("die_type", "d10")
     roll = int(request.POST.get("roll", 1))
@@ -691,10 +755,11 @@ def add_hit_die(request, pk):
 
 
 @login_required
+@character_owner_required
 def delete_hit_die(request, hit_die_id):
     if request.method != "DELETE":
         return HttpResponse(status=405)
-    hd = get_object_or_404(HitDie, pk=hit_die_id, character__user=request.user)
+    hd = get_object_or_404(HitDie, pk=hit_die_id)
     character = hd.character
     hd.delete()
     return _render_section(request, character, "hp")
@@ -704,9 +769,10 @@ def delete_hit_die(request, hit_die_id):
 
 
 @login_required
+@character_owner_required
 @require_POST
 def add_spell(request, pk):
-    character = get_object_or_404(Character, pk=pk, user=request.user)
+    character = get_object_or_404(Character, pk=pk)
     name = request.POST.get("name", "")
     level = int(request.POST.get("level", 1))
 
@@ -715,20 +781,22 @@ def add_spell(request, pk):
 
 
 @login_required
+@character_owner_required
 def delete_spell(request, spell_id):
     if request.method != "DELETE":
         return HttpResponse(status=405)
-    spell = get_object_or_404(Spell, pk=spell_id, character__user=request.user)
+    spell = get_object_or_404(Spell, pk=spell_id)
     character = spell.character
     spell.delete()
     return _render_section(request, character, "spells")
 
 
 @login_required
+@character_owner_required
 def toggle_spell_memorized(request, spell_id: int) -> HttpResponse:
     if request.method != "POST":
         return HttpResponse(status=405)
-    spell = get_object_or_404(Spell, pk=spell_id, character__user=request.user)
+    spell = get_object_or_404(Spell, pk=spell_id)
     spell.is_memorized = "value" in request.POST
     spell.save(update_fields=["is_memorized"])
     return _render_section(request, spell.character, "spells")
@@ -776,12 +844,13 @@ def _build_sage_context(character):
 
 
 @login_required
+@character_owner_required
 @require_GET
 def sage_chosen_field_form(request, pk):
     """Return the inline form snippet for editing chosen field/study."""
     from .sage import sage_fields
 
-    character = get_object_or_404(Character, pk=pk, user=request.user)
+    character = get_object_or_404(Character, pk=pk)
     initial_field = character.chosen_field or next(iter(sage_fields))
     initial_studies = (
         sage_fields[initial_field]["studies"] if initial_field in sage_fields else []
@@ -800,12 +869,13 @@ def sage_chosen_field_form(request, pk):
 
 
 @login_required
+@character_owner_required
 @require_GET
 def sage_study_options(request, pk):
     """Return <option> tags for the studies in the given field (used by HTMX field-select)."""
     from .sage import sage_fields
 
-    get_object_or_404(Character, pk=pk, user=request.user)
+    get_object_or_404(Character, pk=pk)
     field_name = request.GET.get("chosen_field", "")
     studies = sage_fields.get(field_name, {}).get("studies", [])
     return render(
@@ -816,12 +886,13 @@ def sage_study_options(request, pk):
 
 
 @login_required
+@character_owner_required
 @require_POST
 def sage_chosen_field(request, pk):
     """Save chosen field/study and bulk-create class study rows."""
     from .sage import CLASS_FIELDS, sage_fields
 
-    character = get_object_or_404(Character, pk=pk, user=request.user)
+    character = get_object_or_404(Character, pk=pk)
     chosen_field = request.POST.get("chosen_field", "")
     chosen_study = request.POST.get("chosen_study", "")
 
@@ -851,16 +922,17 @@ def sage_chosen_field(request, pk):
             ignore_conflicts=True,
         )
 
-    return render(
-        request, "characters/partials/sage.html", _build_sage_context(character)
-    )
+    sage_ctx = _build_sage_context(character)
+    sage_ctx["is_owner"] = True
+    return render(request, "characters/partials/sage.html", sage_ctx)
 
 
 @login_required
+@character_owner_required
 @require_POST
 def sage_study_points(request, pk, study_pk):
     """Update points for a single study row."""
-    character = get_object_or_404(Character, pk=pk, user=request.user)
+    character = get_object_or_404(Character, pk=pk)
     row = get_object_or_404(SageStudyPoints, pk=study_pk, character=character)
 
     raw = request.POST.get("points")
@@ -873,18 +945,19 @@ def sage_study_points(request, pk, study_pk):
 
     row.points = points
     row.save(update_fields=["points"])
-    return render(
-        request, "characters/partials/sage.html", _build_sage_context(character)
-    )
+    sage_ctx = _build_sage_context(character)
+    sage_ctx["is_owner"] = True
+    return render(request, "characters/partials/sage.html", sage_ctx)
 
 
 @login_required
+@character_owner_required
 @require_POST
 def sage_study_add(request, pk):
     """Add a new study row to the character's sage table."""
     from .sage import sage_studies
 
-    character = get_object_or_404(Character, pk=pk, user=request.user)
+    character = get_object_or_404(Character, pk=pk)
     study = request.POST.get("study", "")
 
     if study not in sage_studies:
@@ -893,9 +966,9 @@ def sage_study_add(request, pk):
     SageStudyPoints.objects.get_or_create(
         character=character, study=study, defaults={"points": 0}
     )
-    return render(
-        request, "characters/partials/sage.html", _build_sage_context(character)
-    )
+    sage_ctx = _build_sage_context(character)
+    sage_ctx["is_owner"] = True
+    return render(request, "characters/partials/sage.html", sage_ctx)
 
 
 # --- Wiki export ---
@@ -903,7 +976,7 @@ def sage_study_add(request, pk):
 
 @login_required
 def wiki_export(request, pk):
-    character = get_object_or_404(Character, pk=pk, user=request.user)
+    character = get_object_or_404(Character, pk=pk)
     from .wiki_export import character_to_wiki as _character_to_wiki
 
     wiki_text = _character_to_wiki(character)

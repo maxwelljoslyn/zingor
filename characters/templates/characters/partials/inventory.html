@@ -21,7 +21,6 @@
       </span>
     {% endif %}
   </div>
-
   {% if items %}
     {% for item in items %}
       {% include "characters/partials/item.html" %}
@@ -29,7 +28,7 @@
   {% else %}
     <p style="color: var(--text-muted); font-size: 0.9rem;">No items.</p>
   {% endif %}
-
+  {% if is_owner %}
   <form hx-post="/character/{{ character.pk }}/add-item/"
         hx-target="#section-inventory"
         hx-swap="outerHTML"
@@ -41,4 +40,5 @@
     <label><input type="checkbox" name="is_worn"> Worn</label>
     <button type="submit" class="btn btn-small">Add Item</button>
   </form>
+  {% endif %}
 </div>

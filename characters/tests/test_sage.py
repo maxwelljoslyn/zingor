@@ -292,8 +292,8 @@ class SageChosenFieldFormViewTests(TestCase):
         self.assertContains(response, "Animal Training")
         self.assertContains(response, "<select")
 
-    def test_wrong_user_returns_404(self):
+    def test_wrong_user_returns_403(self):
         other_char = Character.objects.create(user=self.other_user, name="Enemy")
         url = f"/character/{other_char.pk}/sage/chosen-field/form/"
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 403)

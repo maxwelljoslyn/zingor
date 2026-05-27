@@ -4,52 +4,76 @@
   <div style="margin-bottom: 0.75rem;">
     <h3 style="font-size: 0.95rem;">Background</h3>
     {% if character.background %}
+      {% if is_owner %}
       <span id="field-background"
             class="field-value"
             hx-get="/character/{{ character.pk }}/edit-field/?field=background"
             hx-target="#field-background"
             hx-swap="outerHTML"
             style="cursor: pointer;">{{ character.background|linebreaksbr }}</span>
+      {% else %}
+      <span>{{ character.background|linebreaksbr }}</span>
+      {% endif %}
     {% else %}
+      {% if is_owner %}
       <span class="field-unknown"
             id="field-background"
             hx-get="/character/{{ character.pk }}/edit-field/?field=background"
             hx-target="#field-background"
             hx-swap="outerHTML">Click to add background</span>
+      {% else %}
+      <span style="color: var(--text-muted);">—</span>
+      {% endif %}
     {% endif %}
   </div>
   <div style="margin-bottom: 0.75rem;">
     <h3 style="font-size: 0.95rem;">Appearance</h3>
     {% if character.appearance %}
+      {% if is_owner %}
       <span id="field-appearance"
             class="field-value"
             hx-get="/character/{{ character.pk }}/edit-field/?field=appearance"
             hx-target="#field-appearance"
             hx-swap="outerHTML"
             style="cursor: pointer;">{{ character.appearance|linebreaksbr }}</span>
+      {% else %}
+      <span>{{ character.appearance|linebreaksbr }}</span>
+      {% endif %}
     {% else %}
+      {% if is_owner %}
       <span class="field-unknown"
             id="field-appearance"
             hx-get="/character/{{ character.pk }}/edit-field/?field=appearance"
             hx-target="#field-appearance"
             hx-swap="outerHTML">Click to add appearance</span>
+      {% else %}
+      <span style="color: var(--text-muted);">—</span>
+      {% endif %}
     {% endif %}
   </div>
   <div>
     <h3 style="font-size: 0.95rem;">Notes</h3>
     {% if character.notes %}
+      {% if is_owner %}
       <span id="field-notes"
             class="field-value"
             hx-get="/character/{{ character.pk }}/edit-field/?field=notes"
             hx-target="#field-notes"
             hx-swap="outerHTML"
             style="cursor: pointer;">{{ character.notes|linebreaksbr }}</span>
+      {% else %}
+      <span>{{ character.notes|linebreaksbr }}</span>
+      {% endif %}
     {% else %}
+      {% if is_owner %}
       <span class="field-unknown"
             id="field-notes"
             hx-get="/character/{{ character.pk }}/edit-field/?field=notes"
             hx-target="#field-notes"
             hx-swap="outerHTML">Click to add notes</span>
+      {% else %}
+      <span style="color: var(--text-muted);">—</span>
+      {% endif %}
     {% endif %}
   </div>
 </div>

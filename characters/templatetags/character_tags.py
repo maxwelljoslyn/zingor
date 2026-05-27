@@ -62,8 +62,8 @@ def field_url(name: str) -> str:
     return linkify_field(name)
 
 
-@register.inclusion_tag("characters/partials/unknown_or_value.html")
-def unknown_or_value(value, field_name, character_id, display_value=None):
+@register.inclusion_tag("characters/partials/unknown_or_value.html", takes_context=True)
+def unknown_or_value(context, value, field_name, character_id, display_value=None):
     """Render a value or a clickable 'Unknown' placeholder."""
     return {
         "value": value,
@@ -71,4 +71,5 @@ def unknown_or_value(value, field_name, character_id, display_value=None):
         "field_name": field_name,
         "character_id": character_id,
         "is_set": value is not None and value != "",
+        "is_owner": context.get("is_owner", False),
     }

@@ -1,37 +1,42 @@
 <div class="item-wrapper"
      {% if item.is_container %}data-item-id="{{ item.pk }}"
-     ondragover="zingorDragOver(event)"
+     {% if is_owner %}ondragover="zingorDragOver(event)"
      ondragenter="zingorDragEnter(event)"
      ondragleave="zingorDragLeave(event)"
-     ondrop="zingorDrop(event)"{% endif %}>
+     ondrop="zingorDrop(event)"{% endif %}{% endif %}>
   <div class="item-row" id="item-{{ item.pk }}"
-       draggable="true"
+       {% if is_owner %}draggable="true"
        data-item-id="{{ item.pk }}"
        ondragstart="zingorDragStart(event)"
-       ondragend="zingorDragEnd(event)">
+       ondragend="zingorDragEnd(event)"{% endif %}>
     <span>
+      {% if is_owner %}
       <strong id="item-{{ item.pk }}-name"
               hx-get="/item/{{ item.pk }}/edit-field/?field=name"
               hx-target="#item-{{ item.pk }}-name"
               hx-swap="outerHTML"
               style="cursor: pointer;">{{ item.name }}</strong>
+      {% else %}
+      <strong>{{ item.name }}</strong>
+      {% endif %}
       <span style="color: var(--text-muted); font-size: 0.85rem;">
-        (<span id="item-{{ item.pk }}-weight"
+        ({% if is_owner %}<span id="item-{{ item.pk }}-weight"
                hx-get="/item/{{ item.pk }}/edit-field/?field=weight"
                hx-target="#item-{{ item.pk }}-weight"
                hx-swap="outerHTML"
-               style="cursor: pointer;">{{ item.adjusted_weight }}</span>)
+               style="cursor: pointer;">{{ item.adjusted_weight }}</span>{% else %}{{ item.adjusted_weight }}{% endif %})
       </span>
       {% if item.is_container %}
       <span style="color: var(--text-muted); font-size: 0.85rem;">
-        [cap: <span id="item-{{ item.pk }}-capacity"
+        [cap: {% if is_owner %}<span id="item-{{ item.pk }}-capacity"
                     hx-get="/item/{{ item.pk }}/edit-field/?field=capacity"
                     hx-target="#item-{{ item.pk }}-capacity"
                     hx-swap="outerHTML"
-                    style="cursor: pointer;">{% if item.capacity %}{{ item.capacity }}{% else %}—{% endif %}</span>]
+                    style="cursor: pointer;">{% if item.capacity %}{{ item.capacity }}{% else %}—{% endif %}</span>{% else %}{% if item.capacity %}{{ item.capacity }}{% else %}—{% endif %}{% endif %}]
       </span>
       {% endif %}
     </span>
+    {% if is_owner %}
     <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
       <form hx-post="/item/{{ item.pk }}/update-field/"
             hx-target="#section-inventory"
@@ -71,6 +76,13 @@
               hx-confirm="Remove {{ item.name }}?"
               class="btn btn-danger btn-small">x</button>
     </span>
+    {% else %}
+    <span style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+      {% if item.is_worn %}Worn{% endif %}
+      {% if item.is_container %}Container{% endif %}
+      {% if not item.is_carried %}[not carried]{% endif %}
+    </span>
+    {% endif %}
   </div>
   {% if item.contents.all %}
   <div class="contents">

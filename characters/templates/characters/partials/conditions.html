@@ -16,17 +16,19 @@
         {% endif %}
         {% if not cond.is_active %}<em>(inactive)</em>{% endif %}
       </span>
+      {% if is_owner %}
       <button hx-delete="/condition/{{ cond.pk }}/delete/"
               hx-target="#section-conditions"
               hx-swap="outerHTML"
               hx-confirm="Remove condition?"
               class="btn btn-danger btn-small">x</button>
+      {% endif %}
     </div>
     {% endfor %}
   {% else %}
     <p style="color: var(--text-muted); font-size: 0.9rem;">No active conditions.</p>
   {% endif %}
-
+  {% if is_owner %}
   <form hx-post="/character/{{ character.pk }}/add-condition/"
         hx-target="#section-conditions"
         hx-swap="outerHTML"
@@ -46,4 +48,5 @@
     </select>
     <button type="submit" class="btn btn-small">Add</button>
   </form>
+  {% endif %}
 </div>

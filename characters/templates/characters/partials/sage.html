@@ -1,14 +1,13 @@
 {% load character_tags %}
 <div class="section" id="section-sage" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <h2>Sage Knowledge</h2>
-
   {{ sage_fields_json|json_script:"sage-fields-data" }}
   <script>window.SAGE_FIELDS = JSON.parse(document.getElementById('sage-fields-data').textContent);</script>
-
   <table>
     <tr>
       <th>Chosen Field &amp; Study</th>
       <td>
+        {% if is_owner %}
         <span
           id="sage-chosen-field"
           hx-get="{% url 'characters:sage_chosen_field_form' character.pk %}"
@@ -23,10 +22,18 @@
             Not set
           {% endif %}
         </span>
+        {% else %}
+        <span>
+          {% if character.chosen_field %}
+            <a href="{{ character.chosen_field|field_url }}" target="_blank">{{ character.chosen_field }}</a>{% if character.chosen_study %} / <a href="{{ character.chosen_study|study_url }}" target="_blank">{{ character.chosen_study }}</a>{% endif %}
+          {% else %}
+            Not set
+          {% endif %}
+        </span>
+        {% endif %}
       </td>
     </tr>
   </table>
-
   <h3>Studies</h3>
   {% if sage_studies_by_field %}
     {% for group in sage_studies_by_field %}
@@ -44,6 +51,7 @@
             <tr>
               <td><a href="{{ entry.name|study_url }}" target="_blank">{{ entry.name }}</a></td>
               <td>
+                {% if is_owner %}
                 <input
                   type="number"
                   name="points"
@@ -55,6 +63,9 @@
                   hx-trigger="blur"
                   style="width: 5em;"
                 >
+                {% else %}
+                {{ entry.points }}
+                {% endif %}
               </td>
               <td>{{ entry.rank }}</td>
             </tr>
@@ -65,7 +76,7 @@
   {% else %}
     <p>No studies tracked yet.</p>
   {% endif %}
-
+  {% if is_owner %}
   <h3>Add Study</h3>
   <form
     hx-post="{% url 'characters:sage_study_add' character.pk %}"
@@ -80,4 +91,5 @@
     </select>
     <button type="submit">Add Study</button>
   </form>
+  {% endif %}
 </div>

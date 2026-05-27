@@ -14,7 +14,7 @@
           {% if ability.name == "strength" and ability.base_score == 18 %}
             {% if ability.percentile_strength is not None %}
               /{{ ability.percentile_strength|stringformat:"02d" }}
-            {% else %}
+            {% elif is_owner %}
               <a href="#"
                  hx-get="/character/{{ character.pk }}/edit-field/?field=percentile_strength"
                  hx-target="closest td"
