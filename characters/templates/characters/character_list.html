@@ -37,14 +37,16 @@
 <p style="color: var(--text-muted);">No characters yet. Create one to get started.</p>
 {% endif %}
 <h1 style="margin-top: 2rem;">Party Inventory</h1>
+Click on Owner, Item, or Weight to sort the table by that column.
+
 {% if all_items %}
 <div class="section">
-  <table>
+  <table id="party-inventory-table">
     <thead>
       <tr>
-        <th>Owner</th>
-        <th>Item</th>
-        <th>Weight</th>
+        <th class="sortable" data-col="0" data-type="text">Owner <span class="sort-arrow"></span></th>
+        <th class="sortable" data-col="1" data-type="text">Item <span class="sort-arrow"></span></th>
+        <th class="sortable" data-col="2" data-type="number">Weight <span class="sort-arrow"></span></th>
         <th>Worn</th>
         <th>Carried</th>
       </tr>
@@ -54,7 +56,8 @@
       <tr>
         <td><a href="/character/{{ item.owner.pk }}/" style="color: var(--accent);">{{ item.owner.name|default:"Unnamed" }}</a></td>
         <td>{{ item.name }}</td>
-        <td>{{ item.adjusted_weight }}</td>
+        {# Normalized to oz so client-side sort compares a single unit, not mixed lb/oz strings #}
+        <td data-sort-value="{{ item.adjusted_weight_oz }}">{{ item.adjusted_weight }}</td>
         <td>{% if item.is_worn %}Yes{% else %}—{% endif %}</td>
         <td>{% if item.is_carried %}Yes{% else %}No{% endif %}</td>
       </tr>
@@ -65,4 +68,46 @@
 {% else %}
 <p style="color: var(--text-muted);">No items yet.</p>
 {% endif %}
+<script>
+(function() {
+  var table = document.getElementById('party-inventory-table');
+  if (!table) return;
+  var headers = table.querySelectorAll('th.sortable');
+  var currentCol = null;
+  var ascending = true;
+  headers.forEach(function(th) {
+    th.addEventListener('click', function() {
+      var col = parseInt(th.dataset.col);
+      var type = th.dataset.type;
+      if (currentCol === col) {
+        ascending = !ascending;
+      } else {
+        currentCol = col;
+        ascending = true;
+      }
+      var tbody = table.querySelector('tbody');
+      var rows = Array.from(tbody.querySelectorAll('tr'));
+      rows.sort(function(a, b) {
+        var aCell = a.children[col];
+        var bCell = b.children[col];
+        if (type === 'number') {
+          var aVal = parseFloat(aCell.dataset.sortValue) || 0;
+          var bVal = parseFloat(bCell.dataset.sortValue) || 0;
+          return ascending ? aVal - bVal : bVal - aVal;
+        }
+        var aVal = aCell.textContent.trim().toLowerCase();
+        var bVal = bCell.textContent.trim().toLowerCase();
+        if (aVal < bVal) return ascending ? -1 : 1;
+        if (aVal > bVal) return ascending ? 1 : -1;
+        return 0;
+      });
+      rows.forEach(function(row) { tbody.appendChild(row); });
+      headers.forEach(function(h) {
+        h.querySelector('.sort-arrow').textContent = '';
+      });
+      th.querySelector('.sort-arrow').textContent = ascending ? ' ▲' : ' ▼';
+    });
+  });
+})();
+</script>
 {% endblock %}
