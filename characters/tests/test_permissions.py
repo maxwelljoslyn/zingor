@@ -406,8 +406,8 @@ class HomepageTests(TestCase):
         self.assertContains(response, "alice")
         self.assertContains(response, "bob")
 
-    def test_homepage_shows_social_inventory(self):
+    def test_homepage_shows_party_inventory(self):
         response = self.client.get("/")
-        self.assertContains(response, "Social Inventory")
+        self.assertContains(response, "Party Inventory")
         self.assertContains(response, "Longsword")
         self.assertContains(response, "Spellbook")
