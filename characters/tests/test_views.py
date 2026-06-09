@@ -1,7 +1,7 @@
 """Tests for the views."""
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from characters.models import Character, Condition, HitDie, Item, Spell
 
@@ -26,6 +26,25 @@ class AuthViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertTrue(User.objects.filter(username="newuser").exists())
+
+    @override_settings(REGISTRATION_ENABLED=False)
+    def test_register_page_redirects_when_disabled(self):
+        response = self.client.get("/register/")
+        self.assertRedirects(response, "/login/")
+
+    @override_settings(REGISTRATION_ENABLED=False)
+    def test_register_post_creates_no_user_when_disabled(self):
+        response = self.client.post(
+            "/register/",
+            {
+                "username": "spammer",
+                "email": "spammer@example.com",
+                "password1": "testpass123!",
+                "password2": "testpass123!",
+            },
+        )
+        self.assertRedirects(response, "/login/")
+        self.assertFalse(User.objects.filter(username="spammer").exists())
 
     def test_redirect_when_not_logged_in(self):
         response = self.client.get("/")

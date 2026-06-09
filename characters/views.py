@@ -245,6 +245,9 @@ SECTION_FOR_FIELD = {
 
 
 def register(request):
+    if not django_settings.REGISTRATION_ENABLED:
+        messages.info(request, "New account registration is currently closed.")
+        return redirect("characters:login")
     if request.method == "POST":
         form = RegistrationForm(request.POST)
         if form.is_valid():

@@ -19,9 +19,11 @@
       </div>
       <button type="submit" class="btn">Login</button>
     </form>
+    {% if registration_enabled %}
     <p style="margin-top: 0.75rem; font-size: 0.9rem;">
       No account? <a href="/register/" style="color: var(--accent);">Register</a>
     </p>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
