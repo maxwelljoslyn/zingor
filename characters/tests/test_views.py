@@ -20,6 +20,7 @@ class AuthViewTests(TestCase):
             "/register/",
             {
                 "username": "newuser",
+                "email": "newuser@example.com",
                 "password1": "testpass123!",
                 "password2": "testpass123!",
             },
