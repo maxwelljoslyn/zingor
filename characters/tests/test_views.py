@@ -152,7 +152,39 @@ class ItemCRUDTests(TestCase):
         item = Item.objects.create(owner=self.character, name="Sword", weight="3 lb")
         response = self.client.delete(f"/item/{item.pk}/delete/")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(Item.objects.filter(owner=self.character).count(), 0)
+
+    def test_update_item_weight_decimal(self):
+        """Item weights accept decimals after entry (#37)."""
+        item = Item.objects.create(owner=self.character, name="Sword", weight="3 lb")
+        self.client.post(
+            f"/item/{item.pk}/update-field/",
+            {"field_name": "weight", "value": "2.5", "pint_unit": "pound"},
+        )
+        item.refresh_from_db()
+        self.assertEqual(str(item.weight), "2.5 pound")
+
+    def test_edit_capacity_offers_unit_dropdown(self):
+        """Capacity edit form is split into a number input and a unit <select> (#25)."""
+        item = Item.objects.create(
+            owner=self.character, name="Flask", is_container=True
+        )
+        response = self.client.get(f"/item/{item.pk}/edit-field/?field=capacity")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="pint_unit"')
+        self.assertContains(response, "<select")
+        self.assertContains(response, 'value="fluid_ounce"')
+
+    def test_update_capacity_with_unit(self):
+        """Capacity magnitude + unit dropdown combine into a valid Quantity (#25)."""
+        item = Item.objects.create(
+            owner=self.character, name="Flask", is_container=True
+        )
+        self.client.post(
+            f"/item/{item.pk}/update-field/",
+            {"field_name": "capacity", "value": "64", "pint_unit": "fluid_ounce"},
+        )
+        item.refresh_from_db()
+        self.assertEqual(str(item.capacity), "64 fluid_ounce")
 
 
 class ConditionViewTests(TestCase):

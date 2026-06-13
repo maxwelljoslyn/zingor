@@ -6,9 +6,17 @@
   {% csrf_token %}
   <input type="hidden" name="field_name" value="{{ field_name }}">
   {% if is_pint_split %}
-    <input type="number" name="value" value="{{ pint_magnitude }}" autofocus style="width: 6rem;">
-    <input type="hidden" name="pint_unit" value="{{ pint_unit }}">
-    <span>{{ pint_unit_display }}</span>
+    <input type="number" step="any" name="value" value="{{ pint_magnitude }}" autofocus style="width: 6rem;">
+    {% if pint_unit_choices %}
+      <select name="pint_unit">
+        {% for unit_val, unit_label in pint_unit_choices %}
+          <option value="{{ unit_val }}" {% if unit_val == pint_unit %}selected{% endif %}>{{ unit_label }}</option>
+        {% endfor %}
+      </select>
+    {% else %}
+      <input type="hidden" name="pint_unit" value="{{ pint_unit }}">
+      <span>{{ pint_unit_display }}</span>
+    {% endif %}
   {% elif field_type == "textarea" %}
     <textarea name="value" rows="3" cols="40" autofocus>{{ current_value|default:"" }}</textarea>
   {% elif field_type == "select" %}

@@ -214,6 +214,20 @@ PINT_UNIT_DISPLAY = {
     "copper_piece": "cp",
 }
 
+# Valid units offered as a dropdown for each split Pint field.
+# Each entry is (canonical pint unit name, short display label). The first
+# entry is used as the default when the field has no value yet.
+PINT_UNIT_CHOICES = {
+    "weight": [("pound", "lb"), ("ounce", "oz")],
+    "capacity": [
+        ("gallon", "gal"),
+        ("quart", "qt"),
+        ("pint", "pt"),
+        ("fluid_ounce", "fl oz"),
+        ("cubic_foot", "cu ft"),
+    ],
+}
+
 SECTION_FOR_FIELD = {
     "name": "identity",
     "race": "identity",
@@ -383,6 +397,7 @@ def edit_field(request, pk):
     pint_magnitude = None
     pint_unit = None
     pint_unit_display = None
+    pint_unit_choices = PINT_UNIT_CHOICES.get(field_name)
     if field_name in PINT_FIELDS:
         if current_value is not None:
             parts = current_value.split(" ", 1)
@@ -394,6 +409,11 @@ def edit_field(request, pk):
             pint_magnitude = "0"
             pint_unit = field_name
             pint_unit_display = field_name
+            is_pint_split = True
+        elif pint_unit_choices:
+            pint_magnitude = ""
+            pint_unit = pint_unit_choices[0][0]
+            pint_unit_display = PINT_UNIT_DISPLAY.get(pint_unit, pint_unit)
             is_pint_split = True
 
     section = SECTION_FOR_FIELD.get(field_name, "identity")
@@ -408,6 +428,7 @@ def edit_field(request, pk):
         "pint_magnitude": pint_magnitude,
         "pint_unit": pint_unit,
         "pint_unit_display": pint_unit_display,
+        "pint_unit_choices": pint_unit_choices,
     }
     return render(request, "characters/partials/edit_field.html", ctx)
 
@@ -530,17 +551,21 @@ def edit_item_field(request, item_id):
         is_pint_split = True
     elif field_name == "capacity":
         cap = item.capacity
+        default_unit = PINT_UNIT_CHOICES["capacity"][0][0]
+        if cap is not None:
+            parts = str(cap).split(" ", 1)
+            pint_magnitude = parts[0]
+            pint_unit = parts[1] if len(parts) > 1 else default_unit
+        else:
+            pint_magnitude = ""
+            pint_unit = default_unit
+        pint_unit_display = PINT_UNIT_DISPLAY.get(pint_unit, pint_unit)
         current_value = str(cap) if cap is not None else ""
-        is_pint_split = False
-        pint_magnitude = None
-        pint_unit = None
-        pint_unit_display = None
+        is_pint_split = True
     else:
         return HttpResponse("Invalid field", status=400)
 
-    pint_unit_choices = None
-    if field_name == "weight":
-        pint_unit_choices = [("pound", "lb"), ("ounce", "oz")]
+    pint_unit_choices = PINT_UNIT_CHOICES.get(field_name)
 
     ctx = {
         "item": item,
@@ -580,7 +605,9 @@ def update_item_field(request, item_id):
             item.contents.update(container=None)
     elif field_name == "capacity":
         if raw_value:
-            q = u(raw_value)
+            pint_unit = request.POST.get("pint_unit", "")
+            full = f"{raw_value} {pint_unit}" if pint_unit else raw_value
+            q = u(full)
             item.capacity = str(D(q.magnitude) * q.units)
         else:
             item.capacity = None
