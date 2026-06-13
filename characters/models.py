@@ -84,6 +84,29 @@ class Character(models.Model):
     def __str__(self):
         return self.name or f"Character #{self.pk}"
 
+    @staticmethod
+    def _height_to_feet_inches(height):
+        """Split a height Quantity into (feet, inches) integers/Decimals.
+
+        Inches are returned as an int when whole, else as a Decimal.
+        """
+        total = height.to(u.inch).magnitude
+        feet = int(total // 12)
+        rem = total - feet * 12
+        inches = int(rem) if rem == int(rem) else rem
+        return feet, inches
+
+    @property
+    def height_display(self):
+        """Human-readable height, e.g. `5' 7"` (None if unset)."""
+        h = self.height
+        if h is None:
+            return None
+        feet, inches = self._height_to_feet_inches(h)
+        if inches:
+            return f"{feet}' {inches}\""
+        return f"{feet}'"
+
     # --- Ability score helpers ---
 
     ABILITY_NAMES = [

@@ -122,6 +122,67 @@ class FieldUpdateTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'name="value"')
 
+    def test_edit_height_offers_feet_and_inches(self):
+        """Height edit form has separate feet and inches inputs (#35)."""
+        response = self.client.get(
+            f"/character/{self.character.pk}/edit-field/?field=height"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="feet"')
+        self.assertContains(response, 'name="inches"')
+
+    def test_update_height_feet_and_inches(self):
+        """Feet + inches combine into a single inches Quantity (#35)."""
+        self.client.post(
+            f"/character/{self.character.pk}/update-field/",
+            {"field_name": "height", "feet": "5", "inches": "7"},
+        )
+        self.character.refresh_from_db()
+        self.assertEqual(str(self.character.height), "67 inch")
+        self.assertEqual(self.character.height_display, "5' 7\"")
+
+    def test_edit_height_prefills_feet_and_inches(self):
+        """An existing inches height is split back into feet and inches for editing."""
+        self.character.height = "67 inch"
+        self.character.save(update_fields=["height"])
+        response = self.client.get(
+            f"/character/{self.character.pk}/edit-field/?field=height"
+        )
+        self.assertContains(response, 'name="feet" value="5"')
+        self.assertContains(response, 'name="inches" value="7"')
+
+    def test_update_height_normalizes_excess_inches(self):
+        """Inches >= 12 carry into feet server-side (#35)."""
+        self.client.post(
+            f"/character/{self.character.pk}/update-field/",
+            {"field_name": "height", "feet": "5", "inches": "15"},
+        )
+        self.character.refresh_from_db()
+        self.assertEqual(str(self.character.height), "75 inch")
+        self.assertEqual(self.character.height_display, "6' 3\"")
+
+    def test_update_height_rejects_negatives(self):
+        """A negative POST is rejected and leaves the existing height untouched (#35)."""
+        self.character.height = "67 inch"
+        self.character.save(update_fields=["height"])
+        response = self.client.post(
+            f"/character/{self.character.pk}/update-field/",
+            {"field_name": "height", "feet": "-3", "inches": "-5"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.character.refresh_from_db()
+        self.assertEqual(str(self.character.height), "67 inch")
+
+    def test_update_height_feet_only(self):
+        """Feet alone, with inches blank, stores cleanly (#35)."""
+        self.client.post(
+            f"/character/{self.character.pk}/update-field/",
+            {"field_name": "height", "feet": "6", "inches": ""},
+        )
+        self.character.refresh_from_db()
+        self.assertEqual(str(self.character.height), "72 inch")
+        self.assertEqual(self.character.height_display, "6'")
+
 
 class ItemCRUDTests(TestCase):
     def setUp(self):

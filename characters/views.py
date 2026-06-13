@@ -4,6 +4,7 @@ import functools
 import json
 import logging
 from collections import OrderedDict
+from decimal import InvalidOperation
 from urllib.request import Request, urlopen
 
 from django.conf import settings as django_settings
@@ -398,7 +399,16 @@ def edit_field(request, pk):
     pint_unit = None
     pint_unit_display = None
     pint_unit_choices = PINT_UNIT_CHOICES.get(field_name)
-    if field_name in PINT_FIELDS:
+    # Height gets its own feet + inches widget (stored as inches on the backend).
+    is_height = field_name == "height"
+    height_feet = ""
+    height_inches = ""
+    if is_height:
+        if character.height is not None:
+            height_feet, height_inches = character._height_to_feet_inches(
+                character.height
+            )
+    elif field_name in PINT_FIELDS:
         if current_value is not None:
             parts = current_value.split(" ", 1)
             pint_magnitude = parts[0]
@@ -429,6 +439,9 @@ def edit_field(request, pk):
         "pint_unit": pint_unit,
         "pint_unit_display": pint_unit_display,
         "pint_unit_choices": pint_unit_choices,
+        "is_height": is_height,
+        "height_feet": height_feet,
+        "height_inches": height_inches,
     }
     return render(request, "characters/partials/edit_field.html", ctx)
 
@@ -450,6 +463,22 @@ def update_field(request, pk):
     # Type coercion
     if field_name in INTEGER_FIELDS:
         new_value = int(raw_value) if raw_value else None
+    elif field_name == "height":
+        feet = request.POST.get("feet", "").strip()
+        inches = request.POST.get("inches", "").strip()
+        if not feet and not inches:
+            new_value = None
+        else:
+            try:
+                feet_val = D(feet or "0")
+                inches_val = D(inches or "0")
+            except InvalidOperation:
+                return HttpResponse("Invalid height", status=400)
+            if feet_val < 0 or inches_val < 0:
+                return HttpResponse("Height cannot be negative", status=400)
+            # Excess inches (>= 12) carry into feet via the sum.
+            total_inches = feet_val * 12 + inches_val
+            new_value = total_inches * u.inch
     elif field_name in PINT_FIELDS:
         if raw_value:
             pint_unit = request.POST.get("pint_unit", "")
