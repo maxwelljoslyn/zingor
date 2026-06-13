@@ -6,6 +6,7 @@
 
 ## Git and GitHub
 - Never include `Co-Authored-By` trailers in commit messages.
+- When a commit relates to a GitHub issue, reference it in the commit message body (never the headline): use `Refs #X` if the commit touches the issue, or `Closes #X` if it resolves it. Put these references on their own line, separated by a single blank line from any other body text.
 - Always use `gh issue view <id> --json title,body,comments` instead of bare `gh issue view <id>`. The default output hits a deprecated "Projects (classic)" API and errors out.
 
 ## Commands
