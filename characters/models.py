@@ -205,7 +205,7 @@ class Character(models.Model):
         """Weight of carried inventory items, excluding coins."""
         total = D(0) * u.lb
         for item in self.inventory.filter(is_carried=True, container__isnull=True):
-            total += item.total_weight
+            total += item.carried_weight
         return total
 
     @property
@@ -391,10 +391,23 @@ class Item(models.Model):
 
     @property
     def total_weight(self):
-        """Weight including contents (recursive for containers)."""
+        """Physical weight including all contents (recursive for containers)."""
         total = self.adjusted_weight
         for content in self.contents.all():
             total += content.total_weight.to(total.units)
+        return total
+
+    @property
+    def carried_weight(self):
+        """Weight including contents, counting only carried items (recursive).
+
+        Unlike total_weight, contents flagged is_carried=False are skipped, so
+        nested items are treated consistently with top-level items when summing
+        a character's encumbrance.
+        """
+        total = self.adjusted_weight
+        for content in self.contents.filter(is_carried=True):
+            total += content.carried_weight.to(total.units)
         return total
 
 

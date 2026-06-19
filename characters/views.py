@@ -629,7 +629,14 @@ def update_item_field(request, item_id):
         item.weight = str(D(q.magnitude) * q.units)
     elif field_name == "is_worn":
         item.is_worn = raw_value == "on"
-        item.is_carried = item.is_worn
+        # Wearing an item implies carrying it; taking it off leaves it carried.
+        if item.is_worn:
+            item.is_carried = True
+    elif field_name == "is_carried":
+        item.is_carried = raw_value == "on"
+        # An item that isn't carried can't be worn.
+        if not item.is_carried:
+            item.is_worn = False
     elif field_name == "is_container":
         item.is_container = raw_value == "on"
         if not item.is_container:
@@ -645,9 +652,11 @@ def update_item_field(request, item_id):
     else:
         return HttpResponse("Invalid field", status=400)
 
-    save_fields = (
-        [field_name, "is_carried"] if field_name == "is_worn" else [field_name]
-    )
+    # is_worn and is_carried can each adjust the other, so persist both together.
+    if field_name in {"is_worn", "is_carried"}:
+        save_fields = ["is_worn", "is_carried"]
+    else:
+        save_fields = [field_name]
     item.save(update_fields=save_fields)
     return _render_section(request, item.owner, "inventory")
 

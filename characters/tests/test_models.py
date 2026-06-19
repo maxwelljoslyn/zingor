@@ -85,6 +85,40 @@ class ItemModelTests(TestCase):
         total = backpack.total_weight
         self.assertEqual(total.magnitude, D(7))
 
+    def test_carried_weight_skips_uncarried_contents(self):
+        """A not-carried item inside a container is excluded from carried_weight."""
+        backpack = Item.objects.create(
+            owner=self.character, name="Backpack", weight="2 lb"
+        )
+        Item.objects.create(
+            owner=self.character, name="Rope", weight="5 lb", container=backpack
+        )
+        Item.objects.create(
+            owner=self.character,
+            name="Anvil",
+            weight="50 lb",
+            container=backpack,
+            is_carried=False,
+        )
+        self.assertEqual(backpack.total_weight.magnitude, D(57))
+        self.assertEqual(backpack.carried_weight.magnitude, D(7))
+
+    def test_encumbrance_excludes_uncarried_nested_items(self):
+        """Encumbrance treats nested and top-level not-carried items alike."""
+        backpack = Item.objects.create(
+            owner=self.character, name="Backpack", weight="2 lb"
+        )
+        Item.objects.create(
+            owner=self.character,
+            name="Anvil",
+            weight="50 lb",
+            container=backpack,
+            is_carried=False,
+        )
+        self.assertEqual(
+            self.character.weight_of_carried_items.to("lb").magnitude, D(2)
+        )
+
     def test_percent_left(self):
         item = Item.objects.create(
             owner=self.character,

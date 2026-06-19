@@ -247,6 +247,45 @@ class ItemCRUDTests(TestCase):
         item.refresh_from_db()
         self.assertEqual(str(item.capacity), "64 fluid_ounce")
 
+    def test_unwearing_keeps_item_carried(self):
+        """Taking off a worn item leaves it carried (it isn't dropped)."""
+        item = Item.objects.create(
+            owner=self.character, name="Armor", weight="40 lb", is_worn=True
+        )
+        self.client.post(
+            f"/item/{item.pk}/update-field/",
+            {"field_name": "is_worn", "value": ""},
+        )
+        item.refresh_from_db()
+        self.assertFalse(item.is_worn)
+        self.assertTrue(item.is_carried)
+
+    def test_wearing_item_marks_it_carried(self):
+        """Wearing an uncarried item implies it is now carried."""
+        item = Item.objects.create(
+            owner=self.character, name="Cloak", is_carried=False, is_worn=False
+        )
+        self.client.post(
+            f"/item/{item.pk}/update-field/",
+            {"field_name": "is_worn", "value": "on"},
+        )
+        item.refresh_from_db()
+        self.assertTrue(item.is_worn)
+        self.assertTrue(item.is_carried)
+
+    def test_uncarrying_item_unwears_it(self):
+        """Marking an item not carried also takes it off."""
+        item = Item.objects.create(
+            owner=self.character, name="Helm", is_carried=True, is_worn=True
+        )
+        self.client.post(
+            f"/item/{item.pk}/update-field/",
+            {"field_name": "is_carried", "value": ""},
+        )
+        item.refresh_from_db()
+        self.assertFalse(item.is_carried)
+        self.assertFalse(item.is_worn)
+
 
 class ConditionViewTests(TestCase):
     def setUp(self):

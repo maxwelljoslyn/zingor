@@ -60,7 +60,17 @@
           <input type="checkbox" name="value" {% if item.is_container %}checked{% endif %}> Container
         </label>
       </form>
-      {% if not item.is_carried %}<span style="color: var(--text-muted); font-size: 0.85rem;">[not carried]</span>{% endif %}
+      <form hx-post="/item/{{ item.pk }}/update-field/"
+            hx-target="#section-inventory"
+            hx-swap="outerHTML"
+            hx-trigger="change"
+            style="display: inline;">
+        {% csrf_token %}
+        <input type="hidden" name="field_name" value="is_carried">
+        <label style="font-size: 0.85rem;">
+          <input type="checkbox" name="value" {% if item.is_carried %}checked{% endif %}> Carried
+        </label>
+      </form>
       {% if item.container %}
       <form hx-post="/item/{{ item.pk }}/remove-from-container/"
             hx-target="#section-inventory"
