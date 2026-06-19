@@ -1075,6 +1075,7 @@ def feedback(request):
                     "title": form.cleaned_data["title"],
                     "body": body,
                     "labels": ["user-feedback"],
+                    "assignees": ["maxwelljoslyn"],
                 }
             ).encode()
             req = Request(
