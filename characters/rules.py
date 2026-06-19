@@ -1011,36 +1011,12 @@ classes = {
 # --- Races ---
 
 races = {
-    "human": {
-        "ability_modifiers": {},
-        "base_height": {"male": D(70) * u.inch, "female": D(66) * u.inch},
-        "base_weight": {"male": D(175) * u.lb, "female": D(140) * u.lb},
-    },
-    "elf": {
-        "ability_modifiers": {"intelligence": 1, "constitution": -1},
-        "base_height": {"male": D(60) * u.inch, "female": D(54) * u.inch},
-        "base_weight": {"male": D(120) * u.lb, "female": D(95) * u.lb},
-    },
-    "halforc": {
-        "ability_modifiers": {"strength": 1, "charisma": -1},
-        "base_height": {"male": D(65) * u.inch, "female": D(60) * u.inch},
-        "base_weight": {"male": D(150) * u.lb, "female": D(120) * u.lb},
-    },
-    "halfling": {
-        "ability_modifiers": {"dexterity": 1, "strength": -1},
-        "base_height": {"male": D(36) * u.inch, "female": D(32) * u.inch},
-        "base_weight": {"male": D(75) * u.lb, "female": D(55) * u.lb},
-    },
-    "gnome": {
-        "ability_modifiers": {"wisdom": 1, "strength": -1},
-        "base_height": {"male": D(42) * u.inch, "female": D(38) * u.inch},
-        "base_weight": {"male": D(95) * u.lb, "female": D(75) * u.lb},
-    },
-    "dwarf": {
-        "ability_modifiers": {"constitution": 1, "dexterity": -1},
-        "base_height": {"male": D(48) * u.inch, "female": D(42) * u.inch},
-        "base_weight": {"male": D(140) * u.lb, "female": D(120) * u.lb},
-    },
+    "human": {"ability_modifiers": {}},
+    "elf": {"ability_modifiers": {"intelligence": 1, "constitution": -1}},
+    "halforc": {"ability_modifiers": {"strength": 1, "charisma": -1}},
+    "halfling": {"ability_modifiers": {"dexterity": 1, "strength": -1}},
+    "gnome": {"ability_modifiers": {"wisdom": 1, "strength": -1}},
+    "dwarf": {"ability_modifiers": {"constitution": 1, "dexterity": -1}},
 }
 
 
