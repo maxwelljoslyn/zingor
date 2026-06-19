@@ -1012,12 +1012,14 @@ classes = {
 
 races = {
     "human": {"ability_modifiers": {}},
-    "elf": {"ability_modifiers": {"intelligence": 1, "constitution": -1}},
+    "elf": {"ability_modifiers": {"dexterity": 1, "constitution": -1}},
     "halfelf": {"ability_modifiers": {"dexterity": 1, "constitution": -1}},
-    "halforc": {"ability_modifiers": {"strength": 1, "charisma": -1}},
+    "halforc": {
+        "ability_modifiers": {"strength": 1, "constitution": 1, "charisma": -2}
+    },
     "halfling": {"ability_modifiers": {"dexterity": 1, "strength": -1}},
-    "gnome": {"ability_modifiers": {"wisdom": 1, "strength": -1}},
-    "dwarf": {"ability_modifiers": {"constitution": 1, "dexterity": -1}},
+    "gnome": {"ability_modifiers": {"constitution": 1, "strength": -1}},
+    "dwarf": {"ability_modifiers": {"constitution": 1, "charisma": -1}},
 }
 
 
