@@ -15,37 +15,37 @@
               hx-get="/item/{{ item.pk }}/edit-field/?field=name"
               hx-target="#item-{{ item.pk }}-name"
               hx-swap="outerHTML"
-              style="cursor: pointer;">{{ item.name }}</strong>
+              class="clickable">{{ item.name }}</strong>
       {% else %}
       <strong>{{ item.name }}</strong>
       {% endif %}
-      <span style="color: var(--text-muted); font-size: 0.85rem;">
+      <span class="muted text-sm">
         ({% if is_owner %}<span id="item-{{ item.pk }}-weight"
                hx-get="/item/{{ item.pk }}/edit-field/?field=weight"
                hx-target="#item-{{ item.pk }}-weight"
                hx-swap="outerHTML"
-               style="cursor: pointer;">{{ item.adjusted_weight }}</span>{% else %}{{ item.adjusted_weight }}{% endif %})
+               class="clickable">{{ item.adjusted_weight }}</span>{% else %}{{ item.adjusted_weight }}{% endif %})
       </span>
       {% if item.is_container %}
-      <span style="color: var(--text-muted); font-size: 0.85rem;">
+      <span class="muted text-sm">
         [cap: {% if is_owner %}<span id="item-{{ item.pk }}-capacity"
                     hx-get="/item/{{ item.pk }}/edit-field/?field=capacity"
                     hx-target="#item-{{ item.pk }}-capacity"
                     hx-swap="outerHTML"
-                    style="cursor: pointer;">{% if item.capacity %}{{ item.capacity }}{% else %}—{% endif %}</span>{% else %}{% if item.capacity %}{{ item.capacity }}{% else %}—{% endif %}{% endif %}]
+                    class="clickable">{% if item.capacity %}{{ item.capacity }}{% else %}—{% endif %}</span>{% else %}{% if item.capacity %}{{ item.capacity }}{% else %}—{% endif %}{% endif %}]
       </span>
       {% endif %}
     </span>
     {% if is_owner %}
-    <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
+    <span class="item-actions">
       <form hx-post="/item/{{ item.pk }}/update-field/"
             hx-target="#section-inventory"
             hx-swap="outerHTML"
             hx-trigger="change"
-            style="display: inline;">
+            class="inline">
         {% csrf_token %}
         <input type="hidden" name="field_name" value="is_worn">
-        <label style="font-size: 0.85rem;">
+        <label class="text-sm">
           <input type="checkbox" name="value" {% if item.is_worn %}checked{% endif %}> Worn
         </label>
       </form>
@@ -53,10 +53,10 @@
             hx-target="#section-inventory"
             hx-swap="outerHTML"
             hx-trigger="change"
-            style="display: inline;">
+            class="inline">
         {% csrf_token %}
         <input type="hidden" name="field_name" value="is_container">
-        <label style="font-size: 0.85rem;">
+        <label class="text-sm">
           <input type="checkbox" name="value" {% if item.is_container %}checked{% endif %}> Container
         </label>
       </form>
@@ -64,10 +64,10 @@
             hx-target="#section-inventory"
             hx-swap="outerHTML"
             hx-trigger="change"
-            style="display: inline;">
+            class="inline">
         {% csrf_token %}
         <input type="hidden" name="field_name" value="is_carried">
-        <label style="font-size: 0.85rem;">
+        <label class="text-sm">
           <input type="checkbox" name="value" {% if item.is_carried %}checked{% endif %}> Carried
         </label>
       </form>
@@ -75,7 +75,7 @@
       <form hx-post="/item/{{ item.pk }}/remove-from-container/"
             hx-target="#section-inventory"
             hx-swap="outerHTML"
-            style="display: inline;">
+            class="inline">
         {% csrf_token %}
         <button type="submit" class="btn btn-small btn-secondary">↑ Take out</button>
       </form>
@@ -87,7 +87,7 @@
               class="btn btn-danger btn-small">x</button>
     </span>
     {% else %}
-    <span style="display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+    <span class="item-actions text-sm muted">
       {% if item.is_worn %}Worn{% endif %}
       {% if item.is_container %}Container{% endif %}
       {% if not item.is_carried %}[not carried]{% endif %}

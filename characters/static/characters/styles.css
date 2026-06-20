@@ -1,0 +1,251 @@
+/*
+ * Zingor — Scribe's Vellum Ledger theme (light base).
+ * Every color lives here as a token. A dark counterpart can be added later by
+ * redefining these same names under, e.g., :root[data-theme="dark"] { ... }
+ * without touching any markup. Names referenced inline in templates
+ * (--accent, --text-muted, etc.) must keep their spelling.
+ */
+:root {
+  /* Surfaces — aged vellum and fresh page */
+  --bg: #ece3ce;            /* aged vellum page ground */
+  --surface: #f4eddc;       /* a sheet laid on the page */
+  --surface-alt: #e6dbc0;   /* faint ledger band (odd rows) */
+  --surface-alt-2: #f1e9d6; /* faint ledger band (even rows) */
+  --input-bg: #fbf7ec;      /* fresh, unmarked paper */
+
+  /* Ink */
+  --text: #26221a;          /* iron-gall ink */
+  --text-muted: #6e6450;    /* faded marginalia */
+
+  /* Brand / rubric */
+  --accent: #b23a2e;        /* vermilion rubrication */
+  --accent-hover: #cb4a38;
+  --on-accent: #f7f1e1;     /* cream text on inked buttons */
+  --secondary: #2f5e8c;     /* lapis */
+  --secondary-hover: #3a6fa3;
+
+  /* Semantic */
+  --success: #4f7a3a;       /* verdigris */
+  --danger: #8c2f22;        /* oxblood, distinct from vermilion accent */
+  --danger-hover: #a4382a;
+
+  /* Structure */
+  --border: #c6b591;        /* inked hairline on vellum */
+  --overlay: rgba(38, 34, 26, 0.55);
+  --shadow: 0 1px 2px rgba(38, 34, 26, 0.10), 0 2px 10px rgba(38, 34, 26, 0.05);
+  --ring: 0 0 0 3px rgba(178, 58, 46, 0.20);
+
+  /* Type */
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Hoefler Text", Georgia, serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 1.25rem 1rem; }
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+/* Brand wordmark — set in the display serif, inked rather than rubricated */
+header > a {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  text-decoration: none;
+}
+header > a:hover { color: var(--accent); }
+nav a { color: var(--accent); text-decoration: none; margin-left: 1rem; }
+nav a:hover { color: var(--accent-hover); }
+h1, h2, h3 { font-family: var(--font-display); margin-bottom: 0.5rem; line-height: 1.25; }
+h1 { color: var(--accent); letter-spacing: 0.01em; }
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+  padding: 1rem 1.1rem;
+  margin-bottom: 1.1rem;
+}
+/* The signature: rubricated section headings — vermilion small-caps over a faded rule */
+.section h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant: small-caps;
+  letter-spacing: 0.09em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.85rem;
+}
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { padding: 0.4rem 0.6rem; text-align: left; border-bottom: 1px solid var(--border); }
+th {
+  color: var(--text-muted);
+  font-weight: normal;
+  font-size: 0.78rem;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+}
+.field-unknown {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.field-unknown:hover { color: var(--accent); }
+.field-value { font-weight: bold; }
+input, select, textarea {
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+button, .btn {
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  text-decoration: none;
+  display: inline-block;
+}
+button:hover, .btn:hover { background: var(--accent-hover); }
+button:focus-visible, .btn:focus-visible { outline: none; box-shadow: var(--ring); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-small { padding: 0.2rem 0.5rem; font-size: 0.8rem; }
+.btn-danger { background: var(--danger); }
+.btn-danger:hover { background: var(--danger-hover); }
+.btn-secondary { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--bg); }
+.toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+.modifier-positive { color: var(--success); }
+.modifier-negative { color: var(--accent); }
+.inline-form { display: inline-flex; gap: 0.3rem; align-items: center; }
+ul.spell-list { list-style: none; padding: 0; }
+ul.spell-list li { padding: 0.2rem 0; }
+.htmx-indicator { display: none; }
+.htmx-request .htmx-indicator { display: inline; }
+.flash {
+  padding: 0.5rem 0.7rem;
+  background: var(--surface-alt);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+  margin-bottom: 0.5rem;
+}
+.item-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0.4rem; cursor: grab; }
+.spell-row { display: flex; align-items: center; padding: 0.3rem 0.4rem; gap: 1rem; }
+.spell-row:nth-child(odd) { background: var(--surface-alt); }
+.spell-row:nth-child(even) { background: var(--surface-alt-2); }
+.item-wrapper:nth-child(odd) { background: var(--surface-alt); }
+.item-wrapper:nth-child(even) { background: var(--surface-alt-2); }
+.item-wrapper + .item-wrapper { border-top: 1px solid var(--border); }
+#section-sage tbody tr:nth-child(odd) { background: var(--surface-alt); }
+#section-sage tbody tr:nth-child(even) { background: var(--surface-alt-2); }
+.contents { margin-left: 1.5rem; border-left: 2px solid var(--border); padding-left: 0.75rem; }
+.drop-target { outline: 2px dashed var(--accent); border-radius: 4px; background: var(--surface-alt); }
+th.sortable { cursor: pointer; }
+th.sortable:hover { color: var(--accent-hover); }
+
+/* ---- Utilities (replace former inline styles) ---- */
+.muted { color: var(--text-muted); }
+.link { color: var(--accent); text-decoration: none; }
+.link:hover { color: var(--accent-hover); }
+.clickable { cursor: pointer; }
+.inline { display: inline; }
+.no-shrink { flex-shrink: 0; }
+.flex-1 { flex: 1; }
+.w-full { width: 100%; }
+.text-meta { font-size: 0.9rem; }
+.text-sm { font-size: 0.85rem; }
+.text-xs { font-size: 0.8rem; }
+.subhead { font-size: 0.95rem; }
+.empty-note { color: var(--text-muted); font-size: 0.9rem; }
+.w-4 { width: 4rem; }
+.w-5 { width: 5em; }
+.w-6 { width: 6rem; }
+.w-8 { width: 8rem; }
+.w-10 { width: 10rem; }
+.w-12 { width: 12rem; }
+.w-min-14 { min-width: 14rem; }
+.mb-sm { margin-bottom: 0.5rem; }
+.mb-md { margin-bottom: 0.75rem; }
+.mb-lg { margin-bottom: 1rem; }
+.mt-xs { margin-top: 0.25rem; }
+.mt-sm { margin-top: 0.5rem; }
+.mt-md { margin-top: 0.75rem; }
+.mt-lg { margin-top: 2rem; }
+
+/* ---- Components (replace former inline styles) ---- */
+.row-between { display: flex; justify-content: space-between; align-items: center; }
+.auth-card { max-width: 400px; margin: 2rem auto; }
+.auth-footer { margin-top: 0.75rem; font-size: 0.9rem; }
+.form-error { color: var(--accent); margin-bottom: 0.5rem; }
+.field-label { display: block; margin-bottom: 0.25rem; color: var(--text-muted); font-size: 0.85rem; }
+.field-error { color: var(--accent); font-size: 0.85rem; }
+.owner-tag { font-size: 0.7em; color: var(--text-muted); }
+.item-actions { display: inline-flex; align-items: center; gap: 0.5rem; }
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  max-width: 700px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.modal-title { color: var(--accent); margin: 0; }
+.wiki-export-area {
+  flex: 1;
+  min-height: 400px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+/* Feedback form fields (Django-rendered ids) */
+#id_title, #id_contact { width: 100%; }
+#id_description { width: 100%; resize: vertical; }

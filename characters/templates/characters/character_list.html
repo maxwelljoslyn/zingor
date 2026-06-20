@@ -2,7 +2,7 @@
 {% block title %}Zingor{% endblock %}
 {% block content %}
 <h1>Characters</h1>
-<form method="post" action="/character/create/" style="margin-bottom: 1rem;">
+<form method="post" action="/character/create/" class="mb-lg">
   {% csrf_token %}
   <button type="submit" class="btn">+ New Character</button>
 </form>
@@ -22,7 +22,7 @@
     <tbody>
       {% for char in characters %}
       <tr>
-        <td><a href="/character/{{ char.pk }}/" style="color: var(--accent);">{{ char.name|default:"Unnamed" }}</a></td>
+        <td><a href="/character/{{ char.pk }}/" class="link">{{ char.name|default:"Unnamed" }}</a></td>
         <td>{{ char.user.username }}</td>
         <td>{{ char.race|default:"—" }}</td>
         <td>{{ char.char_class|default:"—" }}</td>
@@ -34,9 +34,9 @@
   </table>
 </div>
 {% else %}
-<p style="color: var(--text-muted);">No characters yet. Create one to get started.</p>
+<p class="muted">No characters yet. Create one to get started.</p>
 {% endif %}
-<h1 style="margin-top: 2rem;">Party Inventory</h1>
+<h1 class="mt-lg">Party Inventory</h1>
 Click on Owner, Item, or Weight to sort the table by that column.
 
 {% if all_items %}
@@ -54,7 +54,7 @@ Click on Owner, Item, or Weight to sort the table by that column.
     <tbody>
       {% for item in all_items %}
       <tr>
-        <td><a href="/character/{{ item.owner.pk }}/" style="color: var(--accent);">{{ item.owner.name|default:"Unnamed" }}</a></td>
+        <td><a href="/character/{{ item.owner.pk }}/" class="link">{{ item.owner.name|default:"Unnamed" }}</a></td>
         <td>{{ item.name }}</td>
         {# Normalized to oz so client-side sort compares a single unit, not mixed lb/oz strings #}
         <td data-sort-value="{{ item.adjusted_weight_oz }}">{{ item.adjusted_weight }}</td>
@@ -66,7 +66,7 @@ Click on Owner, Item, or Weight to sort the table by that column.
   </table>
 </div>
 {% else %}
-<p style="color: var(--text-muted);">No items yet.</p>
+<p class="muted">No items yet.</p>
 {% endif %}
 <script>
 (function() {

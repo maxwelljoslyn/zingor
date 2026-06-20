@@ -1,10 +1,9 @@
 {% if is_set %}
 {% if is_owner %}
-<span class="field-value" id="field-{{ field_name }}"
+<span class="field-value clickable" id="field-{{ field_name }}"
       hx-get="/character/{{ character_id }}/edit-field/?field={{ field_name }}"
       hx-target="#field-{{ field_name }}"
-      hx-swap="outerHTML"
-      style="cursor: pointer;">{{ display_value }}</span>
+      hx-swap="outerHTML">{{ display_value }}</span>
 {% else %}
 <span class="field-value" id="field-{{ field_name }}">{{ display_value }}</span>
 {% endif %}
@@ -14,11 +13,10 @@
       id="field-{{ field_name }}"
       hx-get="/character/{{ character_id }}/edit-field/?field={{ field_name }}"
       hx-target="#field-{{ field_name }}"
-      hx-swap="outerHTML"
-      style="cursor: pointer; color: #888; font-style: italic;">
+      hx-swap="outerHTML">
   Unknown (click to set)
 </span>
 {% else %}
-<span class="field-value" id="field-{{ field_name }}" style="color: #888;">—</span>
+<span class="field-value muted" id="field-{{ field_name }}">—</span>
 {% endif %}
 {% endif %}

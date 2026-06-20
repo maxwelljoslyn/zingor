@@ -1,13 +1,13 @@
 {% extends "characters/base.html" %}
 {% block title %}Register — Zingor{% endblock %}
 {% block content %}
-<div style="max-width: 400px; margin: 2rem auto;">
+<div class="auth-card">
   <h1>Register</h1>
   <div class="section">
     <form method="post">
       {% csrf_token %}
       {% if form.errors %}
-        <div style="color: var(--accent); margin-bottom: 0.5rem;">
+        <div class="form-error">
           {% for field, errors in form.errors.items %}
             {% for error in errors %}
               <div>{{ error }}</div>
@@ -15,27 +15,27 @@
           {% endfor %}
         </div>
       {% endif %}
-      <div style="margin-bottom: 0.75rem;">
+      <div class="mb-md">
         <label for="id_username">Username</label><br>
-        <input type="text" name="username" id="id_username" required autofocus style="width: 100%;">
+        <input type="text" name="username" id="id_username" required autofocus class="w-full">
       </div>
-      <div style="margin-bottom: 0.75rem;">
+      <div class="mb-md">
         <label for="id_email">Email</label><br>
-        <input type="email" name="email" id="id_email" required style="width: 100%;"
+        <input type="email" name="email" id="id_email" required class="w-full"
                value="{{ form.email.value|default:'' }}">
       </div>
-      <div style="margin-bottom: 0.75rem;">
+      <div class="mb-md">
         <label for="id_password1">Password</label><br>
-        <input type="password" name="password1" id="id_password1" required style="width: 100%;">
+        <input type="password" name="password1" id="id_password1" required class="w-full">
       </div>
-      <div style="margin-bottom: 0.75rem;">
+      <div class="mb-md">
         <label for="id_password2">Confirm Password</label><br>
-        <input type="password" name="password2" id="id_password2" required style="width: 100%;">
+        <input type="password" name="password2" id="id_password2" required class="w-full">
       </div>
       <button type="submit" class="btn">Register</button>
     </form>
-    <p style="margin-top: 0.75rem; font-size: 0.9rem;">
-      Already have an account? <a href="/login/" style="color: var(--accent);">Login</a>
+    <p class="auth-footer">
+      Already have an account? <a href="/login/" class="link">Login</a>
     </p>
   </div>
 </div>

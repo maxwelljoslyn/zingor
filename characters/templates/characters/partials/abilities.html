@@ -19,14 +19,14 @@
                  hx-get="/character/{{ character.pk }}/edit-field/?field=percentile_strength"
                  hx-target="closest td"
                  hx-swap="innerHTML"
-                 style="font-size: 0.8rem;">(set %)</a>
+                 class="text-xs">(set %)</a>
             {% endif %}
           {% endif %}
         </td>
         <td>
           {% if ability.base_score is not None %}
             {% for stat in ability.derived %}
-              <span style="font-size: 0.85rem;">
+              <span class="text-sm">
                 {{ stat.label }}:
                 {% if stat.is_modifier %}
                   <span class="{% if stat.value >= 0 %}modifier-positive{% else %}modifier-negative{% endif %}">
@@ -48,13 +48,13 @@
   </table>
 
   {% if derived.thac0 is not None %}
-  <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+  <div class="mt-sm text-meta">
     <strong>THAC0:</strong> {{ derived.thac0 }}
   </div>
   {% endif %}
 
   {% if derived.save_poison is not None %}
-  <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+  <div class="mt-sm text-meta">
     <strong>Saves:</strong>
     Poison {{ derived.save_poison }} |
     Para {{ derived.save_paralyse }} |

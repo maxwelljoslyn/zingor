@@ -1,27 +1,27 @@
 {% extends "characters/base.html" %}
 {% block title %}Login — Zingor{% endblock %}
 {% block content %}
-<div style="max-width: 400px; margin: 2rem auto;">
+<div class="auth-card">
   <h1>Login</h1>
   <div class="section">
     <form method="post">
       {% csrf_token %}
       {% if form.errors %}
-        <div style="color: var(--accent); margin-bottom: 0.5rem;">Invalid username or password.</div>
+        <div class="form-error">Invalid username or password.</div>
       {% endif %}
-      <div style="margin-bottom: 0.75rem;">
+      <div class="mb-md">
         <label for="id_username">Username</label><br>
-        <input type="text" name="username" id="id_username" required autofocus style="width: 100%;">
+        <input type="text" name="username" id="id_username" required autofocus class="w-full">
       </div>
-      <div style="margin-bottom: 0.75rem;">
+      <div class="mb-md">
         <label for="id_password">Password</label><br>
-        <input type="password" name="password" id="id_password" required style="width: 100%;">
+        <input type="password" name="password" id="id_password" required class="w-full">
       </div>
       <button type="submit" class="btn">Login</button>
     </form>
     {% if registration_enabled %}
-    <p style="margin-top: 0.75rem; font-size: 0.9rem;">
-      No account? <a href="/register/" style="color: var(--accent);">Register</a>
+    <p class="auth-footer">
+      No account? <a href="/register/" class="link">Register</a>
     </p>
     {% endif %}
   </div>

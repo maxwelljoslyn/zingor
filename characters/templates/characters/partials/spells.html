@@ -3,20 +3,20 @@
   <h2>Spells</h2>
   {% if spells_by_level %}
     {% for level, spell_list in spells_by_level.items %}
-    <div style="margin-bottom: 0.5rem;">
+    <div class="mb-sm">
       <strong>Level {{ level }}</strong>
       <ul class="spell-list">
         {% for spell in spell_list %}
         <li class="spell-row">
-          <a href="{{ spell.name|spell_url }}" target="_blank" style="flex: 1;">{{ spell.name }}</a>
+          <a href="{{ spell.name|spell_url }}" target="_blank" class="flex-1">{{ spell.name }}</a>
           {% if is_owner %}
           <form hx-post="/spell/{{ spell.pk }}/toggle-memorized/"
                 hx-target="#section-spells"
                 hx-swap="outerHTML"
                 hx-trigger="change"
-                style="display: inline; flex-shrink: 0;">
+                class="inline no-shrink">
             {% csrf_token %}
-            <label style="font-size: 0.85rem;">
+            <label class="text-sm">
               <input type="checkbox" name="value" {% if spell.is_memorized %}checked{% endif %}> Memorized
             </label>
           </form>
@@ -26,7 +26,7 @@
                   hx-confirm="Remove {{ spell.name }}?"
                   class="btn btn-danger btn-small">x</button>
           {% else %}
-          <span style="font-size: 0.85rem; color: var(--text-muted);">{% if spell.is_memorized %}Memorized{% else %}Not memorized{% endif %}</span>
+          <span class="text-sm muted">{% if spell.is_memorized %}Memorized{% else %}Not memorized{% endif %}</span>
           {% endif %}
         </li>
         {% endfor %}
@@ -34,16 +34,16 @@
     </div>
     {% endfor %}
   {% else %}
-    <p style="color: var(--text-muted); font-size: 0.9rem;">No spells known.</p>
+    <p class="empty-note">No spells known.</p>
   {% endif %}
   {% if is_owner %}
   <form hx-post="/character/{{ character.pk }}/add-spell/"
         hx-target="#section-spells"
         hx-swap="outerHTML"
-        class="inline-form" style="margin-top: 0.5rem;">
+        class="inline-form mt-sm">
     {% csrf_token %}
     <input type="text" name="name" placeholder="Spell name" required>
-    <input type="number" name="level" placeholder="Level" style="width: 4rem;" required min="1" max="9">
+    <input type="number" name="level" placeholder="Level" class="w-4" required min="1" max="9">
     <button type="submit" class="btn btn-small">Add</button>
   </form>
   {% endif %}

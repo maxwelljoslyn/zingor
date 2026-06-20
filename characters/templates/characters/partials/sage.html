@@ -14,7 +14,7 @@
           hx-target="#sage-chosen-field"
           hx-swap="outerHTML"
           hx-trigger="click"
-          style="cursor: pointer;"
+          class="clickable"
         >
           {% if character.chosen_field %}
             <a href="{{ character.chosen_field|field_url }}" target="_blank">{{ character.chosen_field }}</a>{% if character.chosen_study %} / <a href="{{ character.chosen_study|study_url }}" target="_blank">{{ character.chosen_study }}</a>{% endif %}
@@ -61,7 +61,7 @@
                   hx-target="#section-sage"
                   hx-swap="outerHTML"
                   hx-trigger="blur"
-                  style="width: 5em;"
+                  class="w-5"
                 >
                 {% else %}
                 {{ entry.points }}

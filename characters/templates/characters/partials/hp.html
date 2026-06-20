@@ -19,7 +19,7 @@
       </td>
     </tr>
   </table>
-  <h3 style="margin-top: 0.75rem; font-size: 0.95rem;">Bodymass Hit Die</h3>
+  <h3 class="subhead mt-md">Bodymass Hit Die</h3>
   {% if bodymass_die %}
     <table>
       <thead><tr><th>Die</th><th>Roll</th>{% if is_owner %}<th></th>{% endif %}</tr></thead>
@@ -43,7 +43,7 @@
     <form hx-post="/character/{{ character.pk }}/add-hit-die/"
           hx-target="#section-hp"
           hx-swap="outerHTML"
-          class="inline-form" style="margin-top: 0.25rem;">
+          class="inline-form mt-xs">
       {% csrf_token %}
       <input type="hidden" name="is_bodymass" value="true">
       <select name="die_type" required>
@@ -53,13 +53,13 @@
         <option value="d10">d10</option>
         <option value="d12">d12</option>
       </select>
-      <input type="number" name="roll" placeholder="Roll" style="width: 4rem;" required>
+      <input type="number" name="roll" placeholder="Roll" class="w-4" required>
       <button type="submit" class="btn btn-small">Set Bodymass Die</button>
     </form>
   {% else %}
-    <p style="color: var(--text-muted); font-size: 0.9rem;">Not set.</p>
+    <p class="empty-note">Not set.</p>
   {% endif %}
-  <h3 style="margin-top: 0.75rem; font-size: 0.95rem;">Level Hit Dice</h3>
+  <h3 class="subhead mt-md">Level Hit Dice</h3>
   {% if level_dice %}
   <table>
     <thead><tr><th>Level</th><th>Die</th><th>Roll</th><th>Con Bonus</th><th>Total</th>{% if is_owner %}<th></th>{% endif %}</tr></thead>
@@ -85,15 +85,15 @@
     </tbody>
   </table>
   {% else %}
-  <p style="color: var(--text-muted); font-size: 0.9rem;">No level hit dice recorded.</p>
+  <p class="empty-note">No level hit dice recorded.</p>
   {% endif %}
   {% if is_owner %}
   <form hx-post="/character/{{ character.pk }}/add-hit-die/"
         hx-target="#section-hp"
         hx-swap="outerHTML"
-        class="inline-form" style="margin-top: 0.5rem;">
+        class="inline-form mt-sm">
     {% csrf_token %}
-    <input type="number" name="level" placeholder="Level" style="width: 4rem;" required>
+    <input type="number" name="level" placeholder="Level" class="w-4" required>
     <select name="die_type" required>
       <option value="d4">d4</option>
       <option value="d6">d6</option>
@@ -101,12 +101,12 @@
       <option value="d10" selected>d10</option>
       <option value="d12">d12</option>
     </select>
-    <input type="number" name="roll" placeholder="Roll" style="width: 4rem;" required>
-    <input type="number" name="con_bonus" placeholder="Con" style="width: 4rem;" value="0">
+    <input type="number" name="roll" placeholder="Roll" class="w-4" required>
+    <input type="number" name="con_bonus" placeholder="Con" class="w-4" value="0">
     <button type="submit" class="btn btn-small">Add Level Die</button>
   </form>
   {% endif %}
-  <h3 style="margin-top: 0.75rem; font-size: 0.95rem;">Additional Hit Points</h3>
+  <h3 class="subhead mt-md">Additional Hit Points</h3>
   {% if bonus_hit_points %}
   <table>
     <thead><tr><th>Amount</th><th>Note</th>{% if is_owner %}<th></th>{% endif %}</tr></thead>
@@ -129,16 +129,16 @@
     </tbody>
   </table>
   {% else %}
-  <p style="color: var(--text-muted); font-size: 0.9rem;">No additional hit points recorded.</p>
+  <p class="empty-note">No additional hit points recorded.</p>
   {% endif %}
   {% if is_owner %}
   <form hx-post="/character/{{ character.pk }}/add-bonus-hp/"
         hx-target="#section-hp"
         hx-swap="outerHTML"
-        class="inline-form" style="margin-top: 0.5rem;">
+        class="inline-form mt-sm">
     {% csrf_token %}
-    <input type="number" name="amount" min="1" placeholder="HP" style="width: 4rem;" required>
-    <input type="text" name="note" placeholder="Source (e.g. soldier at arms)" style="min-width: 14rem;" required>
+    <input type="number" name="amount" min="1" placeholder="HP" class="w-4" required>
+    <input type="text" name="note" placeholder="Source (e.g. soldier at arms)" class="w-min-14" required>
     <button type="submit" class="btn btn-small">Add Bonus HP</button>
   </form>
   {% endif %}

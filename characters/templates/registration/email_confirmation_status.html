@@ -1,7 +1,7 @@
 {% extends "characters/base.html" %}
 {% block title %}Email Confirmation — Zingor{% endblock %}
 {% block content %}
-<div style="max-width: 400px; margin: 2rem auto;">
+<div class="auth-card">
   <h1>Email Confirmation</h1>
   <div class="section">
     {% if user.profile.email_confirmed %}
@@ -9,17 +9,17 @@
     {% else %}
       <p>Your email is not yet confirmed.</p>
 
-      <form method="post" style="margin-top: 0.75rem;">
+      <form method="post" class="mt-md">
         {% csrf_token %}
-        <div style="margin-bottom: 0.75rem;">
+        <div class="mb-md">
           <label for="id_email">Email address</label><br>
-          <input type="email" name="email" id="id_email" style="width: 100%;"
+          <input type="email" name="email" id="id_email" class="w-full"
                  value="{{ user.email }}" required>
         </div>
         <button type="submit" class="btn btn-secondary">Update email</button>
       </form>
 
-      <form method="post" action="{% url 'characters:resend_confirmation' %}" style="margin-top: 0.75rem;">
+      <form method="post" action="{% url 'characters:resend_confirmation' %}" class="mt-md">
         {% csrf_token %}
         <button type="submit" class="btn">Send confirmation email</button>
       </form>

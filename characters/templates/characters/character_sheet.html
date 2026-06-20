@@ -2,11 +2,11 @@
 {% load character_tags %}
 {% block title %}{{ character.name|default:"Unnamed" }} — Zingor{% endblock %}
 {% block content %}
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+<div class="row-between mb-lg">
   <h1>
     {{ character.name|default:"Unnamed Character" }}
     {% if not is_owner %}
-      <span style="font-size: 0.7em; color: var(--text-muted);">({{ character.user.username }}'s character)</span>
+      <span class="owner-tag">({{ character.user.username }}'s character)</span>
     {% endif %}
   </h1>
   <div class="toolbar">

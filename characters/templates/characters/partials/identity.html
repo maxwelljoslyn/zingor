@@ -21,7 +21,7 @@
       <td>
         {% unknown_or_value character.xp "xp" character.pk %}
         {% if derived.xp_for_next_level %}
-          <span style="color: var(--text-muted);"> / {{ derived.xp_for_next_level }}</span>
+          <span class="muted"> / {{ derived.xp_for_next_level }}</span>
         {% endif %}
       </td>
     </tr>

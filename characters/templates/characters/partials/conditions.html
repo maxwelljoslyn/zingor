@@ -26,21 +26,21 @@
     </div>
     {% endfor %}
   {% else %}
-    <p style="color: var(--text-muted); font-size: 0.9rem;">No active conditions.</p>
+    <p class="empty-note">No active conditions.</p>
   {% endif %}
   {% if is_owner %}
   <form hx-post="/character/{{ character.pk }}/add-condition/"
         hx-target="#section-conditions"
         hx-swap="outerHTML"
-        class="inline-form" style="margin-top: 0.5rem;">
+        class="inline-form mt-sm">
     {% csrf_token %}
     <select name="modifier_type" required>
       <option value="ability">Ability</option>
       <option value="weight">Weight</option>
       <option value="action_point">Action Point</option>
     </select>
-    <input type="text" name="target" placeholder="Target (e.g. strength)" style="width: 8rem;">
-    <input type="number" name="value" placeholder="Value" style="width: 4rem;" required>
+    <input type="text" name="target" placeholder="Target (e.g. strength)" class="w-8">
+    <input type="number" name="value" placeholder="Value" class="w-4" required>
     <input type="text" name="source" placeholder="Source" required>
     <select name="scope">
       <option value="">All (no scope)</option>

@@ -4,31 +4,26 @@
 
 {% block content %}
 <h1>Report a Problem or Suggestion</h1>
-<p style="color: var(--text-muted); margin-bottom: 1rem;">
+<p class="muted mb-lg">
   Something broken? Have an idea? Let us know and we'll look into it.
 </p>
 
 <form method="post" class="section">
   {% csrf_token %}
-  <div style="margin-bottom: 0.75rem;">
-    <label for="id_title" style="display: block; margin-bottom: 0.25rem; color: var(--text-muted); font-size: 0.85rem;">Title</label>
+  <div class="mb-md">
+    <label for="id_title" class="field-label">Title</label>
     {{ form.title }}
     {% if form.title.errors %}
-      <div style="color: var(--accent); font-size: 0.85rem;">{{ form.title.errors.0 }}</div>
+      <div class="field-error">{{ form.title.errors.0 }}</div>
     {% endif %}
   </div>
-  <div style="margin-bottom: 0.75rem;">
-    <label for="id_description" style="display: block; margin-bottom: 0.25rem; color: var(--text-muted); font-size: 0.85rem;">Description</label>
+  <div class="mb-md">
+    <label for="id_description" class="field-label">Description</label>
     {{ form.description }}
     {% if form.description.errors %}
-      <div style="color: var(--accent); font-size: 0.85rem;">{{ form.description.errors.0 }}</div>
+      <div class="field-error">{{ form.description.errors.0 }}</div>
     {% endif %}
   </div>
   <button type="submit">Submit Feedback</button>
 </form>
-
-<style>
-  #id_title, #id_contact { width: 100%; }
-  #id_description { width: 100%; resize: vertical; }
-</style>
 {% endblock %}
