@@ -334,6 +334,13 @@ class MaximumHPTests(TestCase):
         hit_dice = [{"level": 1, "die_type": "d4", "roll": 1, "con_bonus": -2}]
         self.assertEqual(maximum_hp(hit_dice, "mage"), 1)
 
+    def test_bonus_hp_added(self):
+        hit_dice = [{"level": 1, "die_type": "d10", "roll": 8, "con_bonus": 1}]
+        self.assertEqual(maximum_hp(hit_dice, "fighter", bonus_hp=4), 13)
+
+    def test_bonus_hp_only(self):
+        self.assertEqual(maximum_hp([], "fighter", bonus_hp=5), 5)
+
 
 class XPTests(TestCase):
     def test_fighter_xp(self):

@@ -174,9 +174,10 @@ class Character(models.Model):
         from . import rules
 
         hit_dice = list(self.hit_dice.values("level", "die_type", "roll", "con_bonus"))
-        if not hit_dice:
+        bonus_hp = sum(b.amount for b in self.bonus_hit_points.all())
+        if not hit_dice and not bonus_hp:
             return None
-        return rules.maximum_hp(hit_dice, self.char_class)
+        return rules.maximum_hp(hit_dice, self.char_class, bonus_hp=bonus_hp)
 
     # --- Money ---
 
@@ -283,6 +284,25 @@ class HitDie(models.Model):
         if self.is_bodymass:
             return f"Bodymass: {self.die_type} → {self.roll}"
         return f"Level {self.level}: {self.die_type} → {self.roll} (+{self.con_bonus})"
+
+
+class BonusHitPoints(models.Model):
+    """Arbitrary additional hit points beyond hit dice, with a note explaining
+    their source (e.g. a soldier at arms whose HP exceeds bodymass but falls
+    short of a full additional hit die).
+    """
+
+    character = models.ForeignKey(
+        Character, on_delete=models.CASCADE, related_name="bonus_hit_points"
+    )
+    amount = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    note = models.CharField(max_length=200)
+
+    class Meta:
+        ordering = ["pk"]
+
+    def __str__(self):
+        return f"+{self.amount} ({self.note})"
 
 
 class Spell(models.Model):

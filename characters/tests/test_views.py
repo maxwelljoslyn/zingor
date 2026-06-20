@@ -3,7 +3,14 @@
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
-from characters.models import Character, Condition, HitDie, Item, Spell
+from characters.models import (
+    BonusHitPoints,
+    Character,
+    Condition,
+    HitDie,
+    Item,
+    Spell,
+)
 
 
 class AuthViewTests(TestCase):
@@ -355,3 +362,40 @@ class HitDieViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(HitDie.objects.filter(character=self.character).count(), 1)
+
+
+class BonusHitPointsViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+        self.character = Character.objects.create(user=self.user, name="Thorn")
+
+    def test_add_bonus_hp(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/add-bonus-hp/",
+            {"amount": "4", "note": "soldier at arms"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            BonusHitPoints.objects.filter(character=self.character).count(), 1
+        )
+
+    def test_add_bonus_hp_requires_note(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/add-bonus-hp/",
+            {"amount": "4", "note": ""},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            BonusHitPoints.objects.filter(character=self.character).count(), 0
+        )
+
+    def test_delete_bonus_hp(self):
+        bonus = BonusHitPoints.objects.create(
+            character=self.character, amount=4, note="soldier at arms"
+        )
+        response = self.client.delete(f"/bonus-hp/{bonus.pk}/delete/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            BonusHitPoints.objects.filter(character=self.character).count(), 0
+        )

@@ -3,7 +3,14 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from characters.models import Character, Condition, HitDie, Item, Spell
+from characters.models import (
+    BonusHitPoints,
+    Character,
+    Condition,
+    HitDie,
+    Item,
+    Spell,
+)
 from characters.units import D
 
 
@@ -61,6 +68,24 @@ class CharacterModelTests(TestCase):
 
     def test_maximum_hp_no_dice(self):
         self.assertIsNone(self.character.maximum_hp)
+
+    def test_maximum_hp_includes_bonus_hp(self):
+        HitDie.objects.create(
+            character=self.character, level=1, die_type="d10", roll=8, con_bonus=1
+        )
+        BonusHitPoints.objects.create(
+            character=self.character, amount=3, note="soldier at arms"
+        )
+        BonusHitPoints.objects.create(
+            character=self.character, amount=2, note="blessing"
+        )
+        self.assertEqual(self.character.maximum_hp, 14)
+
+    def test_maximum_hp_bonus_only(self):
+        BonusHitPoints.objects.create(
+            character=self.character, amount=5, note="soldier at arms"
+        )
+        self.assertEqual(self.character.maximum_hp, 5)
 
 
 class ItemModelTests(TestCase):

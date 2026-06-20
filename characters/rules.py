@@ -1052,12 +1052,14 @@ def thac0(klass, level):
     return row[idx]
 
 
-def maximum_hp(hit_dice_list, char_class=None):
-    """Calculate max HP from a list of hit die dicts.
+def maximum_hp(hit_dice_list, char_class=None, bonus_hp=0):
+    """Calculate max HP from a list of hit die dicts plus any flat bonus HP.
 
     Each dict has: level, die_type, roll, con_bonus.
+    bonus_hp is the summed total of arbitrary additional hit points (e.g. a
+    soldier at arms whose HP exceeds bodymass but is short of a full hit die).
     """
-    total = 0
+    total = bonus_hp
     for die in hit_dice_list:
         total += die["roll"] + die["con_bonus"]
     return max(1, total)

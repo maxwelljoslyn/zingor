@@ -87,6 +87,16 @@ urlpatterns = [
         views.delete_hit_die,
         name="delete_hit_die",
     ),
+    path(
+        "character/<int:pk>/add-bonus-hp/",
+        views.add_bonus_hp,
+        name="add_bonus_hp",
+    ),
+    path(
+        "bonus-hp/<int:bonus_hp_id>/delete/",
+        views.delete_bonus_hp,
+        name="delete_bonus_hp",
+    ),
     # Spells
     path(
         "character/<int:pk>/add-spell/",

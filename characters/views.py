@@ -25,6 +25,7 @@ from .forms import FeedbackForm, RegistrationForm
 
 logger = logging.getLogger(__name__)
 from .models import (
+    BonusHitPoints,
     Character,
     Condition,
     HitDie,
@@ -61,6 +62,9 @@ def character_owner_required(view_func):
         elif "hit_die_id" in kwargs:
             hd = get_object_or_404(HitDie, pk=kwargs["hit_die_id"])
             owner = hd.character.user
+        elif "bonus_hp_id" in kwargs:
+            bonus = get_object_or_404(BonusHitPoints, pk=kwargs["bonus_hp_id"])
+            owner = bonus.character.user
         elif "spell_id" in kwargs:
             spell = get_object_or_404(Spell, pk=kwargs["spell_id"])
             owner = spell.character.user
@@ -151,6 +155,7 @@ def _sheet_context(character):
         "ability_data": ability_data,
         "bodymass_die": bodymass_die,
         "level_dice": level_dice,
+        "bonus_hit_points": character.bonus_hit_points.all(),
         "items": items,
         "conditions": conditions,
         "spells_by_level": spells_by_level,
@@ -832,6 +837,33 @@ def delete_hit_die(request, hit_die_id):
     hd = get_object_or_404(HitDie, pk=hit_die_id)
     character = hd.character
     hd.delete()
+    return _render_section(request, character, "hp")
+
+
+@login_required
+@character_owner_required
+@require_POST
+def add_bonus_hp(request, pk):
+    character = get_object_or_404(Character, pk=pk)
+    amount = int(request.POST.get("amount", 0))
+    note = request.POST.get("note", "").strip()
+    if amount >= 1 and note:
+        BonusHitPoints.objects.create(
+            character=character,
+            amount=amount,
+            note=note,
+        )
+    return _render_section(request, character, "hp")
+
+
+@login_required
+@character_owner_required
+def delete_bonus_hp(request, bonus_hp_id):
+    if request.method != "DELETE":
+        return HttpResponse(status=405)
+    bonus = get_object_or_404(BonusHitPoints, pk=bonus_hp_id)
+    character = bonus.character
+    bonus.delete()
     return _render_section(request, character, "hp")
 
 

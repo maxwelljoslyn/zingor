@@ -106,4 +106,40 @@
     <button type="submit" class="btn btn-small">Add Level Die</button>
   </form>
   {% endif %}
+  <h3 style="margin-top: 0.75rem; font-size: 0.95rem;">Additional Hit Points</h3>
+  {% if bonus_hit_points %}
+  <table>
+    <thead><tr><th>Amount</th><th>Note</th>{% if is_owner %}<th></th>{% endif %}</tr></thead>
+    <tbody>
+      {% for bonus in bonus_hit_points %}
+      <tr>
+        <td>+{{ bonus.amount }}</td>
+        <td>{{ bonus.note }}</td>
+        {% if is_owner %}
+        <td>
+          <button hx-delete="/bonus-hp/{{ bonus.pk }}/delete/"
+                  hx-target="#section-hp"
+                  hx-swap="outerHTML"
+                  hx-confirm="Remove this bonus HP?"
+                  class="btn btn-danger btn-small">x</button>
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color: var(--text-muted); font-size: 0.9rem;">No additional hit points recorded.</p>
+  {% endif %}
+  {% if is_owner %}
+  <form hx-post="/character/{{ character.pk }}/add-bonus-hp/"
+        hx-target="#section-hp"
+        hx-swap="outerHTML"
+        class="inline-form" style="margin-top: 0.5rem;">
+    {% csrf_token %}
+    <input type="number" name="amount" min="1" placeholder="HP" style="width: 4rem;" required>
+    <input type="text" name="note" placeholder="Source (e.g. soldier at arms)" style="min-width: 14rem;" required>
+    <button type="submit" class="btn btn-small">Add Bonus HP</button>
+  </form>
+  {% endif %}
 </div>
