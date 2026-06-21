@@ -141,8 +141,7 @@ header {
   text-decoration: none;
 }
 header > a:hover { color: var(--accent); }
-nav a { color: var(--accent); text-decoration: none; margin-left: 1rem; }
-nav a:hover { color: var(--accent-hover); }
+nav a.btn { color: var(--on-accent); text-decoration: none; margin-left: 1rem; }
 /* Show the icon for the active theme; the other stays hidden. Light is the
    default (:root), dark is applied via :root[data-theme="dark"]. */
 .theme-icon-dark { display: none; }
