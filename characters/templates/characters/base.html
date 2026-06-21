@@ -4,6 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Zingor{% endblock %}</title>
+  <script>
+    // Apply the saved theme before first paint to avoid a flash of the wrong mode.
+    // Default is light (no data-theme attribute); only dark is stored explicitly.
+    (function () {
+      try {
+        if (localStorage.getItem('theme') === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch (e) {}
+    })();
+  </script>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script>
     document.addEventListener('htmx:configRequest', function(event) {
@@ -19,6 +30,19 @@
         }
       }
     });
+
+    // Light/dark theme toggle. Persists to localStorage; the icon shown is driven
+    // by the [data-theme] attribute in CSS, so it stays in sync automatically.
+    window.zingorToggleTheme = function () {
+      var root = document.documentElement;
+      if (root.getAttribute('data-theme') === 'dark') {
+        root.removeAttribute('data-theme');
+        try { localStorage.setItem('theme', 'light'); } catch (e) {}
+      } else {
+        root.setAttribute('data-theme', 'dark');
+        try { localStorage.setItem('theme', 'dark'); } catch (e) {}
+      }
+    };
 
     // Drag-and-drop for inventory containers
     window._zingorDragId = null;
@@ -84,6 +108,11 @@
   <header>
     <a href="/">Zingor</a>
     <nav>
+      <button type="button" onclick="zingorToggleTheme()"
+              aria-label="Toggle light and dark mode" title="Toggle light and dark mode">
+        <span class="theme-icon theme-icon-light"><span aria-hidden="true">☀</span> light</span>
+        <span class="theme-icon theme-icon-dark"><span aria-hidden="true">☾</span> dark</span>
+      </button>
       {% if user.is_authenticated %}
         <a href="{% url 'characters:feedback' %}">Feedback</a>
         <span>{{ user.username }}</span>
