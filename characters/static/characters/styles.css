@@ -121,14 +121,6 @@ a:active {
   /* intentionally left blank: use defaults */
 }
 
-
-
-
-/* deprecated in favor of targeting anchor tags directly
-.link { color: var(--accent); text-decoration: none; }
-.link:hover { color: var(--accent-hover); }
-*/
-
 .container { max-width: 960px; margin: 0 auto; padding: 1.25rem 1rem; }
 header {
   background: var(--surface);
@@ -140,12 +132,12 @@ header {
   align-items: center;
 }
 /* Brand wordmark — set in the display serif, inked rather than rubricated */
-header > a {
+.logo {
   font-family: var(--font-display);
   font-size: 1.3rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--text);
+  color: var(--text) !important;
   text-decoration: none;
 }
 header > a:hover { color: var(--accent); }
@@ -284,10 +276,6 @@ th.sortable:hover { color: var(--accent-hover); }
 .mt-sm { margin-top: 0.5rem; }
 .mt-md { margin-top: 0.75rem; }
 .mt-lg { margin-top: 2rem; }
-/* deprecated in favor of targeting anchor tags directly
-.link { color: var(--accent); text-decoration: none; }
-.link:hover { color: var(--accent-hover); }
-*/
 
 /* ---- Components (replace former inline styles) ---- */
 .row-between { display: flex; justify-content: space-between; align-items: center; }
