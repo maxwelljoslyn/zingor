@@ -40,6 +40,44 @@
   --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/*
+ * Dark counterpart — the same ledger read by candlelight: tooled leather and
+ * tallow-smoke grounds, ink warmed to legibility, rubric brightened so the
+ * vermilion still sings against the dark. Only the color tokens are redefined;
+ * type tokens are inherited from :root. Applied by setting data-theme="dark"
+ * on the document root.
+ */
+:root[data-theme="dark"] {
+  /* Surfaces — tooled leather and smoke */
+  --bg: #1b1813;            /* dark leather binding */
+  --surface: #24201a;       /* a page in candlelight */
+  --surface-alt: #2c271f;   /* faint ledger band (odd rows) */
+  --surface-alt-2: #272219; /* faint ledger band (even rows) */
+  --input-bg: #2f2a21;      /* unmarked paper in shadow */
+
+  /* Ink — warmed for legibility on the dark ground */
+  --text: #ece2cd;          /* lamplit cream */
+  --text-muted: #a39a82;    /* faded marginalia */
+
+  /* Brand / rubric — brightened so vermilion still sings */
+  --accent: #e0654f;        /* vermilion rubrication */
+  --accent-hover: #ec7660;
+  --on-accent: #1b1813;     /* dark ink on lit buttons */
+  --secondary: #6ea3d4;     /* lapis */
+  --secondary-hover: #82b3e0;
+
+  /* Semantic */
+  --success: #84b06a;       /* verdigris */
+  --danger: #d76a58;        /* oxblood, lit */
+  --danger-hover: #e27c69;
+
+  /* Structure */
+  --border: #443c2c;        /* inked hairline on leather */
+  --overlay: rgba(0, 0, 0, 0.65);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.40), 0 2px 10px rgba(0, 0, 0, 0.30);
+  --ring: 0 0 0 3px rgba(224, 101, 79, 0.30);
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: var(--font-body);
