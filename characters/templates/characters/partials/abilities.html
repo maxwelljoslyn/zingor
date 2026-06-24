@@ -1,11 +1,19 @@
 {% load character_tags %}
 <div class="section" id="section-abilities" data-section="abilities">
-  <h2>Ability Scores</h2>
+  <div class="section-head">
+    <h2>Ability Scores</h2>
+    {% if user.is_authenticated %}
+    <button type="button" class="btn btn-secondary btn-small"
+            data-reorder-toggle="abilities"
+            data-label-off="Reorder" data-label-on="Done"
+            onclick="zingorToggleReorder(this)">Reorder</button>
+    {% endif %}
+  </div>
   <table class="kv-table">
     <thead>
       <tr><th>Ability</th><th>Score</th><th>Derived Stats</th></tr>
     </thead>
-    <tbody>
+    <tbody data-sortable="abilities">
       {% for ability in ability_data %}
       <tr data-row="{{ ability.field_name }}">
         <th>{{ ability.name|title }}</th>

@@ -13,13 +13,18 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
-from django.http import HttpResponse, HttpResponseForbidden
+from django.db import transaction
+from django.http import (
+    HttpResponse,
+    HttpResponseBadRequest,
+    HttpResponseForbidden,
+)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_GET, require_POST
 
-from . import rules
+from . import layout, rules
 from .auth_emails import EmailSendError, send_confirmation_email
 from .forms import FeedbackForm, RegistrationForm
 
@@ -30,6 +35,7 @@ from .models import (
     Condition,
     HitDie,
     Item,
+    LayoutOrder,
     Profile,
     SageStudyPoints,
     Spell,
@@ -99,10 +105,10 @@ def _build_char_data(character):
     return data
 
 
-def _build_ability_data(character, derived):
-    """Build structured ability data for the template."""
+def _build_ability_data(character, derived, order):
+    """Build structured ability data for the template, in the given `order`."""
     ability_data = []
-    for ability in Character.ABILITY_NAMES:
+    for ability in order:
         base_score = getattr(character, ability)
         current_score = character.current_ability_score(ability)
         derived_stats = []
@@ -134,11 +140,16 @@ def _build_ability_data(character, derived):
     return ability_data
 
 
-def _sheet_context(character):
-    """Build the full template context for a character sheet."""
+def _sheet_context(character, user):
+    """Build the full template context for a character sheet.
+
+    `user` is the viewer, whose per-user layout preferences determine ordering.
+    """
     char_data = _build_char_data(character)
     derived = rules.calculate_derived_stats(char_data)
-    ability_data = _build_ability_data(character, derived)
+    ability_data = _build_ability_data(
+        character, derived, layout.row_order(user, "abilities")
+    )
     bodymass_die = character.hit_dice.filter(is_bodymass=True).first()
     level_dice = character.hit_dice.filter(is_bodymass=False)
     items = character.inventory.filter(container__isnull=True)
@@ -378,9 +389,39 @@ def character_create(request):
 @login_required
 def character_sheet(request, pk):
     character = get_object_or_404(Character, pk=pk)
-    ctx = _sheet_context(character)
+    ctx = _sheet_context(character, request.user)
     ctx["is_owner"] = character.user == request.user
     return render(request, "characters/character_sheet.html", ctx)
+
+
+@login_required
+@require_POST
+def reorder_rows(request, section):
+    """Persist the viewer's preferred order of a section's reorderable rows.
+
+    Body is a JSON array of row keys. Unknown keys are dropped; the stored order
+    for this (user, scope) is rewritten wholesale. Layout is a per-user display
+    preference, so this is unrelated to character ownership.
+    """
+    if section not in layout.SUBSECTIONS:
+        return HttpResponseBadRequest("Unknown section")
+    try:
+        submitted = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return HttpResponseBadRequest("Invalid JSON body")
+    if not isinstance(submitted, list):
+        return HttpResponseBadRequest("Expected a JSON array of keys")
+    allowed = set(layout.SUBSECTIONS[section])
+    order = [key for key in submitted if key in allowed]
+    with transaction.atomic():
+        LayoutOrder.objects.filter(user=request.user, scope=section).delete()
+        LayoutOrder.objects.bulk_create(
+            [
+                LayoutOrder(user=request.user, scope=section, key=key, position=i)
+                for i, key in enumerate(order)
+            ]
+        )
+    return HttpResponse(status=204)
 
 
 # --- HTMX field editing ---
@@ -526,7 +567,7 @@ def _render_section(request, character, section, oob_sections=None):
 
     oob_sections: list of additional section names to include as hx-swap-oob.
     """
-    ctx = _sheet_context(character)
+    ctx = _sheet_context(character, request.user)
     ctx["is_owner"] = character.user == request.user
     template_name = f"characters/partials/{section}.html"
     response = render(request, template_name, ctx)

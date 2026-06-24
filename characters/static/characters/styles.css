@@ -261,6 +261,31 @@ ul.spell-list { list-style: none; padding: 0; }
 .subsection { margin-bottom: 0.75rem; }
 .subsection:last-child { margin-bottom: 0; }
 
+/* A heading row that keeps the rubricated full-width underline while letting a
+   control (e.g. a Reorder toggle) sit on the same line as the section title. */
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.85rem;
+}
+.section-head h2 {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+/* While a list is in reorder mode, its rows are draggable handles: the open-hand
+   cursor covers the whole row (beating inner clickable/edit cursors and any
+   inline cursor SortableJS leaves behind), and during an active drag the
+   closed-fist cursor is shown everywhere via the body.zingor-dragging flag. */
+body:not(.zingor-dragging) .reordering [data-row],
+body:not(.zingor-dragging) .reordering [data-row] * { cursor: grab !important; }
+body.zingor-dragging * { cursor: grabbing !important; }
+.reordering [data-row]:hover { background: var(--surface-alt); }
+
 /* Inventory items nest, so their stripe lives on the wrapper, not the row. */
 .item-wrapper:nth-child(odd) { background: var(--surface-alt); }
 .item-wrapper:nth-child(even) { background: var(--surface-alt-2); }

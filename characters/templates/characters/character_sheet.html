@@ -21,4 +21,59 @@
   {% include "characters/partials/sheet_body.html" %}
 </div>
 <div id="wiki-modal"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script>
+  // Drag-to-reorder for sheet rows (currently the ability scores). A "Reorder"
+  // toggle turns a Sortable on for a [data-sortable="<scope>"] container; on each
+  // drop, the new order of [data-row] keys is POSTed to the per-user layout
+  // endpoint. Loaded here (sheet page only), not in the app-global base template.
+  (function () {
+    var active = {};
+    function csrfToken() {
+      var el = document.querySelector('[name=csrfmiddlewaretoken]');
+      return el ? el.value : '';
+    }
+    window.zingorToggleReorder = function (btn) {
+      var scope = btn.dataset.reorderToggle;
+      var container = document.querySelector('[data-sortable="' + scope + '"]');
+      if (!container) return;
+      if (active[scope]) {
+        active[scope].destroy();
+        delete active[scope];
+        container.classList.remove('reordering');
+        btn.textContent = btn.dataset.labelOff;
+        return;
+      }
+      container.classList.add('reordering');
+      btn.textContent = btn.dataset.labelOn;
+      active[scope] = Sortable.create(container, {
+        draggable: '[data-row]',
+        animation: 150,
+        onChoose: function () {
+          // Fires on mousedown, before the drag threshold, so the closed-fist
+          // cursor appears the instant you press a row.
+          document.body.classList.add('zingor-dragging');
+        },
+        onUnchoose: function () {
+          document.body.classList.remove('zingor-dragging');
+        },
+        onEnd: function () {
+          var order = Array.prototype.map.call(
+            container.querySelectorAll('[data-row]'),
+            function (el) { return el.dataset.row; }
+          );
+          fetch('/layout/rows/' + scope + '/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrfToken()
+            },
+            body: JSON.stringify(order)
+          });
+        }
+      });
+    };
+  })();
+</script>
 {% endblock %}

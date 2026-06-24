@@ -22,6 +22,37 @@ class Profile(models.Model):
         return f"{self.user.username} profile"
 
 
+class LayoutOrder(models.Model):
+    """One user's position for a single key within an ordering scope.
+
+    A *scope* is an independently-orderable list on the character sheet: a section
+    key like "abilities" for that section's rows (and, later, "sections" for the
+    section order itself). The full order for a (user, scope) is its rows sorted
+    by `position`. This is a per-user display preference, applied whenever the
+    user views any character sheet.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="layout_orders",
+    )
+    scope = models.CharField(max_length=50)
+    key = models.CharField(max_length=50)
+    position = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ["position"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "scope", "key"], name="uniq_layout_user_scope_key"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} {self.scope}: {self.key}@{self.position}"
+
+
 class Character(models.Model):
     """A player character. Wide table with nullable columns so the sheet can start empty."""
 
