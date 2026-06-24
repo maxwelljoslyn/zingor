@@ -283,10 +283,12 @@ ul.spell-list { list-style: none; padding: 0; }
    closed-fist cursor is shown everywhere via the body.zingor-dragging flag. */
 body:not(.zingor-dragging) .reordering[data-sortable="abilities"] [data-row],
 body:not(.zingor-dragging) .reordering[data-sortable="abilities"] [data-row] *,
-body:not(.zingor-dragging) .reordering[data-sortable="sections"] > [data-section] h2,
-body:not(.zingor-dragging) .reordering[data-sortable="notes"] > [data-subsection] h3 { cursor: grab !important; }
+body:not(.zingor-dragging) .reordering[data-sortable="notes"] [data-subsection],
+body:not(.zingor-dragging) .reordering[data-sortable="notes"] [data-subsection] *,
+body:not(.zingor-dragging) .reordering[data-sortable="sections"] > [data-section] h2 { cursor: grab !important; }
 body.zingor-dragging * { cursor: grabbing !important; }
-.reordering[data-sortable="abilities"] [data-row]:hover { background: var(--surface-alt); }
+.reordering[data-sortable="abilities"] [data-row]:hover,
+.reordering[data-sortable="notes"] [data-subsection]:hover { background: var(--surface-alt); }
 
 /* Inventory items nest, so their stripe lives on the wrapper, not the row. */
 .item-wrapper:nth-child(odd) { background: var(--surface-alt); }

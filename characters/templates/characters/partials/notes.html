@@ -9,7 +9,7 @@
             onclick="zingorToggleReorder(this)">Reorder</button>
     {% endif %}
   </div>
-  <div data-sortable="notes" data-sortable-item="subsection" data-sortable-handle="h3">
+  <div data-sortable="notes" data-sortable-item="subsection">
     {% for block in notes_blocks %}
     <div class="subsection" data-subsection="{{ block.key }}">
       <h3 class="subhead">{{ block.label }}</h3>
