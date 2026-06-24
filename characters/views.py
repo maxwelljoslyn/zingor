@@ -917,7 +917,7 @@ def delete_bonus_hp(request, bonus_hp_id):
 def add_spell(request, pk):
     character = get_object_or_404(Character, pk=pk)
     name = request.POST.get("name", "")
-    level = int(request.POST.get("level", 1))
+    level = int(request.POST.get("level", 0))
 
     Spell.objects.create(character=character, name=name, level=level)
     return _render_section(request, character, "spells")

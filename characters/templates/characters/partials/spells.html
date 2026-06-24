@@ -43,7 +43,7 @@
         class="inline-form mt-sm">
     {% csrf_token %}
     <input type="text" name="name" placeholder="Spell name" required>
-    <input type="number" name="level" placeholder="Level" class="w-4" required min="1" max="9">
+    <input type="number" name="level" placeholder="Level" class="w-4" required min="0" max="9">
     <button type="submit" class="btn btn-small">Add</button>
   </form>
   {% endif %}
