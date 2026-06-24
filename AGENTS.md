@@ -14,6 +14,7 @@
 - **Run single test**: `uv run pytest tests/path/to/test_file.py::test_function_name -n auto`
 - **Run tests with output**: `uv run pytest -v -n auto`
 - Don't use `cat` needlessly. Prefer `head` to `cat | head`; prefer `tail` to `cat | tail`
+- Always run tests in a Haiku 4.6 subagent.
 
 ## Code Style
 - **Types**: Use type annotations for function parameters and return values
