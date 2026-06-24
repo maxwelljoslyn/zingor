@@ -184,6 +184,7 @@ th {
 }
 .field-unknown:hover { color: var(--accent); }
 .field-value { font-weight: bold; }
+.field-value--prose { font-weight: normal; }
 input, select, textarea {
   background: var(--input-bg);
   color: var(--text);

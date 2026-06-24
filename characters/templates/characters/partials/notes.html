@@ -16,7 +16,7 @@
       {% if block.value %}
         {% if is_owner %}
         <span id="field-{{ block.field }}"
-              class="field-value clickable"
+              class="field-value field-value--prose clickable"
               hx-get="/character/{{ character.pk }}/edit-field/?field={{ block.field }}"
               hx-target="#field-{{ block.field }}"
               hx-swap="outerHTML">{{ block.value|linebreaksbr }}</span>
