@@ -326,6 +326,16 @@ th.sortable:hover { color: var(--accent-hover); }
 .row-between { display: flex; justify-content: space-between; align-items: center; }
 .auth-card { max-width: 400px; margin: 2rem auto; }
 .auth-footer { margin-top: 0.75rem; font-size: 0.9rem; }
+.build-info {
+  position: fixed;
+  bottom: 0.4rem;
+  right: 0.6rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+  pointer-events: none;
+  font-family: var(--font-body);
+}
 .form-error { color: var(--accent); margin-bottom: 0.5rem; }
 .field-label { display: block; margin-bottom: 0.25rem; color: var(--text-muted); font-size: 0.85rem; }
 .field-error { color: var(--accent); font-size: 0.85rem; }
