@@ -3,10 +3,13 @@
 WIKI_BASE = "https://wiki.alexissmolensk.com/index.php"
 
 
-def linkify_spell(name: str) -> str:
+def linkify_spell(name: str, level: int) -> str:
     """Return the wiki URL for a spell by name."""
     slug = name.replace(" ", "_")
-    return f"{WIKI_BASE}/{slug}_(spell)"
+    if level == 0:
+        return f"{WIKI_BASE}/{slug}_(cantrip)"
+    else:
+        return f"{WIKI_BASE}/{slug}_(spell)"
 
 
 def linkify_study(name: str) -> str:

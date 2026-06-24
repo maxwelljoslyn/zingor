@@ -44,10 +44,10 @@ def ceildiv(value, arg):
         return None
 
 
-@register.filter
-def spell_url(name: str) -> str:
-    """Return the wiki URL for a spell."""
-    return linkify_spell(name)
+@register.simple_tag
+def spell_url(name: str, level: int) -> str:
+    """Return the wiki URL for a spell at the given level."""
+    return linkify_spell(name, level)
 
 
 @register.filter

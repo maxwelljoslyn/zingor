@@ -8,7 +8,7 @@
       <ul class="spell-list striped">
         {% for spell in spell_list %}
         <li class="sheet-row">
-          <a href="{{ spell.name|spell_url }}" target="_blank" class="flex-1">{{ spell.name }}</a>
+          <a href="{% spell_url spell.name level %}" target="_blank" class="flex-1">{{ spell.name }}</a>
           {% if is_owner %}
           <form hx-post="/spell/{{ spell.pk }}/toggle-memorized/"
                 hx-target="#section-spells"

@@ -15,7 +15,8 @@ def _wiki_reachable() -> bool:
 
 
 def test_linkify_spell_url_format():
-    assert linkify_spell("Fireball") == f"{WIKI_BASE}/Fireball_(spell)"
+    assert linkify_spell("Fireball", 3) == f"{WIKI_BASE}/Fireball_(spell)"
+    assert linkify_spell("Hairy", 0) == f"{WIKI_BASE}/Hairy_(cantrip)"
 
 
 def test_linkify_study_url_format():
@@ -33,7 +34,7 @@ def test_linkify_field_url_format():
 @pytest.mark.skipif(not _wiki_reachable(), reason="Wiki site unreachable")
 class TestWikiLinksLive:
     def test_spell_fireball(self):
-        url = linkify_spell("Fireball")
+        url = linkify_spell("Fireball", 3)
         resp = requests.get(url, timeout=10)
         assert resp.status_code == 200
 
