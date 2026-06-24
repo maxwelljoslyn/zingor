@@ -100,6 +100,23 @@
         values: { item_id: itemId }
       });
     };
+
+    // Show the closed-fist cursor the moment a draggable element is pressed, to
+    // match the SortableJS reorder behaviour. Driven by body.zingor-dragging.
+    // (Once a native drag begins the browser may show its own move cursor; this
+    // reliably covers the mousedown-to-drag-start press.)
+    document.addEventListener('pointerdown', function (event) {
+      // Don't grab when pressing an interactive control inside a draggable row.
+      if (event.target.closest('button, a, input, select, label, textarea')) return;
+      if (event.target.closest('[draggable="true"]')) {
+        document.body.classList.add('zingor-dragging');
+      }
+    });
+    function zingorEndDrag() { document.body.classList.remove('zingor-dragging'); }
+    document.addEventListener('pointerup', zingorEndDrag);
+    document.addEventListener('pointercancel', zingorEndDrag);
+    document.addEventListener('dragend', zingorEndDrag);
+    document.addEventListener('drop', zingorEndDrag);
   </script>
   <link rel="stylesheet" href="{% static 'characters/styles.css' %}">
 </head>
