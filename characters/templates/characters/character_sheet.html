@@ -10,6 +10,12 @@
     {% endif %}
   </h1>
   <div class="toolbar">
+    {% if user.is_authenticated %}
+    <button type="button" class="btn btn-secondary btn-small"
+            data-reorder-toggle="sections"
+            data-label-off="Reorder sections" data-label-on="Done"
+            onclick="zingorToggleReorder(this)">Reorder sections</button>
+    {% endif %}
     <button hx-get="/character/{{ character.pk }}/wiki-export/"
             hx-target="#wiki-modal"
             hx-swap="innerHTML"
@@ -17,42 +23,55 @@
     <a href="/" class="btn btn-secondary btn-small">Back to List</a>
   </div>
 </div>
-<div id="sheet-body">
+<div id="sheet-body"
+     data-sortable="sections" data-sortable-item="section" data-sortable-handle="h2">
   {% include "characters/partials/sheet_body.html" %}
 </div>
 <div id="wiki-modal"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
 <script>
-  // Drag-to-reorder for sheet rows (currently the ability scores). A "Reorder"
-  // toggle turns a Sortable on for a [data-sortable="<scope>"] container; on each
-  // drop, the new order of [data-row] keys is POSTed to the per-user layout
-  // endpoint. Loaded here (sheet page only), not in the app-global base template.
+  // Drag-to-reorder for any orderable list on the sheet: sections, ability rows,
+  // notes blocks. A "Reorder" toggle (data-reorder-toggle="<scope>") turns a
+  // Sortable on for the matching [data-sortable="<scope>"] container. The
+  // container declares how to identify its items:
+  //   data-sortable-item="<attr>"   -> items are [data-<attr>], key is dataset[attr]
+  //   data-sortable-handle="<sel>"  -> optional drag-handle selector within an item
+  // On each drop the new key order is POSTed to the per-user layout endpoint.
+  //
+  // A user can still edit game data while in the "reordering sections" state; dragging keeps working.
+  // The following code implements that.
+  // `modes` (which scopes the user has switched on) is the source of truth, not
+  // the Sortable instance — so it survives htmx swaps. When htmx re-renders a
+  // section, its sortable container and toggle button become fresh nodes with no
+  // Sortable bound; the htmx:afterSwap handler re-binds any scope still on.
+  // Loaded here (sheet page only), not in the app-global base template.
   (function () {
-    var active = {};
+    var modes = {};
     function csrfToken() {
       var el = document.querySelector('[name=csrfmiddlewaretoken]');
       return el ? el.value : '';
     }
-    window.zingorToggleReorder = function (btn) {
-      var scope = btn.dataset.reorderToggle;
-      var container = document.querySelector('[data-sortable="' + scope + '"]');
-      if (!container) return;
-      if (active[scope]) {
-        active[scope].destroy();
-        delete active[scope];
-        container.classList.remove('reordering');
-        btn.textContent = btn.dataset.labelOff;
-        return;
-      }
-      container.classList.add('reordering');
-      btn.textContent = btn.dataset.labelOn;
-      active[scope] = Sortable.create(container, {
-        draggable: '[data-row]',
+    function container(scope) {
+      return document.querySelector('[data-sortable="' + scope + '"]');
+    }
+    function toggleButton(scope) {
+      return document.querySelector('[data-reorder-toggle="' + scope + '"]');
+    }
+    function bind(scope) {
+      var el = container(scope);
+      if (!el || Sortable.get(el)) return; // missing, or already bound
+      el.classList.add('reordering');
+      var btn = toggleButton(scope);
+      if (btn) btn.textContent = btn.dataset.labelOn;
+      var itemAttr = el.dataset.sortableItem;
+      var itemSelector = '[data-' + itemAttr + ']';
+      var options = {
+        draggable: itemSelector,
         animation: 150,
         onChoose: function () {
           // Fires on mousedown, before the drag threshold, so the closed-fist
-          // cursor appears the instant you press a row.
+          // cursor appears the instant you press an item.
           document.body.classList.add('zingor-dragging');
         },
         onUnchoose: function () {
@@ -60,10 +79,10 @@
         },
         onEnd: function () {
           var order = Array.prototype.map.call(
-            container.querySelectorAll('[data-row]'),
-            function (el) { return el.dataset.row; }
+            el.querySelectorAll(itemSelector),
+            function (node) { return node.dataset[itemAttr]; }
           );
-          fetch('/layout/rows/' + scope + '/', {
+          fetch('/layout/order/' + scope + '/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -72,8 +91,39 @@
             body: JSON.stringify(order)
           });
         }
-      });
+      };
+      if (el.dataset.sortableHandle) {
+        options.handle = el.dataset.sortableHandle;
+      }
+      Sortable.create(el, options);
+    }
+    function unbind(scope) {
+      var el = container(scope);
+      if (el) {
+        var instance = Sortable.get(el);
+        if (instance) instance.destroy();
+        el.classList.remove('reordering');
+      }
+      var btn = toggleButton(scope);
+      if (btn) btn.textContent = btn.dataset.labelOff;
+    }
+    window.zingorToggleReorder = function (btn) {
+      var scope = btn.dataset.reorderToggle;
+      if (modes[scope]) {
+        modes[scope] = false;
+        unbind(scope);
+      } else {
+        modes[scope] = true;
+        bind(scope);
+      }
     };
+    // Re-apply reorder mode after a swap replaces a sortable container/button.
+    // bind() is idempotent: scopes whose container survived are left untouched.
+    document.body.addEventListener('htmx:afterSwap', function () {
+      Object.keys(modes).forEach(function (scope) {
+        if (modes[scope]) bind(scope);
+      });
+    });
   })();
 </script>
 {% endblock %}

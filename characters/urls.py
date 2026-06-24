@@ -34,7 +34,7 @@ urlpatterns = [
     # Character sheet
     path("character/<int:pk>/", views.character_sheet, name="character_sheet"),
     # Per-user layout preferences (not character-scoped)
-    path("layout/rows/<str:section>/", views.reorder_rows, name="reorder_rows"),
+    path("layout/order/<str:scope>/", views.save_order, name="save_order"),
     # HTMX field editing
     path(
         "character/<int:pk>/edit-field/",

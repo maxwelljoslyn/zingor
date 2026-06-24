@@ -64,6 +64,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "characters.context_processors.registration_enabled",
+                "characters.context_processors.git_commit",
             ],
         },
     },

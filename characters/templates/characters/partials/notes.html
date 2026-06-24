@@ -1,76 +1,40 @@
 {% load character_tags %}
 <div class="section" id="section-notes" data-section="notes">
-  <h2>Notes</h2>
-  <div class="subsection" data-subsection="background">
-    <h3 class="subhead">Background</h3>
-    {% if character.background %}
-      {% if is_owner %}
-      <span id="field-background"
-            class="field-value clickable"
-            hx-get="/character/{{ character.pk }}/edit-field/?field=background"
-            hx-target="#field-background"
-            hx-swap="outerHTML">{{ character.background|linebreaksbr }}</span>
-      {% else %}
-      <span>{{ character.background|linebreaksbr }}</span>
-      {% endif %}
-    {% else %}
-      {% if is_owner %}
-      <span class="field-unknown"
-            id="field-background"
-            hx-get="/character/{{ character.pk }}/edit-field/?field=background"
-            hx-target="#field-background"
-            hx-swap="outerHTML">Click to add background</span>
-      {% else %}
-      <span class="muted">—</span>
-      {% endif %}
+  <div class="section-head">
+    <h2>Notes</h2>
+    {% if user.is_authenticated %}
+    <button type="button" class="btn btn-secondary btn-small"
+            data-reorder-toggle="notes"
+            data-label-off="Reorder" data-label-on="Done"
+            onclick="zingorToggleReorder(this)">Reorder</button>
     {% endif %}
   </div>
-  <div class="subsection" data-subsection="appearance">
-    <h3 class="subhead">Appearance</h3>
-    {% if character.appearance %}
-      {% if is_owner %}
-      <span id="field-appearance"
-            class="field-value clickable"
-            hx-get="/character/{{ character.pk }}/edit-field/?field=appearance"
-            hx-target="#field-appearance"
-            hx-swap="outerHTML">{{ character.appearance|linebreaksbr }}</span>
+  <div data-sortable="notes" data-sortable-item="subsection" data-sortable-handle="h3">
+    {% for block in notes_blocks %}
+    <div class="subsection" data-subsection="{{ block.key }}">
+      <h3 class="subhead">{{ block.label }}</h3>
+      {% if block.value %}
+        {% if is_owner %}
+        <span id="field-{{ block.field }}"
+              class="field-value clickable"
+              hx-get="/character/{{ character.pk }}/edit-field/?field={{ block.field }}"
+              hx-target="#field-{{ block.field }}"
+              hx-swap="outerHTML">{{ block.value|linebreaksbr }}</span>
+        {% else %}
+        <span>{{ block.value|linebreaksbr }}</span>
+        {% endif %}
       {% else %}
-      <span>{{ character.appearance|linebreaksbr }}</span>
+        {% if is_owner %}
+        <span class="field-unknown"
+              id="field-{{ block.field }}"
+              hx-get="/character/{{ character.pk }}/edit-field/?field={{ block.field }}"
+              hx-target="#field-{{ block.field }}"
+              hx-swap="outerHTML">Click to add {{ block.label|lower }}</span>
+        {% else %}
+        <span class="muted">—</span>
+        {% endif %}
       {% endif %}
-    {% else %}
-      {% if is_owner %}
-      <span class="field-unknown"
-            id="field-appearance"
-            hx-get="/character/{{ character.pk }}/edit-field/?field=appearance"
-            hx-target="#field-appearance"
-            hx-swap="outerHTML">Click to add appearance</span>
-      {% else %}
-      <span class="muted">—</span>
-      {% endif %}
-    {% endif %}
-  </div>
-  <div class="subsection" data-subsection="notes">
-    <h3 class="subhead">Notes</h3>
-    {% if character.notes %}
-      {% if is_owner %}
-      <span id="field-notes"
-            class="field-value clickable"
-            hx-get="/character/{{ character.pk }}/edit-field/?field=notes"
-            hx-target="#field-notes"
-            hx-swap="outerHTML">{{ character.notes|linebreaksbr }}</span>
-      {% else %}
-      <span>{{ character.notes|linebreaksbr }}</span>
-      {% endif %}
-    {% else %}
-      {% if is_owner %}
-      <span class="field-unknown"
-            id="field-notes"
-            hx-get="/character/{{ character.pk }}/edit-field/?field=notes"
-            hx-target="#field-notes"
-            hx-swap="outerHTML">Click to add notes</span>
-      {% else %}
-      <span class="muted">—</span>
-      {% endif %}
-    {% endif %}
+    </div>
+    {% endfor %}
   </div>
 </div>

@@ -148,7 +148,7 @@ def _sheet_context(character, user):
     char_data = _build_char_data(character)
     derived = rules.calculate_derived_stats(char_data)
     ability_data = _build_ability_data(
-        character, derived, layout.row_order(user, "abilities")
+        character, derived, layout.order_for(user, "abilities")
     )
     bodymass_die = character.hit_dice.filter(is_bodymass=True).first()
     level_dice = character.hit_dice.filter(is_bodymass=False)
@@ -170,9 +170,33 @@ def _sheet_context(character, user):
         "items": items,
         "conditions": conditions,
         "spells_by_level": spells_by_level,
+        "section_order": layout.section_order(user),
+        "notes_blocks": _build_notes_blocks(character, layout.order_for(user, "notes")),
     }
     ctx.update(_build_sage_context(character))
     return ctx
+
+
+# Editable free-text blocks in the Notes section: key -> display label. The key
+# is also the Character field name and the layout row key.
+NOTES_FIELDS = {
+    "background": "Background",
+    "appearance": "Appearance",
+    "notes": "Notes",
+}
+
+
+def _build_notes_blocks(character, order):
+    """Notes blocks (key, label, field, value) in the viewer's chosen order."""
+    return [
+        {
+            "key": key,
+            "label": NOTES_FIELDS[key],
+            "field": key,
+            "value": getattr(character, key),
+        }
+        for key in order
+    ]
 
 
 # --- Field type mapping ---
@@ -396,28 +420,31 @@ def character_sheet(request, pk):
 
 @login_required
 @require_POST
-def reorder_rows(request, section):
-    """Persist the viewer's preferred order of a section's reorderable rows.
+def save_order(request, scope):
+    """Persist the viewer's preferred order for an orderable scope.
 
-    Body is a JSON array of row keys. Unknown keys are dropped; the stored order
-    for this (user, scope) is rewritten wholesale. Layout is a per-user display
-    preference, so this is unrelated to character ownership.
+    `scope` is either "sections" (the section order) or a section key whose rows
+    are reorderable (e.g. "abilities", "notes"). Body is a JSON array of keys;
+    unknown keys are dropped and the stored order for this (user, scope) is
+    rewritten wholesale. Layout is a per-user display preference, so this is
+    unrelated to character ownership.
     """
-    if section not in layout.SUBSECTIONS:
-        return HttpResponseBadRequest("Unknown section")
+    allowed = layout.valid_keys(scope)
+    if allowed is None:
+        return HttpResponseBadRequest("Unknown scope")
     try:
         submitted = json.loads(request.body)
     except (json.JSONDecodeError, UnicodeDecodeError):
         return HttpResponseBadRequest("Invalid JSON body")
     if not isinstance(submitted, list):
         return HttpResponseBadRequest("Expected a JSON array of keys")
-    allowed = set(layout.SUBSECTIONS[section])
-    order = [key for key in submitted if key in allowed]
+    allowed_set = set(allowed)
+    order = [key for key in submitted if key in allowed_set]
     with transaction.atomic():
-        LayoutOrder.objects.filter(user=request.user, scope=section).delete()
+        LayoutOrder.objects.filter(user=request.user, scope=scope).delete()
         LayoutOrder.objects.bulk_create(
             [
-                LayoutOrder(user=request.user, scope=section, key=key, position=i)
+                LayoutOrder(user=request.user, scope=scope, key=key, position=i)
                 for i, key in enumerate(order)
             ]
         )

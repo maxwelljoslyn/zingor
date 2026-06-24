@@ -1,10 +1,1 @@
-{% include "characters/partials/identity.html" %}
-<div class="grid-2">
-  {% include "characters/partials/abilities.html" %}
-  {% include "characters/partials/hp.html" %}
-</div>
-{% include "characters/partials/inventory.html" %}
-{% include "characters/partials/conditions.html" %}
-{% include "characters/partials/spells.html" %}
-{% include "characters/partials/notes.html" %}
-{% include "characters/partials/sage.html" %}
+{% for key, template in section_order %}{% include template %}{% endfor %}

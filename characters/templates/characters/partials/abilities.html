@@ -13,7 +13,7 @@
     <thead>
       <tr><th>Ability</th><th>Score</th><th>Derived Stats</th></tr>
     </thead>
-    <tbody data-sortable="abilities">
+    <tbody data-sortable="abilities" data-sortable-item="row">
       {% for ability in ability_data %}
       <tr data-row="{{ ability.field_name }}">
         <th>{{ ability.name|title }}</th>
