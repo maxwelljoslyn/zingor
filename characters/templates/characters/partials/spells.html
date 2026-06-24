@@ -1,13 +1,13 @@
 {% load character_tags %}
-<div class="section" id="section-spells">
+<div class="section" id="section-spells" data-section="spells">
   <h2>Spells</h2>
   {% if spells_by_level %}
     {% for level, spell_list in spells_by_level.items %}
     <div class="mb-sm">
       <strong>Level {{ level }}</strong>
-      <ul class="spell-list">
+      <ul class="spell-list striped">
         {% for spell in spell_list %}
-        <li class="spell-row">
+        <li class="sheet-row">
           <a href="{{ spell.name|spell_url }}" target="_blank" class="flex-1">{{ spell.name }}</a>
           {% if is_owner %}
           <form hx-post="/spell/{{ spell.pk }}/toggle-memorized/"

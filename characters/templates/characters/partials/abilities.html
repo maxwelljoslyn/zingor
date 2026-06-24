@@ -1,13 +1,13 @@
 {% load character_tags %}
-<div class="section" id="section-abilities">
+<div class="section" id="section-abilities" data-section="abilities">
   <h2>Ability Scores</h2>
-  <table>
+  <table class="kv-table">
     <thead>
       <tr><th>Ability</th><th>Score</th><th>Derived Stats</th></tr>
     </thead>
     <tbody>
       {% for ability in ability_data %}
-      <tr>
+      <tr data-row="{{ ability.field_name }}">
         <th>{{ ability.name|title }}</th>
         <td>
           {% unknown_or_value ability.base_score ability.field_name character.pk %}

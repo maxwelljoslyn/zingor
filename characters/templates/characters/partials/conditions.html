@@ -1,9 +1,9 @@
 {% load character_tags %}
-<div class="section" id="section-conditions">
+<div class="section" id="section-conditions" data-section="conditions">
   <h2>Conditions</h2>
   {% if conditions %}
     {% for cond in conditions %}
-    <div class="item-row">
+    <div class="sheet-row sheet-row--between">
       <span>
         <strong>{{ cond.source }}</strong>:
         {% if cond.modifier_type == "ability" %}

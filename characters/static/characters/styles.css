@@ -225,7 +225,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .modifier-negative { color: var(--accent); }
 .inline-form { display: inline-flex; gap: 0.3rem; align-items: center; }
 ul.spell-list { list-style: none; padding: 0; }
-ul.spell-list li { padding: 0.2rem 0; }
 .htmx-indicator { display: none; }
 .htmx-request .htmx-indicator { display: inline; }
 .flash {
@@ -235,15 +234,37 @@ ul.spell-list li { padding: 0.2rem 0; }
   border-radius: 0 4px 4px 0;
   margin-bottom: 0.5rem;
 }
-.item-row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0.4rem; cursor: grab; }
-.spell-row { display: flex; align-items: center; padding: 0.3rem 0.4rem; gap: 1rem; }
-.spell-row:nth-child(odd) { background: var(--surface-alt); }
-.spell-row:nth-child(even) { background: var(--surface-alt-2); }
+/* ---- Reusable sheet structure ----
+ * Two row families share one vocabulary across every section:
+ *   .sheet-row  — a horizontal row in a flex list (inventory, conditions, spells)
+ *   .kv-table / .data-table — table-based rows (identity, HP, abilities, sage)
+ * Styling here is keyed to these classes (and data-* attributes), never to the
+ * #section-* ids, which are reserved as htmx swap targets. */
+
+/* Generic horizontal row used in flex lists. */
+.sheet-row { display: flex; align-items: center; gap: 1rem; padding: 0.3rem 0.4rem; }
+.sheet-row--between { justify-content: space-between; }
+.sheet-row--grab { cursor: grab; }
+/* Opt-in zebra striping for a list of sibling rows. */
+.striped > .sheet-row:nth-child(odd) { background: var(--surface-alt); }
+.striped > .sheet-row:nth-child(even) { background: var(--surface-alt-2); }
+
+/* Key/value tables: a label in the th, its value in the td. */
+.kv-table { width: 100%; }
+
+/* Tabular data with zebra-striped body rows (e.g. sage studies). */
+.data-table tbody tr:nth-child(odd) { background: var(--surface-alt); }
+.data-table tbody tr:nth-child(even) { background: var(--surface-alt-2); }
+
+/* A titled block within a section (notes fields, HP groups). A stable
+ * data-subsection key makes these individually addressable for reordering. */
+.subsection { margin-bottom: 0.75rem; }
+.subsection:last-child { margin-bottom: 0; }
+
+/* Inventory items nest, so their stripe lives on the wrapper, not the row. */
 .item-wrapper:nth-child(odd) { background: var(--surface-alt); }
 .item-wrapper:nth-child(even) { background: var(--surface-alt-2); }
 .item-wrapper + .item-wrapper { border-top: 1px solid var(--border); }
-#section-sage tbody tr:nth-child(odd) { background: var(--surface-alt); }
-#section-sage tbody tr:nth-child(even) { background: var(--surface-alt-2); }
 .contents { margin-left: 1.5rem; border-left: 2px solid var(--border); padding-left: 0.75rem; }
 .drop-target { outline: 2px dashed var(--accent); border-radius: 4px; background: var(--surface-alt); }
 th.sortable { cursor: pointer; }

@@ -4,7 +4,7 @@
      ondragenter="zingorDragEnter(event)"
      ondragleave="zingorDragLeave(event)"
      ondrop="zingorDrop(event)"{% endif %}{% endif %}>
-  <div class="item-row" id="item-{{ item.pk }}"
+  <div class="sheet-row sheet-row--between sheet-row--grab" id="item-{{ item.pk }}"
        {% if is_owner %}draggable="true"
        data-item-id="{{ item.pk }}"
        ondragstart="zingorDragStart(event)"

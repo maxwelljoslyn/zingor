@@ -1,7 +1,7 @@
 {% load character_tags %}
-<div class="section" id="section-hp">
+<div class="section" id="section-hp" data-section="hp">
   <h2>Hit Points</h2>
-  <table>
+  <table class="kv-table">
     <tr>
       <th>Current HP</th>
       <td>{% unknown_or_value character.current_hp "current_hp" character.pk %}</td>

@@ -1,9 +1,9 @@
 {% load character_tags %}
-<div class="section" id="section-sage" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<div class="section" id="section-sage" data-section="sage" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <h2>Sage Knowledge</h2>
   {{ sage_fields_json|json_script:"sage-fields-data" }}
   <script>window.SAGE_FIELDS = JSON.parse(document.getElementById('sage-fields-data').textContent);</script>
-  <table>
+  <table class="kv-table">
     <tr>
       <th>Chosen Field &amp; Study</th>
       <td>
@@ -38,7 +38,7 @@
   {% if sage_studies_by_field %}
     {% for group in sage_studies_by_field %}
       <h4><a href="{{ group.field|field_url }}" target="_blank">{{ group.field }}</a></h4>
-      <table>
+      <table class="data-table">
         <thead>
           <tr>
             <th>Study</th>
