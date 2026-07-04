@@ -253,9 +253,14 @@ ul.spell-list { list-style: none; padding: 0; }
 /* Key/value tables: a label in the th, its value in the td. */
 .kv-table { width: 100%; }
 
-/* Tabular data with zebra-striped body rows (e.g. sage studies). */
+/* Tabular data with zebra-striped body rows (e.g. sage studies, party inventory). */
 .data-table tbody tr:nth-child(odd) { background: var(--surface-alt); }
 .data-table tbody tr:nth-child(even) { background: var(--surface-alt-2); }
+
+/* Zebra striping by <tbody> group instead of by row: a container and its
+   contents share one stripe (character inventory). */
+.group-striped > tbody:nth-of-type(odd) { background: var(--surface-alt); }
+.group-striped > tbody:nth-of-type(even) { background: var(--surface-alt-2); }
 
 /* A titled block within a section (notes fields, HP groups). A stable
  * data-subsection key makes these individually addressable for reordering. */
@@ -291,11 +296,9 @@ body.zingor-dragging * { cursor: grabbing !important; }
 .reordering[data-sortable="abilities"] [data-row]:hover,
 .reordering[data-sortable="notes"] [data-subsection]:hover { background: var(--surface-alt); }
 
-/* Inventory items nest, so their stripe lives on the wrapper, not the row. */
-.item-wrapper:nth-child(odd) { background: var(--surface-alt); }
-.item-wrapper:nth-child(even) { background: var(--surface-alt-2); }
-.item-wrapper + .item-wrapper { border-top: 1px solid var(--border); }
-.contents { margin-left: 1.5rem; border-left: 2px solid var(--border); padding-left: 0.75rem; }
+/* Inventory rows for container contents indent by nesting depth; --depth is
+   set inline on the cell (0 for top-level items, matching the base td pad). */
+.cell-indent { padding-left: calc(0.6rem + var(--depth, 0) * 1.5rem); }
 .drop-target { outline: 2px dashed var(--accent); border-radius: 4px; background: var(--surface-alt); }
 th.sortable { cursor: pointer; }
 th.sortable:hover { color: var(--accent-hover); }
