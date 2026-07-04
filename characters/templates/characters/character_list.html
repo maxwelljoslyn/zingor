@@ -41,7 +41,7 @@ Click on Owner, Item, or Weight to sort the table by that column.
 
 {% if all_items %}
 <div class="section">
-  <table class="data-table" data-sort-table="rows">
+  <table class="group-striped" data-sort-table="groups">
     <thead>
       <tr>
         <th class="sortable" data-col="0" data-type="text">Owner <span class="sort-arrow"></span></th>
@@ -51,18 +51,12 @@ Click on Owner, Item, or Weight to sort the table by that column.
         <th>Carried</th>
       </tr>
     </thead>
+    {# One tbody per top-level item: the sorter moves each group as a unit, so container contents stay under their container. #}
+    {% for item in all_items %}
     <tbody>
-      {% for item in all_items %}
-      <tr>
-        <td><a href="/character/{{ item.owner.pk }}/" class="link">{{ item.owner.name|default:"Unnamed" }}</a></td>
-        <td>{{ item.name }}</td>
-        {# Normalized to oz so client-side sort compares a single unit, not mixed lb/oz strings #}
-        <td data-sort-value="{{ item.adjusted_weight_oz }}">{{ item.adjusted_weight }}</td>
-        <td>{% if item.is_worn %}Yes{% else %}—{% endif %}</td>
-        <td>{% if item.is_carried %}Yes{% else %}No{% endif %}</td>
-      </tr>
-      {% endfor %}
+      {% include "characters/partials/item_row.html" with depth=0 show_owner=True %}
     </tbody>
+    {% endfor %}
   </table>
 </div>
 {% else %}

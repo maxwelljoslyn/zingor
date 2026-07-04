@@ -391,6 +391,7 @@ def character_list(request):
     all_items = (
         Item.objects.select_related("owner", "owner__user")
         .filter(container__isnull=True)
+        .prefetch_related("contents", "contents__contents")
         .order_by("owner__name", "name")
     )
     return render(
