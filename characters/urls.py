@@ -1,7 +1,7 @@
 """URL configuration for characters app."""
 
 from django.contrib.auth import views as auth_views
-from django.urls import path
+from django.urls import path, reverse_lazy
 
 from . import views
 
@@ -27,6 +27,32 @@ urlpatterns = [
         "email-confirmation/",
         views.email_confirmation_status,
         name="email_confirmation_status",
+    ),
+    # Password reset. Django's stock views default their success_url to
+    # non-namespaced names, which don't resolve under app_name = "characters",
+    # so each redirecting step overrides it (the confirm view does so in
+    # ConfirmingPasswordResetConfirmView, which also marks the email confirmed).
+    path(
+        "password-reset/",
+        auth_views.PasswordResetView.as_view(
+            success_url=reverse_lazy("characters:password_reset_done"),
+        ),
+        name="password_reset",
+    ),
+    path(
+        "password-reset/done/",
+        auth_views.PasswordResetDoneView.as_view(),
+        name="password_reset_done",
+    ),
+    path(
+        "reset/<uidb64>/<token>/",
+        views.ConfirmingPasswordResetConfirmView.as_view(),
+        name="password_reset_confirm",
+    ),
+    path(
+        "reset/done/",
+        auth_views.PasswordResetCompleteView.as_view(),
+        name="password_reset_complete",
     ),
     # Character list
     path("", views.character_list, name="character_list"),

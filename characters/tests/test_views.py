@@ -1,7 +1,12 @@
 """Tests for the views."""
 
 from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
+from django.core import mail
 from django.test import TestCase, override_settings
+from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 
 from characters.models import (
     BonusHitPoints,
@@ -9,6 +14,7 @@ from characters.models import (
     Condition,
     HitDie,
     Item,
+    Profile,
     Spell,
 )
 
@@ -57,6 +63,66 @@ class AuthViewTests(TestCase):
     def test_redirect_when_not_logged_in(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 302)
+
+
+class PasswordResetTests(TestCase):
+    def test_password_reset_sends_email(self):
+        User.objects.create_user(
+            username="forgot", email="forgot@example.com", password="oldpass123!"
+        )
+        response = self.client.post(
+            reverse("characters:password_reset"), {"email": "forgot@example.com"}
+        )
+        self.assertRedirects(response, reverse("characters:password_reset_done"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("forgot@example.com", mail.outbox[0].to)
+
+    def test_password_reset_unknown_email_is_silent(self):
+        response = self.client.post(
+            reverse("characters:password_reset"), {"email": "nobody@example.com"}
+        )
+        self.assertRedirects(response, reverse("characters:password_reset_done"))
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_password_reset_confirm_sets_password_and_confirms_email(self):
+        user = User.objects.create_user(
+            username="resetme", email="reset@example.com", password="oldpass123!"
+        )
+        Profile.objects.create(user=user, email_confirmed=False)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        # The first GET stores the token in the session and redirects to the
+        # set-password URL (the token in the URL becomes a fixed sentinel).
+        response = self.client.get(
+            reverse(
+                "characters:password_reset_confirm",
+                kwargs={"uidb64": uid, "token": token},
+            )
+        )
+        self.assertEqual(response.status_code, 302)
+        response = self.client.post(
+            response.url,
+            {"new_password1": "brandnew456!", "new_password2": "brandnew456!"},
+        )
+        self.assertRedirects(response, reverse("characters:password_reset_complete"))
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("brandnew456!"))
+        # Completing the reset proves email control, so the account is confirmed too.
+        self.assertTrue(user.profile.email_confirmed)
+
+    def test_password_reset_confirm_invalid_link(self):
+        user = User.objects.create_user(
+            username="resetbad", email="resetbad@example.com", password="oldpass123!"
+        )
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        response = self.client.get(
+            reverse(
+                "characters:password_reset_confirm",
+                kwargs={"uidb64": uid, "token": "bad-token"},
+            )
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"invalid or has expired", response.content.lower())
 
 
 class CharacterListViewTests(TestCase):

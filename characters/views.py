@@ -13,6 +13,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth.views import PasswordResetConfirmView
 from django.db import transaction
 from django.http import (
     HttpResponse,
@@ -20,6 +21,7 @@ from django.http import (
     HttpResponseForbidden,
 )
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_GET, require_POST
@@ -299,6 +301,27 @@ SECTION_FOR_FIELD = {
 
 
 # --- Auth views ---
+
+
+class ConfirmingPasswordResetConfirmView(PasswordResetConfirmView):
+    """Django's reset-confirm view, but it also marks the email confirmed.
+
+    Completing a password reset proves control of the account's email address —
+    the same proof account confirmation requires — so anyone who finishes a reset
+    should never then be bounced by the unconfirmed-login gate. Without this, a
+    user who forgot their password *and* never confirmed would reset it and still
+    be unable to log in.
+    """
+
+    success_url = reverse_lazy("characters:password_reset_complete")
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        profile, _ = Profile.objects.get_or_create(user=form.user)
+        if not profile.email_confirmed:
+            profile.email_confirmed = True
+            profile.save(update_fields=["email_confirmed"])
+        return response
 
 
 def register(request):

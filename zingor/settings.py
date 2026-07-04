@@ -31,13 +31,16 @@ ALLOWED_HOSTS = (
 )
 
 INSTALLED_APPS = [
+    # characters must precede django.contrib.admin: both ship
+    # registration/password_reset_*.html templates, and the app-directories
+    # loader resolves in INSTALLED_APPS order, so admin-first would shadow ours.
+    "characters",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "characters",
 ]
 
 MIDDLEWARE = [
