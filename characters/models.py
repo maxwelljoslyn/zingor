@@ -436,17 +436,17 @@ class Item(models.Model):
         return w * (D("0.01") * D(str(percent_left)))
 
     @property
-    def adjusted_weight_oz(self) -> D:
-        """Adjusted weight converted to ounces, for uniform numeric comparison."""
-        return self.adjusted_weight.to(u.oz).magnitude
-
-    @property
     def total_weight(self):
         """Physical weight including all contents (recursive for containers)."""
         total = self.adjusted_weight
         for content in self.contents.all():
             total += content.total_weight.to(total.units)
         return total
+
+    @property
+    def total_weight_oz(self) -> D:
+        """Total weight converted to ounces, for uniform numeric comparison."""
+        return self.total_weight.to(u.oz).magnitude
 
     @property
     def carried_weight(self):

@@ -145,6 +145,19 @@ class CharacterListViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(Character.objects.filter(user=self.user).count(), 1)
 
+    def test_party_inventory_sorts_containers_by_total_weight(self):
+        """A container's weight cell sorts by its total weight, contents included."""
+        character = Character.objects.create(user=self.user, name="Thorn")
+        backpack = Item.objects.create(
+            owner=character, name="Backpack", weight="2 lb", is_container=True
+        )
+        Item.objects.create(
+            owner=character, name="Rope", weight="5 lb", container=backpack
+        )
+        response = self.client.get("/")
+        self.assertContains(response, f'data-sort-value="{backpack.total_weight_oz}"')
+        self.assertContains(response, f"({backpack.total_weight} total)")
+
 
 class CharacterSheetViewTests(TestCase):
     def setUp(self):
@@ -156,6 +169,18 @@ class CharacterSheetViewTests(TestCase):
         response = self.client.get(f"/character/{self.character.pk}/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Thorn")
+
+    def test_inventory_sorts_containers_by_total_weight(self):
+        """The sheet's weight cell sorts by total weight, contents included."""
+        backpack = Item.objects.create(
+            owner=self.character, name="Backpack", weight="2 lb", is_container=True
+        )
+        Item.objects.create(
+            owner=self.character, name="Rope", weight="5 lb", container=backpack
+        )
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, f'data-sort-value="{backpack.total_weight_oz}"')
+        self.assertContains(response, f"({backpack.total_weight} total)")
 
     def test_other_users_character_viewable(self):
         other_user = User.objects.create_user(username="other", password="testpass")

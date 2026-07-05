@@ -33,8 +33,9 @@
     </span>
     {% endif %}
   </td>
-  {# Normalized to oz so client-side sort compares a single unit, not mixed lb/oz strings #}
-  <td data-sort-value="{{ item.adjusted_weight_oz }}">
+  {# Normalized to oz so client-side sort compares a single unit, not mixed lb/oz strings. #}
+  {# Sorts by total weight (contents included); for non-containers total == own weight. #}
+  <td data-sort-value="{{ item.total_weight_oz }}">
     {% if is_owner %}
     <span id="item-{{ item.pk }}-weight"
           hx-get="/item/{{ item.pk }}/edit-field/?field=weight"
@@ -43,6 +44,9 @@
           class="clickable">{{ item.adjusted_weight }}</span>
     {% else %}
     {{ item.adjusted_weight }}
+    {% endif %}
+    {% if item.contents.all %}
+    <span class="muted text-sm">({{ item.total_weight }} total)</span>
     {% endif %}
   </td>
   {% if is_owner %}

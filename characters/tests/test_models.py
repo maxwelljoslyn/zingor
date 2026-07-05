@@ -110,6 +110,21 @@ class ItemModelTests(TestCase):
         total = backpack.total_weight
         self.assertEqual(total.magnitude, D(7))
 
+    def test_total_weight_oz_normalizes_mixed_units(self):
+        """Sort key converts container + contents to a single unit (oz)."""
+        backpack = Item.objects.create(
+            owner=self.character, name="Backpack", weight="1 lb"
+        )
+        Item.objects.create(
+            owner=self.character, name="Flask", weight="8 oz", container=backpack
+        )
+        self.assertEqual(backpack.total_weight_oz, D(24))
+
+    def test_total_weight_oz_plain_item(self):
+        """For a non-container, total weight is just its own weight."""
+        sword = Item.objects.create(owner=self.character, name="Sword", weight="3 lb")
+        self.assertEqual(sword.total_weight_oz, D(48))
+
     def test_carried_weight_skips_uncarried_contents(self):
         """A not-carried item inside a container is excluded from carried_weight."""
         backpack = Item.objects.create(
