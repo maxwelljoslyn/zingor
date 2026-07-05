@@ -154,7 +154,9 @@ def _sheet_context(character, user):
     )
     bodymass_die = character.hit_dice.filter(is_bodymass=True).first()
     level_dice = character.hit_dice.filter(is_bodymass=False)
-    items = character.inventory.filter(container__isnull=True)
+    items = character.inventory.filter(container__isnull=True).prefetch_related(
+        "contents", "contents__contents"
+    )
     conditions = character.conditions.all()
     spells = character.spells.all()
 
