@@ -33,6 +33,9 @@
       </ul>
     </div>
     {% endfor %}
+    {% if unmemorized_memorize_minutes %}
+    <p class="text-sm muted">Time needed to rememorize used spells: {{ unmemorized_memorize_minutes|format_duration }}</p>
+    {% endif %}
   {% else %}
     <p class="empty-note">No spells known.</p>
   {% endif %}

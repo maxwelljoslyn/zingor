@@ -44,6 +44,22 @@ def ceildiv(value, arg):
         return None
 
 
+@register.filter
+def format_duration(minutes):
+    """Render a whole number of minutes as "H hr M min": {{ mins|format_duration }}"""
+    try:
+        total = int(minutes)
+    except (TypeError, ValueError):
+        return None
+    hours, mins = divmod(total, 60)
+    parts = []
+    if hours:
+        parts.append(str(hours) + " hr")
+    if mins or not hours:
+        parts.append(str(mins) + " min")
+    return " ".join(parts)
+
+
 @register.simple_tag
 def spell_url(name: str, level: int) -> str:
     """Return the wiki URL for a spell at the given level."""

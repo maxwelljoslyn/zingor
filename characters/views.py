@@ -163,6 +163,11 @@ def _sheet_context(character, user):
     spells_by_level = OrderedDict()
     for spell in spells:
         spells_by_level.setdefault(spell.level, []).append(spell)
+    unmemorized_memorize_minutes = sum(
+        rules.spell_memorize_minutes(spell.level)
+        for spell in spells
+        if not spell.is_memorized
+    )
 
     ctx = {
         "character": character,
@@ -174,6 +179,7 @@ def _sheet_context(character, user):
         "items": items,
         "conditions": conditions,
         "spells_by_level": spells_by_level,
+        "unmemorized_memorize_minutes": unmemorized_memorize_minutes,
         "section_order": layout.section_order(user),
         "notes_blocks": _build_notes_blocks(character, layout.order_for(user, "notes")),
     }

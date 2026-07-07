@@ -1065,6 +1065,17 @@ def maximum_hp(hit_dice_list, char_class=None, bonus_hp=0):
     return max(1, total)
 
 
+def spell_memorize_minutes(level):
+    """Minutes needed to memorize one spell of the given level.
+
+    Cantrips (level 0) take 5 minutes; every other spell takes 10 minutes per
+    spell level.
+    """
+    if level == 0:
+        return 5
+    return level * 10
+
+
 def total_xp_for_next_level(klass, current_level):
     """Total XP required to reach the next level."""
     if klass is None or klass not in classes:

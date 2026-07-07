@@ -19,6 +19,7 @@ from characters.rules import (
     int_spell_capability_chance,
     maximum_encumbrance,
     maximum_hp,
+    spell_memorize_minutes,
     str_attack_mod,
     str_damage_mod,
     thac0,
@@ -340,6 +341,18 @@ class MaximumHPTests(TestCase):
 
     def test_bonus_hp_only(self):
         self.assertEqual(maximum_hp([], "fighter", bonus_hp=5), 5)
+
+
+class SpellMemorizeMinutesTests(TestCase):
+    def test_cantrip(self):
+        self.assertEqual(spell_memorize_minutes(0), 5)
+
+    def test_first_level(self):
+        self.assertEqual(spell_memorize_minutes(1), 10)
+
+    def test_higher_levels(self):
+        self.assertEqual(spell_memorize_minutes(3), 30)
+        self.assertEqual(spell_memorize_minutes(9), 90)
 
 
 class XPTests(TestCase):
