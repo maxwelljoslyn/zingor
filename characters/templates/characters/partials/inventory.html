@@ -23,23 +23,26 @@
   </div>
   {% if items %}
   <p class="muted text-sm">Click on Item or Weight to sort the table by that column.</p>
-  <table class="group-striped" data-sort-table="groups">
+  {# data-collapse-scope opts this table into per-viewer container collapsing (inventory-collapse.js); the value keys the localStorage entry. #}
+  {# fixed-cols pins column widths so collapsing/expanding container rows (or sorting) can't reflow the columns. #}
+  <table class="group-striped fixed-cols" data-sort-table="groups" data-collapse-scope="{{ character.pk }}">
     <thead>
       <tr>
-        <th class="sortable" data-col="0" data-type="text">Item <span class="sort-arrow"></span></th>
-        <th class="sortable" data-col="1" data-type="number">Weight <span class="sort-arrow"></span></th>
-        <th>Worn</th>
-        <th>Carried</th>
+        <th class="sortable col-name" data-col="0" data-type="text">Item <span class="sort-arrow"></span></th>
+        <th class="sortable col-weight" data-col="1" data-type="number">Weight <span class="sort-arrow"></span></th>
+        <th class="col-flag">Worn</th>
+        <th class="col-flag">Carried</th>
         {% if is_owner %}
-        <th>Container</th>
-        <th></th>
+        <th class="col-flag">Container</th>
+        <th class="col-actions"></th>
         {% endif %}
       </tr>
     </thead>
     {# One tbody per top-level item: the sorter moves each group as a unit, so container contents stay under their container. #}
     {% for item in items %}
     <tbody>
-      {% include "characters/partials/item_row.html" with depth=0 %}
+      {# collapsible propagates into the recursive contents includes (no "only"), so every container row gets a caret. #}
+      {% include "characters/partials/item_row.html" with depth=0 collapsible=True %}
     </tbody>
     {% endfor %}
   </table>

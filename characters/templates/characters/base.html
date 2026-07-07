@@ -94,6 +94,9 @@
       var itemId = window._zingorDragId;
       window._zingorDragId = null;
       if (!itemId || itemId === containerId) return;
+      // Expand a collapsed container before the drop lands, so the moved item
+      // is visible in the re-rendered section (inventory-collapse.js).
+      if (window.zingorExpandRow) window.zingorExpandRow(el);
       htmx.ajax('POST', '/item/' + containerId + '/put-in-container/', {
         target: '#section-inventory',
         swap: 'outerHTML',
@@ -119,6 +122,7 @@
     document.addEventListener('drop', zingorEndDrag);
   </script>
   <script src="{% static 'characters/table-sort.js' %}" defer></script>
+  <script src="{% static 'characters/inventory-collapse.js' %}" defer></script>
   <link rel="stylesheet" href="{% static 'characters/styles.css' %}">
 </head>
 <body>

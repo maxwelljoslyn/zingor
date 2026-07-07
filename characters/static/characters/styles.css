@@ -299,6 +299,28 @@ body.zingor-dragging * { cursor: grabbing !important; }
 /* Inventory rows for container contents indent by nesting depth; --depth is
    set inline on the cell (0 for top-level items, matching the base td pad). */
 .cell-indent { padding-left: calc(0.6rem + var(--depth, 0) * 1.5rem); }
+/* Container collapse (inventory-collapse.js): rows inside a collapsed container. */
+tr.collapse-hidden { display: none; }
+/* Fixed column widths: display:none rows stop informing auto table layout, so
+   without these the columns would reflow on every collapse/expand (and the
+   caret would move out from under the pointer). Widths on the header cells
+   size the whole column; in the read-only 4-column variant the leftover
+   width is distributed proportionally, which is fine. */
+.fixed-cols { table-layout: fixed; }
+.fixed-cols .col-name { width: 36%; }
+.fixed-cols .col-weight { width: 22%; }
+.fixed-cols .col-flag { width: 8%; }
+.fixed-cols .col-actions { width: 18%; }
+/* Caret toggle on a container row: plain glyph, not an accent button. */
+.collapse-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 0.2rem;
+  font-size: 0.8rem;
+}
+.collapse-toggle:hover { background: none; color: var(--accent-hover); }
 .drop-target { outline: 2px dashed var(--accent); border-radius: 4px; background: var(--surface-alt); }
 th.sortable { cursor: pointer; }
 th.sortable:hover { color: var(--accent-hover); }

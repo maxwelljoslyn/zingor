@@ -2,7 +2,9 @@
 {# Included with depth=0 from inventory.html (character sheet, editable when #}
 {# is_owner) and character_list.html (read-only, show_owner adds an Owner #}
 {# column); contents re-include with depth+1. #}
-<tr {% if is_owner %}draggable="true" data-item-id="{{ item.pk }}"
+{# data-item-id / data-parent-id are behavior hooks (drag-drop, collapse), rendered regardless of is_owner. #}
+<tr data-item-id="{{ item.pk }}"{% if item.container_id %} data-parent-id="{{ item.container_id }}"{% endif %}
+    {% if is_owner %}draggable="true"
     ondragstart="zingorDragStart(event)"
     ondragend="zingorDragEnd(event)"
     {% if item.is_container %}ondragover="zingorDragOver(event)"
@@ -13,7 +15,13 @@
   {# Owner is shown on the top-level row only; contents inherit it visually. #}
   <td>{% if not depth %}<a href="/character/{{ item.owner.pk }}/" class="link">{{ item.owner.name|default:"Unnamed" }}</a>{% endif %}</td>
   {% endif %}
-  <td class="cell-indent" style="--depth: {{ depth }}">
+  <td class="cell-indent" style="--depth: {{ depth }}" data-sort-value="{{ item.name }}">
+    {# Collapse caret: only where the section opts in (collapsible) and there is something to hide. #}
+    {# The glyph/aria state here is the expanded default; inventory-collapse.js re-applies saved state. #}
+    {% if collapsible and item.contents.all %}
+    <button type="button" class="collapse-toggle" data-collapse-toggle
+            aria-expanded="true" aria-label="Collapse or expand contents of {{ item.name }}">▾</button>
+    {% endif %}
     {% if is_owner %}
     <span id="item-{{ item.pk }}-name"
           hx-get="/item/{{ item.pk }}/edit-field/?field=name"

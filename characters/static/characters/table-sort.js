@@ -1,6 +1,7 @@
 // Click-to-sort for any table marked data-sort-table. Sortable headers carry
 // class "sortable" plus data-col (cell index) and data-type ("text" | "number");
-// number cells may provide data-sort-value for unit-normalized comparison.
+// cells may provide data-sort-value to override textContent as the key (unit-
+// normalized weights; item names whose cell also holds a collapse caret).
 // data-sort-table="rows" sorts the rows of the table's first <tbody>;
 // data-sort-table="groups" sorts whole <tbody> groups by each group's first row,
 // so container contents travel with their container (character inventory).
@@ -10,12 +11,12 @@
   function cellKey(row, col, type) {
     var cell = row.children[col];
     if (!cell) return type === 'number' ? 0 : '';
+    var raw = cell.dataset.sortValue !== undefined ? cell.dataset.sortValue : cell.textContent;
     if (type === 'number') {
-      var raw = cell.dataset.sortValue !== undefined ? cell.dataset.sortValue : cell.textContent;
       var val = parseFloat(raw);
       return isNaN(val) ? 0 : val;
     }
-    return cell.textContent.trim().toLowerCase();
+    return raw.trim().toLowerCase();
   }
   document.addEventListener('click', function (event) {
     var th = event.target.closest('th.sortable');
