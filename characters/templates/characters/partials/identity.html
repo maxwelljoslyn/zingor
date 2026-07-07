@@ -16,7 +16,12 @@
     </tr>
     <tr>
       <th>Level</th>
-      <td>{% unknown_or_value character.level "level" character.pk %}</td>
+      <td>
+        {% unknown_or_value character.level "level" character.pk %}
+        {% if derived.fighter_equivalent_level is not None %}
+          <span class="muted"> (fighter equivalent: {{ derived.fighter_equivalent_level }})</span>
+        {% endif %}
+      </td>
       <th>XP</th>
       <td>
         {% unknown_or_value character.xp "xp" character.pk %}

@@ -1086,6 +1086,26 @@ def total_xp_for_next_level(klass, current_level):
     return classes[klass]["levels"][current_level + 1]["min XP"]
 
 
+def fighter_equivalent_level(xp):
+    """The level a fighter would have with this much XP.
+
+    Used to compare characters of different classes on a common scale. Past the
+    top of the fighter XP table, extrapolate using the table's fixed high-level
+    XP increment (fighters gain a level per fixed amount of XP once they reach
+    the highest tabulated levels).
+    """
+    if xp is None:
+        return None
+    fighter_levels = classes["fighter"]["levels"]
+    max_lvl = max(fighter_levels.keys())
+    if xp < fighter_levels[max_lvl]["min XP"]:
+        return max(lvl for lvl, data in fighter_levels.items() if xp >= data["min XP"])
+    increment = (
+        fighter_levels[max_lvl]["min XP"] - fighter_levels[max_lvl - 1]["min XP"]
+    )
+    return max_lvl + (xp - fighter_levels[max_lvl]["min XP"]) // increment
+
+
 # Strength-to-encumbrance base factor lookup.
 # Percentile strength is represented as a fractional value:
 # 18/01-50 → 18.1, 18/51-75 → 18.2, 18/76-90 → 18.3, 18/91-99 → 18.4, 18/00 → 18.5
@@ -1243,6 +1263,15 @@ def calculate_derived_stats(char_data):
         result["xp_for_next_level"] = total_xp_for_next_level(char_class, level)
     else:
         result["xp_for_next_level"] = None
+
+    # Fighter-equivalent level: what level a fighter would be with this much XP.
+    # Redundant for fighters themselves, so only computed for other classes.
+    if char_class == "fighter":
+        result["fighter_equivalent_level"] = None
+    else:
+        result["fighter_equivalent_level"] = fighter_equivalent_level(
+            char_data.get("xp")
+        )
 
     # Saving throws
     if level is not None:

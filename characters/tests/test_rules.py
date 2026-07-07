@@ -14,6 +14,7 @@ from characters.rules import (
     dex_initiative_mod,
     dex_ranged_attacks_mod,
     effective_strength,
+    fighter_equivalent_level,
     int_max_mage_illusionist_spell_level,
     int_min_capable_spells,
     int_spell_capability_chance,
@@ -365,6 +366,39 @@ class XPTests(TestCase):
 
     def test_max_level(self):
         self.assertIsNone(total_xp_for_next_level("fighter", 20))
+
+    def test_fighter_equivalent_level(self):
+        # A fighter needs 2,001 XP for level 2, 4,001 for level 3.
+        self.assertEqual(fighter_equivalent_level(0), 1)
+        self.assertEqual(fighter_equivalent_level(2_000), 1)
+        self.assertEqual(fighter_equivalent_level(2_001), 2)
+        self.assertEqual(fighter_equivalent_level(4_000), 2)
+        self.assertEqual(fighter_equivalent_level(4_001), 3)
+
+    def test_fighter_equivalent_level_at_table_top(self):
+        # Level 20 is the top tabulated fighter level at 3,000,001 XP.
+        self.assertEqual(fighter_equivalent_level(3_000_001), 20)
+
+    def test_fighter_equivalent_level_extrapolated(self):
+        # Past the table, fighters gain a level per 250,000 XP.
+        self.assertEqual(fighter_equivalent_level(3_250_001), 21)
+        self.assertEqual(fighter_equivalent_level(3_500_001), 22)
+
+    def test_fighter_equivalent_level_none(self):
+        self.assertIsNone(fighter_equivalent_level(None))
+
+    def test_derived_fighter_equivalent_level(self):
+        derived = calculate_derived_stats(
+            {"char_class": "mage", "level": 5, "xp": 500_000}
+        )
+        self.assertEqual(derived["fighter_equivalent_level"], 9)
+
+    def test_derived_fighter_equivalent_level_suppressed_for_fighters(self):
+        # Redundant to show a fighter their own fighter-equivalent level.
+        derived = calculate_derived_stats(
+            {"char_class": "fighter", "level": 5, "xp": 500_000}
+        )
+        self.assertIsNone(derived["fighter_equivalent_level"])
 
 
 class EncumbranceTests(TestCase):

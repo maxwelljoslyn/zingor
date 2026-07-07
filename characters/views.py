@@ -102,6 +102,7 @@ def _build_char_data(character):
     data["percentile_strength"] = eff_pct
     data["char_class"] = character.char_class
     data["level"] = character.level
+    data["xp"] = character.xp
     data["race"] = character.race
     data["sex"] = character.sex
     return data
