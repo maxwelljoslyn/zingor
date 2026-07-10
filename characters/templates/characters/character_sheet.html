@@ -6,7 +6,7 @@
   <h1>
     {{ character.name|default:"Unnamed Character" }}
     {% if not is_owner %}
-      <span class="owner-tag">(<a href="{% url 'characters:user_profile' character.user.username %}" class="link">{{ character.user|display_name }}</a>'s character)</span>
+      <span class="owner-tag">(<a href="{% url 'characters:user_profile' character.user.username %}">{{ character.user|display_name }}</a>'s character)</span>
     {% endif %}
   </h1>
   <div class="toolbar">

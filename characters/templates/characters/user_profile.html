@@ -32,7 +32,7 @@
     <tbody>
       {% for char in characters %}
       <tr>
-        <td><a href="/character/{{ char.pk }}/" class="link">{{ char.name|default:"Unnamed" }}</a></td>
+        <td><a href="/character/{{ char.pk }}/">{{ char.name|default:"Unnamed" }}</a></td>
         <td>{{ char.race|default:"—" }}</td>
         <td>{{ char.char_class|default:"—" }}</td>
         <td>{{ char.level|default:"—" }}</td>

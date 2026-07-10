@@ -20,11 +20,11 @@
       <button type="submit" class="btn">Login</button>
     </form>
     <p class="auth-footer">
-      <a href="{% url 'characters:password_reset' %}" class="link">Forgot your password?</a>
+      <a href="{% url 'characters:password_reset' %}">Forgot your password?</a>
     </p>
     {% if registration_enabled %}
     <p class="auth-footer">
-      No account? <a href="/register/" class="link">Register</a>
+      No account? <a href="/register/">Register</a>
     </p>
     {% endif %}
   </div>
