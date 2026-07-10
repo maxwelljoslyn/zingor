@@ -525,6 +525,7 @@ class SageStudyPoints(models.Model):
     class Meta:
         unique_together = ("character", "study")
         ordering = ["study"]
+        verbose_name_plural = "Sage study points"
 
     def __str__(self):
         return f"{self.study}: {self.points} pts"
