@@ -266,10 +266,11 @@ class MoneyItemTests(TestCase):
         self.assertEqual(self.character.cp, D(0) * u.cp)
 
     def test_money_total_converts_currencies(self):
+        """Campaign rates: 1 gp = 16 sp, 1 sp = 12 cp, so 1 gp = 192 cp."""
         self._coins("gp", 1)
         self._coins("sp", 2)
         self._coins("cp", 5)
-        self.assertEqual(self.character.money.to(u.cp).magnitude, D(255))
+        self.assertEqual(self.character.money.to(u.cp).magnitude, D(221))
 
     def test_carried_coins_count_toward_encumbrance(self):
         self._coins("gp", 40)

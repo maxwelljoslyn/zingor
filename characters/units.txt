@@ -9,8 +9,8 @@
 
 # money
 copper_piece = [money] = cp
-silver_piece = 25 * copper_piece = sp
-gold_piece = 8 * silver_piece = gp
+silver_piece = 12 * copper_piece = sp
+gold_piece = 16 * silver_piece = gp
 
 # custom units
 head = [creatures]

@@ -4,13 +4,15 @@ import importlib
 
 from django.apps import apps
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 
 from characters.models import Character, Item
+from characters.units import D
 
 consolidation = importlib.import_module(
     "characters.migrations.0015_consolidate_duplicate_items"
 )
+coins_to_items = importlib.import_module("characters.migrations.0017_coins_to_items")
 
 
 def run_consolidation() -> None:
@@ -103,3 +105,46 @@ class ConsolidateDuplicateItemsTests(TestCase):
         self._torch()
         run_consolidation()
         self.assertEqual(Item.objects.filter(name="Torch").count(), 2)
+
+
+class WholeCoinsTests(SimpleTestCase):
+    """The coin migration's exact decomposition of fractional amounts.
+
+    Campaign rates: 1 gp = 16 sp, 1 sp = 12 cp. Prod held 13.75 sp, which is
+    exactly 13 sp + 9 cp — fractions cascade into smaller coins without any
+    rounding, and anything that can't is bad data and must abort.
+    """
+
+    def _whole(self, gp, sp, cp):
+        return coins_to_items.whole_coins(D(str(gp)), D(str(sp)), D(str(cp)))
+
+    def test_whole_amounts_pass_through(self):
+        counts = self._whole(670, 224, 227)
+        self.assertEqual(counts, {"gp": 670, "sp": 224, "cp": 227})
+
+    def test_fractional_sp_cascades_to_cp(self):
+        counts = self._whole(0, "13.75", 0)
+        self.assertEqual(counts, {"gp": 0, "sp": 13, "cp": 9})
+
+    def test_fractional_gp_cascades_to_sp(self):
+        counts = self._whole("2.5", 0, 0)
+        self.assertEqual(counts, {"gp": 2, "sp": 8, "cp": 0})
+
+    def test_cascade_through_both_denominations(self):
+        counts = self._whole("1.5", "0.5", 3)
+        self.assertEqual(counts, {"gp": 1, "sp": 8, "cp": 9})
+
+    def test_sub_copper_remainder_aborts(self):
+        with self.assertRaises(ValueError):
+            self._whole(0, 0, "0.4")
+        with self.assertRaises(ValueError):
+            self._whole(0, "0.03125", 0)
+
+    def test_large_amounts_do_not_lose_precision(self):
+        """The app's global Decimal prec is 4; the helper must not inherit it."""
+        counts = self._whole(0, "999.75", 999)
+        self.assertEqual(counts, {"gp": 0, "sp": 999, "cp": 1008})
+
+    def test_negative_amounts_abort(self):
+        with self.assertRaises(ValueError):
+            self._whole(0, "-1", 0)
