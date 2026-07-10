@@ -636,7 +636,7 @@ def update_field(request, pk):
         "encumbrance_multiplier",
     }:
         oob.append("inventory")
-    if field_name in {"strength", "percentile_strength"}:
+    if field_name in {"strength", "percentile_strength", "level"}:
         oob.append("abilities")
     return _render_section(request, character, section, oob_sections=oob or None)
 
