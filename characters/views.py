@@ -445,8 +445,10 @@ def user_profile(request, username: str):
 
 @login_required
 def character_list(request):
-    characters = Character.objects.select_related("user", "user__profile").order_by(
-        "user__username", "name"
+    characters = (
+        Character.objects.select_related("user", "user__profile")
+        .prefetch_related("hit_dice", "bonus_hit_points")
+        .order_by("user__username", "name")
     )
     all_items = (
         Item.objects.select_related("owner", "owner__user")

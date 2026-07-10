@@ -17,6 +17,7 @@
         <th>Race</th>
         <th>Class</th>
         <th>Level</th>
+        <th>HP</th>
         <th>Last Updated</th>
       </tr>
     </thead>
@@ -28,6 +29,7 @@
         <td>{{ char.race|default:"—" }}</td>
         <td>{{ char.char_class|default:"—" }}</td>
         <td>{{ char.level|default:"—" }}</td>
+        <td>{{ char.current_hp|default_if_none:"—" }} / {{ char.maximum_hp|default_if_none:"—" }}</td>
         <td>{{ char.updated_at|date:"M d, Y H:i" }}</td>
       </tr>
       {% endfor %}

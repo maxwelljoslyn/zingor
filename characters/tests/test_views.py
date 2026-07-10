@@ -225,6 +225,20 @@ class CharacterListViewTests(TestCase):
         response = self.client.get("/")
         self.assertContains(response, "Thorn")
 
+    def test_hp_column_shows_current_and_max(self):
+        character = Character.objects.create(
+            user=self.user, name="Thorn", char_class="fighter", current_hp=12
+        )
+        character.hit_dice.create(level=1, die_type="d10", roll=8, con_bonus=2)
+        response = self.client.get("/")
+        self.assertContains(response, "12 / 10")
+
+    def test_hp_column_shows_zero_current_hp(self):
+        """A character at exactly 0 HP shows 0, not an em dash."""
+        Character.objects.create(user=self.user, name="Downed", current_hp=0)
+        response = self.client.get("/")
+        self.assertContains(response, "0 / —")
+
     def test_create_character(self):
         response = self.client.post("/character/create/")
         self.assertEqual(response.status_code, 302)
