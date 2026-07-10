@@ -329,6 +329,7 @@ th.sortable:hover { color: var(--accent-hover); }
 .muted { color: var(--text-muted); }
 .clickable { cursor: pointer; }
 .inline { display: inline; }
+.block { display: block; }
 .no-shrink { flex-shrink: 0; }
 .flex-1 { flex: 1; }
 .w-full { width: 100%; }

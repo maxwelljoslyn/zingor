@@ -78,6 +78,12 @@ urlpatterns = [
     path("character/<int:pk>/add-item/", views.add_item, name="add_item"),
     path("character/<int:pk>/add-money/", views.add_money, name="add_money"),
     path("item/<int:item_id>/delete/", views.delete_item, name="delete_item"),
+    path("item/<int:item_id>/split/", views.split_item, name="split_item"),
+    path(
+        "item/<int:item_id>/split-form/",
+        views.split_item_form,
+        name="split_item_form",
+    ),
     path(
         "item/<int:item_id>/edit-field/", views.edit_item_field, name="edit_item_field"
     ),

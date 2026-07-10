@@ -1,0 +1,14 @@
+{# Inline count form revealed by the Split button (see item_row.html). #}
+<form class="inline-form"
+      hx-post="/item/{{ item.pk }}/split/"
+      hx-target="#section-inventory"
+      hx-swap="outerHTML"
+      id="item-{{ item.pk }}-split">
+  {% csrf_token %}
+  <input type="number" name="count" min="1" max="{{ item.quantity|add:"-1" }}" autofocus class="w-4" title="Number to split off" required>
+  <button type="submit" class="btn btn-small">Split</button>
+  <button type="button" class="btn btn-secondary btn-small"
+          hx-get="/character/{{ item.owner.pk }}/section/inventory/"
+          hx-target="#section-inventory"
+          hx-swap="outerHTML">Cancel</button>
+</form>

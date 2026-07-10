@@ -863,6 +863,49 @@ def remove_from_container(request, item_id):
     return _render_section(request, item.owner, "inventory")
 
 
+@login_required
+@character_owner_required
+def split_item_form(request, item_id):
+    """Return the inline count form the Split button reveals."""
+    item = get_object_or_404(Item, pk=item_id)
+    if item.quantity < 2:
+        return HttpResponse("Nothing to split", status=400)
+    return render(request, "characters/partials/item_split_form.html", {"item": item})
+
+
+@login_required
+@character_owner_required
+@require_POST
+def split_item(request, item_id):
+    """Split `count` units off a stack into a sibling row.
+
+    The new row keeps the original's container, flags, and currency; the player
+    then drags it wherever it should live. Total quantity is conserved, so
+    wealth and encumbrance are unchanged.
+    """
+    item = get_object_or_404(Item, pk=item_id)
+    try:
+        count = int(request.POST.get("count", ""))
+    except (TypeError, ValueError):
+        return HttpResponse("Count must be a whole number", status=400)
+    if not 1 <= count < item.quantity:
+        return HttpResponse("Count must be less than the stack size", status=400)
+    item.quantity -= count
+    item.save(update_fields=["quantity"])
+    Item.objects.create(
+        owner=item.owner,
+        name=item.name,
+        weight=item.weight,
+        currency=item.currency,
+        container=item.container,
+        is_carried=item.is_carried,
+        is_worn=item.is_worn,
+        quantity=count,
+        props=dict(item.props or {}),
+    )
+    return _render_section(request, item.owner, "inventory")
+
+
 # --- Item CRUD ---
 
 

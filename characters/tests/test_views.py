@@ -584,6 +584,113 @@ class MoneyViewTests(TestCase):
             )
             self.assertEqual(response.status_code, 400)
 
+
+class SplitStackTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+        self.character = Character.objects.create(user=self.user, name="Thorn")
+
+    def _split(self, item, count):
+        return self.client.post(f"/item/{item.pk}/split/", {"count": count})
+
+    def test_split_creates_sibling_stack(self):
+        torches = Item.objects.create(
+            owner=self.character, name="Torch", weight="1.5 lb", quantity=28
+        )
+        response = self._split(torches, 3)
+        self.assertEqual(response.status_code, 200)
+        torches.refresh_from_db()
+        self.assertEqual(torches.quantity, 25)
+        new = Item.objects.filter(name="Torch").exclude(pk=torches.pk).get()
+        self.assertEqual(new.quantity, 3)
+        self.assertEqual(str(new.weight), str(torches.weight))
+        self.assertIsNone(new.container)
+
+    def test_split_inside_container_stays_in_container(self):
+        backpack = Item.objects.create(
+            owner=self.character, name="Backpack", weight="2 lb", is_container=True
+        )
+        oil = Item.objects.create(
+            owner=self.character,
+            name="Lamp oil",
+            weight="1 lb",
+            quantity=5,
+            container=backpack,
+            props={"percent_left": 50},
+        )
+        self._split(oil, 2)
+        new = Item.objects.filter(name="Lamp oil").exclude(pk=oil.pk).get()
+        self.assertEqual(new.container, backpack)
+        self.assertEqual(new.props, {"percent_left": 50})
+
+    def test_split_money_stack(self):
+        coins = Item.objects.create(
+            owner=self.character,
+            name="gold pieces",
+            weight=None,
+            currency="gp",
+            quantity=650,
+        )
+        self._split(coins, 200)
+        coins.refresh_from_db()
+        self.assertEqual(coins.quantity, 450)
+        new = Item.objects.filter(currency="gp").exclude(pk=coins.pk).get()
+        self.assertEqual(new.quantity, 200)
+        self.assertIsNone(new.weight)
+        self.assertEqual(self.character.gp.magnitude, D(650))
+
+    def test_split_preserves_carried_and_worn_flags(self):
+        stash = Item.objects.create(
+            owner=self.character,
+            name="Ring",
+            weight="1 oz",
+            quantity=4,
+            is_carried=False,
+        )
+        self._split(stash, 1)
+        new = Item.objects.filter(name="Ring").exclude(pk=stash.pk).get()
+        self.assertFalse(new.is_carried)
+
+    def test_split_rejects_bad_counts(self):
+        torches = Item.objects.create(
+            owner=self.character, name="Torch", weight="1.5 lb", quantity=5
+        )
+        for bad in ("0", "-1", "5", "6", "junk", ""):
+            response = self._split(torches, bad)
+            self.assertEqual(response.status_code, 400)
+        torches.refresh_from_db()
+        self.assertEqual(torches.quantity, 5)
+        self.assertEqual(Item.objects.filter(name="Torch").count(), 1)
+
+    def test_split_rejects_single_item(self):
+        sword = Item.objects.create(owner=self.character, name="Sword", weight="3 lb")
+        response = self._split(sword, 1)
+        self.assertEqual(response.status_code, 400)
+
+    def test_split_button_rendered_for_stacks_only(self):
+        torches = Item.objects.create(
+            owner=self.character, name="Torch", weight="1.5 lb", quantity=28
+        )
+        sword = Item.objects.create(owner=self.character, name="Sword", weight="3 lb")
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, f"/item/{torches.pk}/split-form/")
+        self.assertNotContains(response, f"/item/{sword.pk}/split-form/")
+
+    def test_split_form_endpoint_returns_count_form(self):
+        torches = Item.objects.create(
+            owner=self.character, name="Torch", weight="1.5 lb", quantity=28
+        )
+        response = self.client.get(f"/item/{torches.pk}/split-form/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="count"')
+        self.assertContains(response, f"/item/{torches.pk}/split/")
+
+    def test_split_form_rejects_single_item(self):
+        sword = Item.objects.create(owner=self.character, name="Sword", weight="3 lb")
+        response = self.client.get(f"/item/{sword.pk}/split-form/")
+        self.assertEqual(response.status_code, 400)
+
     def test_delete_item(self):
         item = Item.objects.create(owner=self.character, name="Sword", weight="3 lb")
         response = self.client.delete(f"/item/{item.pk}/delete/")

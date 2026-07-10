@@ -68,8 +68,9 @@
     <span class="muted text-sm">({{ item.total_weight }} total)</span>
     {% endif %}
     {# The weight edit form takes per-unit weight, so remind owners what one unit weighs. #}
+    {# block keeps the note on its own line instead of wrapping the cell mid-sentence. #}
     {% if item.quantity > 1 %}
-    <span class="muted text-sm">({{ item.unit_weight }} each)</span>
+    <span class="muted text-sm block">{{ item.unit_weight }} each</span>
     {% endif %}
   </td>
   {% if is_owner %}
@@ -119,6 +120,16 @@
         {% csrf_token %}
         <button type="submit" class="btn btn-small btn-secondary">↑ Take out</button>
       </form>
+      {% endif %}
+      {# Split N units off into a sibling row, ready to drag elsewhere. #}
+      {# Click-to-reveal like the field editors: the count input only appears on demand. #}
+      {% if item.quantity > 1 %}
+      <span id="item-{{ item.pk }}-split">
+        <button type="button" class="btn btn-small btn-secondary"
+                hx-get="/item/{{ item.pk }}/split-form/"
+                hx-target="#item-{{ item.pk }}-split"
+                hx-swap="outerHTML">Split</button>
+      </span>
       {% endif %}
       <button hx-delete="/item/{{ item.pk }}/delete/"
               hx-target="#section-inventory"
