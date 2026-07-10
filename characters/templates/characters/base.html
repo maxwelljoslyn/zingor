@@ -157,7 +157,7 @@
     {% if user.is_authenticated and not user.profile.email_confirmed %}
       <div class="flash">
         Your email is not confirmed.
-        <a href="{% url 'characters:email_confirmation_status' %}" class="link">Confirm it now.</a>
+        <a href="{% url 'characters:email_confirmation_status' %}">Confirm it now.</a>
       </div>
     {% endif %}
     {% block content %}{% endblock %}

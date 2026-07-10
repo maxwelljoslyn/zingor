@@ -23,8 +23,8 @@
     <tbody>
       {% for char in characters %}
       <tr>
-        <td><a href="/character/{{ char.pk }}/" class="link">{{ char.name|default:"Unnamed" }}</a></td>
-        <td><a href="{% url 'characters:user_profile' char.user.username %}" class="link">{{ char.user|display_name }}</a></td>
+        <td><a href="/character/{{ char.pk }}/">{{ char.name|default:"Unnamed" }}</a></td>
+        <td><a href="{% url 'characters:user_profile' char.user.username %}">{{ char.user|display_name }}</a></td>
         <td>{{ char.race|default:"—" }}</td>
         <td>{{ char.char_class|default:"—" }}</td>
         <td>{{ char.level|default:"—" }}</td>
