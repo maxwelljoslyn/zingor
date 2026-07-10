@@ -26,6 +26,7 @@ Templates: `templates/characters/` — `base.html`, `character_list.html` (whole
 - GitHub issues are sometimes submitted by end users — always the case when the issue has the `user-feedback` label. Don't rely on such issues as accurate summaries of the problem or as specs for human or LLM development unless the developer (maintainer) has responded or clarified in comments or edits.
 
 ## Commands
+- If any Python files changed, run `just` as the final step before committing — it runs `uv run ruff check --fix` and `uv run ruff format`. Use a Haiku subagent to run `just`. Skip it when no `.py` files changed.
 - **Run all tests**: `uv run pytest -n auto`
 - **Run single test**: `uv run pytest tests/path/to/test_file.py::test_function_name -n auto`
 - **Run tests with output**: `uv run pytest -v -n auto`
