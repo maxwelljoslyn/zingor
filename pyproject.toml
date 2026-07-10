@@ -1,6 +1,6 @@
 [project]
 name = "zingor"
-version = "0.1.10"
+version = "0.1.11"
 description = "D&D character tracker web app"
 readme = "README.md"
 requires-python = ">=3.11"
