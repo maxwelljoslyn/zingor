@@ -1,7 +1,21 @@
 {% extends "characters/base.html" %}
-{% block title %}{{ profile_user.username }} — Zingor{% endblock %}
+{% load character_tags %}
+{% block title %}{{ profile_user|display_name }} — Zingor{% endblock %}
 {% block content %}
-<h1>{{ profile_user.username }}</h1>
+<h1>{{ profile_user|display_name }}</h1>
+{% if profile_user|display_name != profile_user.username %}
+<p class="muted">username: {{ profile_user.username }}</p>
+{% endif %}
+{% if is_self %}
+<form method="post" class="mb-lg">
+  {% csrf_token %}
+  <label for="display-name-input">Display name</label>
+  <input id="display-name-input" type="text" name="display_name" maxlength="150"
+         value="{{ profile_user|display_name }}">
+  <button type="submit" class="btn">Save</button>
+  <span class="muted">to reset display name to your username, click Save with an empty input</span>
+</form>
+{% endif %}
 <h2 class="mt-lg">Characters</h2>
 {% if characters %}
 <div class="section">

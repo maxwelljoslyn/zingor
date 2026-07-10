@@ -1,10 +1,21 @@
 """Template tags and filters for character display."""
 
 from django import template
+from django.core.exceptions import ObjectDoesNotExist
 
 from characters.wiki_links import linkify_field, linkify_spell, linkify_study
 
 register = template.Library()
+
+
+@register.filter
+def display_name(user) -> str:
+    """The user's chosen display name, falling back to their username."""
+    try:
+        name = user.profile.display_name
+    except ObjectDoesNotExist:
+        name = ""
+    return name or user.username
 
 
 @register.filter

@@ -417,13 +417,32 @@ def email_confirmation_status(request):
 
 @login_required
 def user_profile(request, username: str):
-    """Public (within the party) profile page for a user, listing their characters."""
-    profile_user = get_object_or_404(User, username=username)
+    """Profile page for a user, listing their characters.
+
+    A user may POST a new `display_name` to their own profile; blank
+    means "use the username" (see the `display_name` template filter).
+    """
+    profile_user = get_object_or_404(
+        User.objects.select_related("profile"), username=username
+    )
+    is_self = request.user == profile_user
+    if request.method == "POST":
+        if not is_self:
+            return HttpResponseForbidden("You can only edit your own profile.")
+        profile, _ = Profile.objects.get_or_create(user=profile_user)
+        profile.display_name = request.POST.get("display_name", "").strip()[:150]
+        profile.save(update_fields=["display_name"])
+        messages.success(request, "Display name updated.")
+        return redirect("characters:user_profile", username=username)
     characters = Character.objects.filter(user=profile_user).order_by("name")
     return render(
         request,
         "characters/user_profile.html",
-        {"profile_user": profile_user, "characters": characters},
+        {
+            "profile_user": profile_user,
+            "characters": characters,
+            "is_self": is_self,
+        },
     )
 
 
@@ -432,7 +451,7 @@ def user_profile(request, username: str):
 
 @login_required
 def character_list(request):
-    characters = Character.objects.select_related("user").order_by(
+    characters = Character.objects.select_related("user", "user__profile").order_by(
         "user__username", "name"
     )
     all_items = (

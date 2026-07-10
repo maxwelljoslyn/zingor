@@ -17,6 +17,8 @@ class Profile(models.Model):
         related_name="profile",
     )
     email_confirmed = models.BooleanField(default=False)
+    # Blank means "use the username"; see the `display_name` template filter.
+    display_name = models.CharField(max_length=150, blank=True, default="")
 
     def __str__(self):
         return f"{self.user.username} profile"

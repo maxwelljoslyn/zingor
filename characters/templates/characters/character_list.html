@@ -1,4 +1,5 @@
 {% extends "characters/base.html" %}
+{% load character_tags %}
 {% block title %}Zingor{% endblock %}
 {% block content %}
 <h1>Characters</h1>
@@ -23,7 +24,7 @@
       {% for char in characters %}
       <tr>
         <td><a href="/character/{{ char.pk }}/" class="link">{{ char.name|default:"Unnamed" }}</a></td>
-        <td><a href="{% url 'characters:user_profile' char.user.username %}" class="link">{{ char.user.username }}</a></td>
+        <td><a href="{% url 'characters:user_profile' char.user.username %}" class="link">{{ char.user|display_name }}</a></td>
         <td>{{ char.race|default:"—" }}</td>
         <td>{{ char.char_class|default:"—" }}</td>
         <td>{{ char.level|default:"—" }}</td>

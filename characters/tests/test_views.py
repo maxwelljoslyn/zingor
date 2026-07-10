@@ -161,6 +161,54 @@ class UserProfileViewTests(TestCase):
         self.assertNotContains(response, "Grimble")
 
 
+class DisplayNameTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+
+    def test_defaults_to_username(self):
+        response = self.client.get("/users/testuser/")
+        self.assertContains(response, "<h1>testuser</h1>", html=True)
+
+    def test_own_profile_shows_edit_form(self):
+        response = self.client.get("/users/testuser/")
+        self.assertContains(response, 'name="display_name"')
+
+    def test_other_profile_hides_edit_form(self):
+        User.objects.create_user(username="otheruser", password="testpass")
+        response = self.client.get("/users/otheruser/")
+        self.assertNotContains(response, 'name="display_name"')
+
+    def test_set_display_name(self):
+        response = self.client.post(
+            "/users/testuser/", {"display_name": "Maxwell of Zingor"}
+        )
+        self.assertRedirects(response, "/users/testuser/")
+        self.assertEqual(self.user.profile.display_name, "Maxwell of Zingor")
+        response = self.client.get("/users/testuser/")
+        self.assertContains(response, "<h1>Maxwell of Zingor</h1>", html=True)
+        self.assertContains(response, "username: testuser")
+
+    def test_display_name_used_in_character_list(self):
+        Character.objects.create(user=self.user, name="Thorn")
+        self.client.post("/users/testuser/", {"display_name": "Maxwell of Zingor"})
+        response = self.client.get("/")
+        self.assertContains(response, "Maxwell of Zingor")
+
+    def test_blank_resets_to_username(self):
+        self.client.post("/users/testuser/", {"display_name": "Maxwell of Zingor"})
+        self.client.post("/users/testuser/", {"display_name": "  "})
+        response = self.client.get("/users/testuser/")
+        self.assertContains(response, "<h1>testuser</h1>", html=True)
+
+    def test_cannot_edit_another_users_display_name(self):
+        other = User.objects.create_user(username="otheruser", password="testpass")
+        response = self.client.post("/users/otheruser/", {"display_name": "Impostor"})
+        self.assertEqual(response.status_code, 403)
+        profile = Profile.objects.filter(user=other).first()
+        self.assertTrue(profile is None or profile.display_name == "")
+
+
 class CharacterListViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")
