@@ -4,8 +4,8 @@ Coins become inventory rows so players can stash them in containers or leave
 them behind; encumbrance then follows from ordinary carried-item weight.
 Fractional amounts (prod held 13.75 sp) cascade exactly into smaller coins at
 the campaign rates (1 gp = 16 sp, 1 sp = 12 cp): 13.75 sp -> 13 sp + 9 cp.
-An amount that doesn't resolve to whole coppers would lose money silently, so
-it aborts the migration instead.
+Any remainder below one copper is discarded — there is no smaller coin — and
+the cascade is printed so the deploy log shows exactly what changed.
 """
 
 from decimal import Decimal, localcontext
@@ -20,10 +20,11 @@ SP_TO_CP = 12
 
 
 def whole_coins(gp: Decimal, sp: Decimal, cp: Decimal) -> dict[str, int]:
-    """Decompose possibly-fractional coin amounts into whole coins, exactly.
+    """Decompose possibly-fractional coin amounts into whole coins.
 
-    Fractions cascade into the next-smaller denomination. Negative amounts or
-    a sub-copper remainder raise ValueError so nobody's wealth changes.
+    Fractions cascade into the next-smaller denomination; any remainder below
+    one copper is discarded (no smaller coin exists). Negative amounts raise
+    ValueError so nobody's wealth goes further wrong.
     """
     # The app's global Decimal precision is 4 significant digits; cascade
     # arithmetic on large purses needs more, so use a local context.
@@ -36,8 +37,6 @@ def whole_coins(gp: Decimal, sp: Decimal, cp: Decimal) -> dict[str, int]:
         sp_whole = int(sp)
         cp = cp + (sp - sp_whole) * SP_TO_CP
         cp_whole = int(cp)
-        if cp_whole != cp:
-            raise ValueError(f"sub-copper remainder: {cp - cp_whole} cp")
     return {"gp": gp_whole, "sp": sp_whole, "cp": cp_whole}
 
 

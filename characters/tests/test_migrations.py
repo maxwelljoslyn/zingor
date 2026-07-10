@@ -111,8 +111,8 @@ class WholeCoinsTests(SimpleTestCase):
     """The coin migration's exact decomposition of fractional amounts.
 
     Campaign rates: 1 gp = 16 sp, 1 sp = 12 cp. Prod held 13.75 sp, which is
-    exactly 13 sp + 9 cp — fractions cascade into smaller coins without any
-    rounding, and anything that can't is bad data and must abort.
+    exactly 13 sp + 9 cp — fractions cascade into smaller coins, and any
+    remainder below one copper is simply discarded.
     """
 
     def _whole(self, gp, sp, cp):
@@ -134,11 +134,10 @@ class WholeCoinsTests(SimpleTestCase):
         counts = self._whole("1.5", "0.5", 3)
         self.assertEqual(counts, {"gp": 1, "sp": 8, "cp": 9})
 
-    def test_sub_copper_remainder_aborts(self):
-        with self.assertRaises(ValueError):
-            self._whole(0, 0, "0.4")
-        with self.assertRaises(ValueError):
-            self._whole(0, "0.03125", 0)
+    def test_sub_copper_remainder_discarded(self):
+        self.assertEqual(self._whole(0, 0, "0.4"), {"gp": 0, "sp": 0, "cp": 0})
+        self.assertEqual(self._whole(0, "0.03125", 0), {"gp": 0, "sp": 0, "cp": 0})
+        self.assertEqual(self._whole(0, "13.8", 0), {"gp": 0, "sp": 13, "cp": 9})
 
     def test_large_amounts_do_not_lose_precision(self):
         """The app's global Decimal prec is 4; the helper must not inherit it."""
