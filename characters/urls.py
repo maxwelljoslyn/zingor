@@ -54,6 +54,8 @@ urlpatterns = [
         auth_views.PasswordResetCompleteView.as_view(),
         name="password_reset_complete",
     ),
+    # User profiles
+    path("users/<str:username>/", views.user_profile, name="user_profile"),
     # Character list
     path("", views.character_list, name="character_list"),
     path("character/create/", views.character_create, name="character_create"),

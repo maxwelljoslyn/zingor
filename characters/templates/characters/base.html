@@ -137,7 +137,7 @@
       </button>
       {% if user.is_authenticated %}
         <a class="btn" href="{% url 'characters:feedback' %}">Feedback</a>
-        <span>{{ user.username }}</span>
+        <a href="{% url 'characters:user_profile' user.username %}">{{ user.username }}</a>
         <form method="post" action="{% url 'characters:logout' %}" class="inline">
           {% csrf_token %}
           <button type="submit">Logout</button>

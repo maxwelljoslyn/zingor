@@ -125,6 +125,42 @@ class PasswordResetTests(TestCase):
         self.assertIn(b"invalid or has expired", response.content.lower())
 
 
+class UserProfileViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+
+    def test_requires_login(self):
+        self.client.logout()
+        response = self.client.get("/users/testuser/")
+        self.assertEqual(response.status_code, 302)
+
+    def test_own_profile(self):
+        response = self.client.get("/users/testuser/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "testuser")
+        self.assertContains(response, "No characters yet")
+
+    def test_other_users_profile(self):
+        other = User.objects.create_user(username="otheruser", password="testpass")
+        Character.objects.create(user=other, name="Grimble")
+        response = self.client.get("/users/otheruser/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Grimble")
+
+    def test_unknown_username_404s(self):
+        response = self.client.get("/users/nosuchuser/")
+        self.assertEqual(response.status_code, 404)
+
+    def test_lists_only_that_users_characters(self):
+        other = User.objects.create_user(username="otheruser", password="testpass")
+        Character.objects.create(user=self.user, name="Thorn")
+        Character.objects.create(user=other, name="Grimble")
+        response = self.client.get("/users/testuser/")
+        self.assertContains(response, "Thorn")
+        self.assertNotContains(response, "Grimble")
+
+
 class CharacterListViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")

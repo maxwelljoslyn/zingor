@@ -412,6 +412,21 @@ def email_confirmation_status(request):
     return render(request, "registration/email_confirmation_status.html")
 
 
+# --- User profiles ---
+
+
+@login_required
+def user_profile(request, username: str):
+    """Public (within the party) profile page for a user, listing their characters."""
+    profile_user = get_object_or_404(User, username=username)
+    characters = Character.objects.filter(user=profile_user).order_by("name")
+    return render(
+        request,
+        "characters/user_profile.html",
+        {"profile_user": profile_user, "characters": characters},
+    )
+
+
 # --- Character list ---
 
 

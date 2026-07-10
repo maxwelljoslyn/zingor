@@ -68,7 +68,8 @@ class ViewPermissionsTests(PermissionsTestBase):
     def test_viewer_sees_owner_attribution(self):
         self.login_as_viewer()
         response = self.client.get(f"/character/{self.character.pk}/")
-        self.assertContains(response, "owner's character")
+        self.assertContains(response, "'s character)")
+        self.assertContains(response, 'href="/users/owner/"')
 
     def test_owner_does_not_see_attribution(self):
         self.login_as_owner()

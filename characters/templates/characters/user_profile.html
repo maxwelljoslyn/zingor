@@ -1,0 +1,34 @@
+{% extends "characters/base.html" %}
+{% block title %}{{ profile_user.username }} — Zingor{% endblock %}
+{% block content %}
+<h1>{{ profile_user.username }}</h1>
+<h2 class="mt-lg">Characters</h2>
+{% if characters %}
+<div class="section">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Race</th>
+        <th>Class</th>
+        <th>Level</th>
+        <th>Last Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for char in characters %}
+      <tr>
+        <td><a href="/character/{{ char.pk }}/" class="link">{{ char.name|default:"Unnamed" }}</a></td>
+        <td>{{ char.race|default:"—" }}</td>
+        <td>{{ char.char_class|default:"—" }}</td>
+        <td>{{ char.level|default:"—" }}</td>
+        <td>{{ char.updated_at|date:"M d, Y H:i" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="muted">No characters yet.</p>
+{% endif %}
+{% endblock %}
