@@ -22,15 +22,12 @@ coin_exchange = {
     "copper": {"weight": D("0.8") * u.oz},
 }
 
+currency_names = {"gp": "gold", "sp": "silver", "cp": "copper"}
 
-def weight_of_money(gp, sp, cp):
-    """Calculate the weight of coins."""
-    total = (
-        gp.magnitude * coin_exchange["gold"]["weight"]
-        + sp.magnitude * coin_exchange["silver"]["weight"]
-        + cp.magnitude * coin_exchange["copper"]["weight"]
-    )
-    return total.to(u.lb)
+
+def coin_weight(currency: str):
+    """Weight of a single coin of the given currency ("gp"/"sp"/"cp")."""
+    return coin_exchange[currency_names[currency]]["weight"]
 
 
 # --- Ability score functions ---

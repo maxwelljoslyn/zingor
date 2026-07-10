@@ -459,6 +459,131 @@ class ItemCRUDTests(TestCase):
         response = self.client.get(f"/character/{self.character.pk}/")
         self.assertContains(response, "×28")
 
+
+class MoneyViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+        self.character = Character.objects.create(user=self.user, name="Thorn")
+
+    def _coins(self, currency, quantity, **overrides):
+        defaults = {
+            "owner": self.character,
+            "name": f"{currency} coins",
+            "weight": None,
+            "currency": currency,
+            "quantity": quantity,
+        }
+        defaults.update(overrides)
+        return Item.objects.create(**defaults)
+
+    def test_add_money_creates_stack(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/add-money/",
+            {"quantity": "40", "currency": "gp"},
+        )
+        self.assertEqual(response.status_code, 200)
+        coins = Item.objects.get(owner=self.character, currency="gp")
+        self.assertEqual(coins.quantity, 40)
+        self.assertIsNone(coins.weight)
+        self.assertEqual(coins.name, "gold pieces")
+
+    def test_add_money_merges_into_top_level_stack(self):
+        """Adding coins tops up an existing loose stack instead of splitting it."""
+        existing = self._coins("gp", 10, name="gold pieces")
+        self.client.post(
+            f"/character/{self.character.pk}/add-money/",
+            {"quantity": "5", "currency": "gp"},
+        )
+        existing.refresh_from_db()
+        self.assertEqual(existing.quantity, 15)
+        self.assertEqual(
+            Item.objects.filter(owner=self.character, currency="gp").count(), 1
+        )
+
+    def test_add_money_does_not_merge_into_contained_or_stashed_stacks(self):
+        backpack = Item.objects.create(
+            owner=self.character, name="Backpack", weight="2 lb", is_container=True
+        )
+        self._coins("gp", 10, container=backpack)
+        self._coins("gp", 99, is_carried=False)
+        self.client.post(
+            f"/character/{self.character.pk}/add-money/",
+            {"quantity": "5", "currency": "gp"},
+        )
+        stacks = Item.objects.filter(owner=self.character, currency="gp")
+        self.assertEqual(stacks.count(), 3)
+
+    def test_add_money_rejects_bad_input(self):
+        for payload in (
+            {"quantity": "5", "currency": "euro"},
+            {"quantity": "0", "currency": "gp"},
+            {"quantity": "junk", "currency": "gp"},
+        ):
+            response = self.client.post(
+                f"/character/{self.character.pk}/add-money/", payload
+            )
+            self.assertEqual(response.status_code, 400)
+        self.assertEqual(Item.objects.filter(owner=self.character).count(), 0)
+
+    def test_money_quantity_zero_deletes_stack(self):
+        """Spending your last copper empties the purse instead of erroring."""
+        coins = self._coins("cp", 3)
+        response = self.client.post(
+            f"/item/{coins.pk}/update-field/",
+            {"field_name": "quantity", "value": "0"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Item.objects.filter(pk=coins.pk).exists())
+
+    def test_money_weight_cannot_be_edited(self):
+        coins = self._coins("gp", 40)
+        response = self.client.post(
+            f"/item/{coins.pk}/update-field/",
+            {"field_name": "weight", "value": "5", "pint_unit": "pound"},
+        )
+        self.assertEqual(response.status_code, 400)
+        edit = self.client.get(f"/item/{coins.pk}/edit-field/?field=weight")
+        self.assertEqual(edit.status_code, 400)
+
+    def test_money_cannot_become_container(self):
+        coins = self._coins("gp", 40)
+        response = self.client.post(
+            f"/item/{coins.pk}/update-field/",
+            {"field_name": "is_container", "value": "on"},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_money_edit_refreshes_identity_section(self):
+        """Coin changes re-render the identity section's money row out-of-band."""
+        coins = self._coins("gp", 40)
+        response = self.client.post(
+            f"/item/{coins.pk}/update-field/",
+            {"field_name": "quantity", "value": "10"},
+        )
+        self.assertContains(response, 'id="section-identity"')
+        response = self.client.post(
+            f"/character/{self.character.pk}/add-money/",
+            {"quantity": "5", "currency": "sp"},
+        )
+        self.assertContains(response, 'id="section-identity"')
+
+    def test_identity_shows_derived_money(self):
+        self._coins("gp", 670)
+        self._coins("sp", 224)
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, "670 gp")
+        self.assertContains(response, "224 sp")
+        self.assertContains(response, "0 cp")
+
+    def test_character_money_fields_no_longer_editable(self):
+        for field in ("gp", "sp", "cp"):
+            response = self.client.post(
+                f"/character/{self.character.pk}/update-field/",
+                {"field_name": field, "value": "10"},
+            )
+            self.assertEqual(response.status_code, 400)
+
     def test_delete_item(self):
         item = Item.objects.create(owner=self.character, name="Sword", weight="3 lb")
         response = self.client.delete(f"/item/{item.pk}/delete/")

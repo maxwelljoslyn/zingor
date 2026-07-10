@@ -54,7 +54,8 @@
   {# Normalized to oz so client-side sort compares a single unit, not mixed lb/oz strings. #}
   {# Sorts by total weight (contents included); for non-containers total == own weight. #}
   <td data-sort-value="{{ item.total_weight_oz }}">
-    {% if is_owner %}
+    {# Coin weight is derived from the rules, so money rows get no weight editor. #}
+    {% if is_owner and not item.currency %}
     <span id="item-{{ item.pk }}-weight"
           hx-get="/item/{{ item.pk }}/edit-field/?field=weight"
           hx-target="#item-{{ item.pk }}-weight"
@@ -68,7 +69,7 @@
     {% endif %}
     {# The weight edit form takes per-unit weight, so remind owners what one unit weighs. #}
     {% if item.quantity > 1 %}
-    <span class="muted text-sm">({{ item.weight }} each)</span>
+    <span class="muted text-sm">({{ item.unit_weight }} each)</span>
     {% endif %}
   </td>
   {% if is_owner %}
@@ -95,6 +96,8 @@
     </form>
   </td>
   <td>
+    {# Coins can never hold other items, so money rows get no container toggle. #}
+    {% if not item.currency %}
     <form hx-post="/item/{{ item.pk }}/update-field/"
           hx-target="#section-inventory"
           hx-swap="outerHTML"
@@ -104,6 +107,7 @@
       <input type="hidden" name="field_name" value="is_container">
       <input type="checkbox" name="value" aria-label="Container" {% if item.is_container %}checked{% endif %}>
     </form>
+    {% endif %}
   </td>
   <td>
     <span class="item-actions">

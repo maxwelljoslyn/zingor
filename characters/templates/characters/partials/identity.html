@@ -38,10 +38,11 @@
     </tr>
     <tr>
       <th>Money</th>
+      {# Derived from money items in the inventory; add or edit coins there. #}
       <td colspan="3">
-        {% unknown_or_value character.gp "gp" character.pk character.gp.magnitude %} gp,
-        {% unknown_or_value character.sp "sp" character.pk character.sp.magnitude %} sp,
-        {% unknown_or_value character.cp "cp" character.pk character.cp.magnitude %} cp
+        {{ character.gp.magnitude }} gp,
+        {{ character.sp.magnitude }} sp,
+        {{ character.cp.magnitude }} cp
       </td>
     </tr>
   </table>

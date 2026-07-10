@@ -88,11 +88,6 @@ class Character(models.Model):
     # HP
     current_hp = models.IntegerField(null=True, blank=True)
 
-    # Money
-    gp = PintField(default="0 gp")
-    sp = PintField(default="0 sp")
-    cp = PintField(default="0 cp")
-
     # Encumbrance tuning
     encumbrance_multiplier = models.DecimalField(
         max_digits=5, decimal_places=2, default=Decimal("1.0")
@@ -213,30 +208,38 @@ class Character(models.Model):
         return rules.maximum_hp(hit_dice, self.char_class, bonus_hp=bonus_hp)
 
     # --- Money ---
+    # Coins live in the inventory as money items (Item.currency), so wealth is
+    # derived by summing stacks wherever they are — carried, stashed, or nested.
+
+    def _coin_total(self, currency):
+        """Total coins of one currency across all money items, as a Quantity."""
+        total = self.inventory.filter(currency=currency).aggregate(
+            total=models.Sum("quantity")
+        )["total"]
+        return D(total or 0) * getattr(u, currency)
+
+    @property
+    def gp(self):
+        return self._coin_total("gp")
+
+    @property
+    def sp(self):
+        return self._coin_total("sp")
+
+    @property
+    def cp(self):
+        return self._coin_total("cp")
 
     @property
     def money(self):
-        """Total money in copper pieces."""
-        gp = self.gp or D(0) * u.gp
-        sp = self.sp or D(0) * u.sp
-        cp = self.cp or D(0) * u.cp
-        return gp + sp + cp
-
-    @property
-    def weight_of_money(self):
-        """Weight of all coins carried."""
-        from . import rules
-
-        gp = self.gp or D(0) * u.gp
-        sp = self.sp or D(0) * u.sp
-        cp = self.cp or D(0) * u.cp
-        return rules.weight_of_money(gp, sp, cp)
+        """Total money across all currencies (convertible, e.g. .to(u.cp))."""
+        return self.gp + self.sp + self.cp
 
     # --- Encumbrance ---
 
     @property
     def weight_of_carried_items(self):
-        """Weight of carried inventory items, excluding coins."""
+        """Weight of carried inventory items, coins included."""
         total = D(0) * u.lb
         for item in self.inventory.filter(is_carried=True, container__isnull=True):
             total += item.carried_weight
@@ -244,8 +247,8 @@ class Character(models.Model):
 
     @property
     def current_encumbrance(self):
-        """Total weight of carried items + money."""
-        return self.weight_of_carried_items + self.weight_of_money
+        """Total weight of everything carried."""
+        return self.weight_of_carried_items
 
     @property
     def max_encumbrance(self):
@@ -392,13 +395,27 @@ class Condition(models.Model):
 
 
 class Item(models.Model):
-    """An item in a character's inventory."""
+    """An item in a character's inventory.
+
+    A row with `currency` set is a stack of coins: its per-coin weight comes
+    from the rules tables (never stored, hence weight must be NULL) and its
+    quantity is the coin count.
+    """
+
+    CURRENCY_CHOICES = [
+        ("gp", "gold pieces"),
+        ("sp", "silver pieces"),
+        ("cp", "copper pieces"),
+    ]
 
     owner = models.ForeignKey(
         Character, on_delete=models.CASCADE, related_name="inventory"
     )
     name = models.CharField(max_length=200)
-    weight = PintField(default="0 oz")
+    weight = PintField(default="0 oz", null=True, blank=True)
+    currency = models.CharField(
+        max_length=2, choices=CURRENCY_CHOICES, null=True, blank=True
+    )
     unit = PintField(default="1 item")
     container = models.ForeignKey(
         "self", on_delete=models.CASCADE, null=True, blank=True, related_name="contents"
@@ -423,13 +440,28 @@ class Item(models.Model):
                 condition=models.Q(is_container=False) | models.Q(quantity=1),
                 name="item_container_quantity_1",
             ),
+            # Coin weight is derived from the rules tables, so storing one is a bug;
+            # and a coin stack can't hold other items.
+            models.CheckConstraint(
+                condition=models.Q(currency__isnull=True)
+                | models.Q(weight__isnull=True, is_container=False),
+                name="item_money_no_weight_no_container",
+            ),
         ]
 
     def __str__(self):
         return self.name
 
     def _get_weight_quantity(self):
-        """Get weight as a Pint Quantity, handling string values."""
+        """Per-unit weight as a Pint Quantity, handling string values.
+
+        Money items derive their per-coin weight from the rules tables; their
+        stored weight is NULL by constraint.
+        """
+        if self.currency:
+            from . import rules
+
+            return rules.coin_weight(self.currency)
         w = self.weight
         if w is None:
             return D(0) * u.oz
@@ -439,6 +471,11 @@ class Item(models.Model):
             field = PintField()
             return field.to_python(w)
         return w
+
+    @property
+    def unit_weight(self):
+        """Public per-unit weight, e.g. for the "(X each)" note on stacks."""
+        return self._get_weight_quantity()
 
     @property
     def adjusted_weight(self):

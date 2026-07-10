@@ -3,9 +3,7 @@
   <h2>Inventory</h2>
   <div class="mb-sm text-meta">
     <strong>Encumbrance:</strong>
-    {{ character.weight_of_carried_items }} items
-    + {{ character.weight_of_money }} coins
-    = {{ character.current_encumbrance }}
+    {{ character.current_encumbrance }}
     {% if character.max_encumbrance %}
       / {{ character.max_encumbrance }}
       {% if character.percent_encumbered %}
@@ -60,6 +58,20 @@
     <input type="number" name="quantity" value="1" min="1" max="100" class="w-4" title="Quantity">
     <label><input type="checkbox" name="is_worn"> Worn</label>
     <button type="submit" class="btn btn-small">Add Item</button>
+  </form>
+  {# Coins are items too; this form tops up the loose stack of the chosen currency. #}
+  <form hx-post="/character/{{ character.pk }}/add-money/"
+        hx-target="#section-inventory"
+        hx-swap="outerHTML"
+        class="inline-form mt-md">
+    {% csrf_token %}
+    <input type="number" name="quantity" value="1" min="1" class="w-4" title="Number of coins" required>
+    <select name="currency">
+      <option value="gp">gp</option>
+      <option value="sp">sp</option>
+      <option value="cp">cp</option>
+    </select>
+    <button type="submit" class="btn btn-small">Add Coins</button>
   </form>
   {% endif %}
 </div>

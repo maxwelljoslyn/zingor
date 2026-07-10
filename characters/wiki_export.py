@@ -79,13 +79,9 @@ def character_to_wiki(character):
 
     # --- Encumbrance ---
     lines.append("== Encumbrance ==")
-    item_wt = character.weight_of_carried_items
-    coin_wt = character.weight_of_money
     total_wt = character.current_encumbrance
     max_enc = character.max_encumbrance
     current_ap = character.current_action_points
-    lines.append(f"* '''Item weight:''' {_fmt_weight(item_wt)}")
-    lines.append(f"* '''Coin weight:''' {_fmt_weight(coin_wt)}")
     lines.append(f"* '''Total carried:''' {_fmt_weight(total_wt)}")
     lines.append(
         f"* '''Max encumbrance:''' {_fmt_weight(max_enc) if max_enc is not None else '?'}"

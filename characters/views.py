@@ -229,9 +229,6 @@ FIELD_TYPES = {
     "current_hp": "number",
     "height": "text",
     "weight": "text",
-    "gp": "text",
-    "sp": "text",
-    "cp": "text",
     "notes": "textarea",
     "background": "textarea",
     "appearance": "textarea",
@@ -257,7 +254,7 @@ INTEGER_FIELDS = {
     "current_hp",
 }
 
-PINT_FIELDS = {"height", "weight", "gp", "sp", "cp"}
+PINT_FIELDS = {"height", "weight"}
 
 # Short display labels for money pint units (canonical name -> short form)
 PINT_UNIT_DISPLAY = {
@@ -291,9 +288,6 @@ SECTION_FOR_FIELD = {
     "xp": "identity",
     "height": "identity",
     "weight": "identity",
-    "gp": "identity",
-    "sp": "identity",
-    "cp": "identity",
     "strength": "abilities",
     "percentile_strength": "abilities",
     "dexterity": "abilities",
@@ -535,7 +529,6 @@ def edit_field(request, pk):
         current_value = str(current_value)
 
     # For pint fields with a set value, split into magnitude and unit for the edit form.
-    # For money fields with no value yet, default to 0 with the field's unit.
     is_pint_split = False
     pint_magnitude = None
     pint_unit = None
@@ -556,11 +549,6 @@ def edit_field(request, pk):
             pint_magnitude = parts[0]
             pint_unit = parts[1] if len(parts) > 1 else field_name
             pint_unit_display = PINT_UNIT_DISPLAY.get(pint_unit, pint_unit)
-            is_pint_split = True
-        elif field_name in {"gp", "sp", "cp"}:
-            pint_magnitude = "0"
-            pint_unit = field_name
-            pint_unit_display = field_name
             is_pint_split = True
         elif pint_unit_choices:
             pint_magnitude = ""
@@ -646,9 +634,6 @@ def update_field(request, pk):
         "percentile_strength",
         "weight",
         "encumbrance_multiplier",
-        "gp",
-        "sp",
-        "cp",
     }:
         oob.append("inventory")
     if field_name in {"strength", "percentile_strength"}:
@@ -721,6 +706,8 @@ def edit_item_field(request, item_id):
         pint_unit = None
         pint_unit_display = None
     elif field_name == "weight":
+        if item.currency:
+            return HttpResponse("Coin weight is fixed by the rules", status=400)
         weight_str = str(item.weight) if item.weight is not None else "0 ounce"
         parts = weight_str.split(" ", 1)
         pint_magnitude = parts[0]
@@ -769,9 +756,14 @@ def update_item_field(request, item_id):
     field_name = request.POST.get("field_name", "")
     raw_value = request.POST.get("value", "")
 
+    # A money edit changes the character's wealth, shown in the identity section.
+    oob = ["identity"] if item.currency else None
+
     if field_name == "name":
         item.name = raw_value
     elif field_name == "weight":
+        if item.currency:
+            return HttpResponse("Coin weight is fixed by the rules", status=400)
         pint_unit = request.POST.get("pint_unit", "")
         full = f"{raw_value} {pint_unit}" if pint_unit else raw_value
         q = u(full)
@@ -791,6 +783,13 @@ def update_item_field(request, item_id):
             quantity = int(raw_value)
         except (TypeError, ValueError):
             return HttpResponse("Quantity must be a whole number", status=400)
+        if quantity == 0 and item.currency:
+            # Spending the last coin empties the purse: the stack goes away.
+            character = item.owner
+            item.delete()
+            return _render_section(
+                request, character, "inventory", oob_sections=["identity"]
+            )
         if quantity < 1:
             return HttpResponse("Quantity must be at least 1", status=400)
         if item.is_container and quantity != 1:
@@ -799,6 +798,8 @@ def update_item_field(request, item_id):
     elif field_name == "is_container":
         if raw_value == "on" and item.quantity != 1:
             return HttpResponse("Stacked items cannot become containers", status=400)
+        if raw_value == "on" and item.currency:
+            return HttpResponse("Coins cannot hold other items", status=400)
         item.is_container = raw_value == "on"
         if not item.is_container:
             item.contents.update(container=None)
@@ -819,7 +820,7 @@ def update_item_field(request, item_id):
     else:
         save_fields = [field_name]
     item.save(update_fields=save_fields)
-    return _render_section(request, item.owner, "inventory")
+    return _render_section(request, item.owner, "inventory", oob_sections=oob)
 
 
 # --- Container operations ---
@@ -900,13 +901,48 @@ def add_item(request, pk):
 
 @login_required
 @character_owner_required
+@require_POST
+def add_money(request, pk):
+    """Add coins: top up the loose top-level stack of that currency, or start one."""
+    character = get_object_or_404(Character, pk=pk)
+    currency = request.POST.get("currency", "")
+    currency_names = dict(Item.CURRENCY_CHOICES)
+    if currency not in currency_names:
+        return HttpResponse("Unknown currency", status=400)
+    try:
+        quantity = int(request.POST.get("quantity", ""))
+    except (TypeError, ValueError):
+        return HttpResponse("Quantity must be a whole number", status=400)
+    if quantity < 1:
+        return HttpResponse("Quantity must be at least 1", status=400)
+
+    stack = character.inventory.filter(
+        currency=currency, container__isnull=True, is_carried=True
+    ).first()
+    if stack is not None:
+        stack.quantity += quantity
+        stack.save(update_fields=["quantity"])
+    else:
+        Item.objects.create(
+            owner=character,
+            name=currency_names[currency],
+            weight=None,
+            currency=currency,
+            quantity=quantity,
+        )
+    return _render_section(request, character, "inventory", oob_sections=["identity"])
+
+
+@login_required
+@character_owner_required
 def delete_item(request, item_id):
     if request.method != "DELETE":
         return HttpResponse(status=405)
     item = get_object_or_404(Item, pk=item_id)
     character = item.owner
+    oob = ["identity"] if item.currency else None
     item.delete()
-    return _render_section(request, character, "inventory")
+    return _render_section(request, character, "inventory", oob_sections=oob)
 
 
 # --- Condition CRUD ---

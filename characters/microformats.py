@@ -64,13 +64,6 @@ def _coerce_bool(text: str) -> bool:
     return text.strip().lower() in {"x", "yes", "true", "y", "✓", "1"}
 
 
-def _coerce_money(unit: str) -> Callable[[str], object]:
-    def coerce(text: str) -> object:
-        return D(_num(text)) * getattr(u, unit)
-
-    return coerce
-
-
 def _coerce_weight(text: str) -> object:
     """e.g. "75 Lbs." -> 75 lb."""
     return D(_num(text)) * u.lb
@@ -108,15 +101,16 @@ SCALARS: list[tuple[str, str, Callable[[str], object]]] = [
     ("height", "height", _coerce_height),
     ("weight", "weight", _coerce_weight),
     ("current-hp", "current_hp", _coerce_int),
-    ("gp", "gp", _coerce_money("gp")),
-    ("sp", "sp", _coerce_money("sp")),
-    ("cp", "cp", _coerce_money("cp")),
     ("notes", "notes", _coerce_str),
     ("background", "background", _coerce_str),
     ("appearance", "appearance", _coerce_str),
     ("chosen-field", "chosen_field", _coerce_str),
     ("chosen-study", "chosen_study", _coerce_str),
 ]
+
+# Coins are inventory items, not Character columns, so they parse into
+# ParsedSheet.money (currency -> coin count) for the save step to turn into items.
+MONEY_SUFFIXES = ["gp", "sp", "cp"]
 
 
 @dataclass(frozen=True)
@@ -160,6 +154,7 @@ class ParsedSheet:
     character: Character
     spells: list[Spell] = dc_field(default_factory=list)
     sage_studies: list[SageStudyPoints] = dc_field(default_factory=list)
+    money: dict[str, int] = dc_field(default_factory=dict)
     warnings: list[str] = dc_field(default_factory=list)
 
 
@@ -186,6 +181,20 @@ def parse_sheet(html: str) -> ParsedSheet:
         raw = _text(els[0])
         try:
             setattr(sheet.character, attr, coerce(raw))
+        except Exception as exc:
+            sheet.warnings.append(f"scalar '{suffix}': could not parse {raw!r} ({exc})")
+
+    for suffix in MONEY_SUFFIXES:
+        els = soup.select(f".{PREFIX}{suffix}")
+        if not els:
+            continue
+        if len(els) > 1:
+            sheet.warnings.append(
+                f"scalar '{suffix}': {len(els)} elements found; using the first"
+            )
+        raw = _text(els[0])
+        try:
+            sheet.money[suffix] = _coerce_int(raw)
         except Exception as exc:
             sheet.warnings.append(f"scalar '{suffix}': could not parse {raw!r} ({exc})")
 
@@ -244,9 +253,6 @@ _DISPLAY_FIELDS = [
     ("height_display", "height"),
     ("weight", "weight"),
     ("current_hp", "current_hp"),
-    ("gp", "gp"),
-    ("sp", "sp"),
-    ("cp", "cp"),
 ]
 
 
@@ -257,6 +263,9 @@ def render_sheet(sheet: ParsedSheet) -> str:
         val = getattr(c, attr)
         if val is not None and val != "":
             lines.append(f"  {label:<14} {val}")
+    for currency in MONEY_SUFFIXES:
+        if currency in sheet.money:
+            lines.append(f"  {currency:<14} {sheet.money[currency]}")
 
     lines.append("")
     lines.append(f"=== Spells ({len(sheet.spells)}) ===")

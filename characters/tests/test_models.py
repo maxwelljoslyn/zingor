@@ -12,7 +12,7 @@ from characters.models import (
     Item,
     Spell,
 )
-from characters.units import D
+from characters.units import D, u
 
 
 class CharacterModelTests(TestCase):
@@ -222,6 +222,69 @@ class ItemModelTests(TestCase):
                 quantity=6,
                 is_container=True,
             )
+
+
+class MoneyItemTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.character = Character.objects.create(user=self.user, name="Thorn")
+
+    def _coins(self, currency, quantity, **overrides):
+        defaults = {
+            "owner": self.character,
+            "name": f"{currency} coins",
+            "weight": None,
+            "currency": currency,
+            "quantity": quantity,
+        }
+        defaults.update(overrides)
+        return Item.objects.create(**defaults)
+
+    def test_money_weight_is_derived_from_coin_exchange(self):
+        """40 gold at 0.4 oz each weighs a pound, no stored weight involved."""
+        coins = self._coins("gp", 40)
+        self.assertEqual(coins.adjusted_weight.to(u.oz).magnitude, D(16))
+
+    def test_each_currency_has_its_own_coin_weight(self):
+        self.assertEqual(self._coins("sp", 10).adjusted_weight.to(u.oz).magnitude, D(6))
+        self.assertEqual(self._coins("cp", 10).adjusted_weight.to(u.oz).magnitude, D(8))
+
+    def test_money_cannot_store_a_weight(self):
+        with self.assertRaises(IntegrityError):
+            self._coins("gp", 40, weight="5 lb")
+
+    def test_money_cannot_be_a_container(self):
+        with self.assertRaises(IntegrityError):
+            self._coins("gp", 40, is_container=True)
+
+    def test_character_coin_totals_are_derived_from_items(self):
+        self._coins("gp", 40)
+        self._coins("gp", 10, name="stash", is_carried=False)
+        self._coins("sp", 7)
+        self.assertEqual(self.character.gp, D(50) * u.gp)
+        self.assertEqual(self.character.sp, D(7) * u.sp)
+        self.assertEqual(self.character.cp, D(0) * u.cp)
+
+    def test_money_total_converts_currencies(self):
+        self._coins("gp", 1)
+        self._coins("sp", 2)
+        self._coins("cp", 5)
+        self.assertEqual(self.character.money.to(u.cp).magnitude, D(255))
+
+    def test_carried_coins_count_toward_encumbrance(self):
+        self._coins("gp", 40)
+        self.assertEqual(self.character.current_encumbrance.to(u.oz).magnitude, D(16))
+
+    def test_stashed_coins_do_not_count_toward_encumbrance(self):
+        self._coins("gp", 40, is_carried=False)
+        self.assertEqual(self.character.current_encumbrance.to(u.oz).magnitude, D(0))
+
+    def test_coins_in_uncarried_container_do_not_count(self):
+        chest = Item.objects.create(
+            owner=self.character, name="Chest", weight="10 lb", is_carried=False
+        )
+        self._coins("gp", 40, container=chest)
+        self.assertEqual(self.character.current_encumbrance.to(u.oz).magnitude, D(0))
 
 
 class SpellModelTests(TestCase):
