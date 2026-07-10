@@ -17,6 +17,8 @@
       <input type="hidden" name="pint_unit" value="{{ pint_unit }}">
       <span>{{ pint_unit_display }}</span>
     {% endif %}
+  {% elif is_integer %}
+    <input type="number" name="value" value="{{ current_value|default:"" }}" min="1" step="1" autofocus class="w-4">
   {% else %}
     <input type="text" name="value" value="{{ current_value|default:"" }}" autofocus class="w-12">
   {% endif %}

@@ -31,6 +31,16 @@
     {% else %}
     {{ item.name }}
     {% endif %}
+    {# Stack size: owners can always click it (to stack up a single); containers can't stack, so no affordance. #}
+    {% if is_owner and not item.is_container %}
+    <span id="item-{{ item.pk }}-quantity"
+          hx-get="/item/{{ item.pk }}/edit-field/?field=quantity"
+          hx-target="#item-{{ item.pk }}-quantity"
+          hx-swap="outerHTML"
+          class="clickable muted text-sm">×{{ item.quantity }}</span>
+    {% elif item.quantity > 1 %}
+    <span class="muted text-sm">×{{ item.quantity }}</span>
+    {% endif %}
     {% if item.is_container %}
     <span class="muted text-sm">
       [cap: {% if is_owner %}<span id="item-{{ item.pk }}-capacity"
@@ -55,6 +65,10 @@
     {% endif %}
     {% if item.contents.all %}
     <span class="muted text-sm">({{ item.total_weight }} total)</span>
+    {% endif %}
+    {# The weight edit form takes per-unit weight, so remind owners what one unit weighs. #}
+    {% if item.quantity > 1 %}
+    <span class="muted text-sm">({{ item.weight }} each)</span>
     {% endif %}
   </td>
   {% if is_owner %}

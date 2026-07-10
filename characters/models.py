@@ -407,11 +407,23 @@ class Item(models.Model):
     capacity = PintField(null=True, blank=True)
     is_carried = models.BooleanField(default=True)
     is_worn = models.BooleanField(default=False)
+    quantity = models.IntegerField(default=1)
     props = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["name"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(quantity__gte=1),
+                name="item_quantity_gte_1",
+            ),
+            # Contents point at a single container row, so containers can't stack.
+            models.CheckConstraint(
+                condition=models.Q(is_container=False) | models.Q(quantity=1),
+                name="item_container_quantity_1",
+            ),
+        ]
 
     def __str__(self):
         return self.name
@@ -430,8 +442,8 @@ class Item(models.Model):
 
     @property
     def adjusted_weight(self):
-        """Weight adjusted for percent_left (e.g. partially consumed items)."""
-        w = self._get_weight_quantity()
+        """Stack weight: per-unit weight × quantity, scaled by percent_left."""
+        w = self._get_weight_quantity() * self.quantity
         percent_left = self.props.get("percent_left") if self.props else None
         if percent_left is None:
             return w

@@ -1,6 +1,7 @@
 """Tests for the models."""
 
 from django.contrib.auth.models import User
+from django.db import IntegrityError
 from django.test import TestCase
 
 from characters.models import (
@@ -167,6 +168,60 @@ class ItemModelTests(TestCase):
             props={"percent_left": 50},
         )
         self.assertEqual(item.adjusted_weight.magnitude, D("0.50"))
+
+    def test_quantity_defaults_to_one(self):
+        item = Item.objects.create(owner=self.character, name="Sword", weight="3 lb")
+        self.assertEqual(item.quantity, 1)
+        self.assertEqual(item.adjusted_weight.magnitude, D(3))
+
+    def test_quantity_multiplies_weight(self):
+        """A stack's weight is per-unit weight times quantity."""
+        item = Item.objects.create(
+            owner=self.character, name="Torch", weight="1.5 lb", quantity=4
+        )
+        self.assertEqual(item.adjusted_weight.magnitude, D(6))
+
+    def test_quantity_with_percent_left(self):
+        """percent_left scales the whole stack's weight."""
+        item = Item.objects.create(
+            owner=self.character,
+            name="Lamp oil",
+            weight="1 lb",
+            quantity=4,
+            props={"percent_left": 50},
+        )
+        self.assertEqual(item.adjusted_weight.magnitude, D(2))
+
+    def test_stacked_contents_count_in_container_weight(self):
+        backpack = Item.objects.create(
+            owner=self.character, name="Backpack", weight="2 lb"
+        )
+        Item.objects.create(
+            owner=self.character,
+            name="Rope",
+            weight="5 lb",
+            quantity=2,
+            container=backpack,
+        )
+        self.assertEqual(backpack.total_weight.magnitude, D(12))
+        self.assertEqual(backpack.carried_weight.magnitude, D(12))
+
+    def test_quantity_must_be_at_least_one(self):
+        with self.assertRaises(IntegrityError):
+            Item.objects.create(
+                owner=self.character, name="Ghost", weight="1 lb", quantity=0
+            )
+
+    def test_container_quantity_must_be_one(self):
+        """Containers are individuals: contents point at one row, so no stacks."""
+        with self.assertRaises(IntegrityError):
+            Item.objects.create(
+                owner=self.character,
+                name="Sacks",
+                weight="1 lb",
+                quantity=6,
+                is_container=True,
+            )
 
 
 class SpellModelTests(TestCase):

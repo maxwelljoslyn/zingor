@@ -17,6 +17,7 @@ from characters.models import (
     Profile,
     Spell,
 )
+from characters.units import D
 
 
 class AuthViewTests(TestCase):
@@ -381,15 +382,82 @@ class ItemCRUDTests(TestCase):
         self.assertEqual(Item.objects.filter(owner=self.character).count(), 1)
 
     def test_add_item_with_quantity(self):
+        """Quantity creates a single stacked row, not N duplicate rows (#74)."""
         response = self.client.post(
             f"/character/{self.character.pk}/add-item/",
             {"name": "Arrow", "weight": "1 oz", "quantity": "5"},
         )
         self.assertEqual(response.status_code, 200)
         items = Item.objects.filter(owner=self.character, name="Arrow")
-        self.assertEqual(items.count(), 5)
-        for item in items:
-            self.assertEqual(str(item.weight), "1 ounce")
+        self.assertEqual(items.count(), 1)
+        item = items.get()
+        self.assertEqual(item.quantity, 5)
+        self.assertEqual(str(item.weight), "1 ounce")
+        self.assertEqual(item.adjusted_weight.magnitude, D(5))
+
+    def test_update_item_quantity(self):
+        item = Item.objects.create(
+            owner=self.character, name="Torch", weight="1 lb", quantity=3
+        )
+        response = self.client.post(
+            f"/item/{item.pk}/update-field/",
+            {"field_name": "quantity", "value": "7"},
+        )
+        self.assertEqual(response.status_code, 200)
+        item.refresh_from_db()
+        self.assertEqual(item.quantity, 7)
+
+    def test_update_item_quantity_rejects_below_one(self):
+        item = Item.objects.create(
+            owner=self.character, name="Torch", weight="1 lb", quantity=3
+        )
+        for bad in ("0", "-2", "junk"):
+            response = self.client.post(
+                f"/item/{item.pk}/update-field/",
+                {"field_name": "quantity", "value": bad},
+            )
+            self.assertEqual(response.status_code, 400)
+        item.refresh_from_db()
+        self.assertEqual(item.quantity, 3)
+
+    def test_update_quantity_on_container_rejected(self):
+        backpack = Item.objects.create(
+            owner=self.character, name="Backpack", weight="2 lb", is_container=True
+        )
+        response = self.client.post(
+            f"/item/{backpack.pk}/update-field/",
+            {"field_name": "quantity", "value": "2"},
+        )
+        self.assertEqual(response.status_code, 400)
+        backpack.refresh_from_db()
+        self.assertEqual(backpack.quantity, 1)
+
+    def test_make_stack_a_container_rejected(self):
+        item = Item.objects.create(
+            owner=self.character, name="Sack", weight="1 lb", quantity=6
+        )
+        response = self.client.post(
+            f"/item/{item.pk}/update-field/",
+            {"field_name": "is_container", "value": "on"},
+        )
+        self.assertEqual(response.status_code, 400)
+        item.refresh_from_db()
+        self.assertFalse(item.is_container)
+
+    def test_edit_quantity_field_form(self):
+        item = Item.objects.create(
+            owner=self.character, name="Torch", weight="1 lb", quantity=3
+        )
+        response = self.client.get(f"/item/{item.pk}/edit-field/?field=quantity")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="field_name" value="quantity"')
+
+    def test_inventory_shows_stack_quantity(self):
+        Item.objects.create(
+            owner=self.character, name="Torch", weight="1 lb", quantity=28
+        )
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, "×28")
 
     def test_delete_item(self):
         item = Item.objects.create(owner=self.character, name="Sword", weight="3 lb")

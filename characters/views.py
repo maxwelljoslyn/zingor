@@ -706,9 +706,17 @@ def edit_item_field(request, item_id):
     item = get_object_or_404(Item, pk=item_id)
     field_name = request.GET.get("field", "")
 
+    is_integer = False
     if field_name == "name":
         current_value = item.name
         is_pint_split = False
+        pint_magnitude = None
+        pint_unit = None
+        pint_unit_display = None
+    elif field_name == "quantity":
+        current_value = item.quantity
+        is_pint_split = False
+        is_integer = True
         pint_magnitude = None
         pint_unit = None
         pint_unit_display = None
@@ -743,6 +751,7 @@ def edit_item_field(request, item_id):
         "field_name": field_name,
         "current_value": current_value,
         "is_pint_split": is_pint_split,
+        "is_integer": is_integer,
         "pint_magnitude": pint_magnitude,
         "pint_unit": pint_unit,
         "pint_unit_display": pint_unit_display,
@@ -777,7 +786,19 @@ def update_item_field(request, item_id):
         # An item that isn't carried can't be worn.
         if not item.is_carried:
             item.is_worn = False
+    elif field_name == "quantity":
+        try:
+            quantity = int(raw_value)
+        except (TypeError, ValueError):
+            return HttpResponse("Quantity must be a whole number", status=400)
+        if quantity < 1:
+            return HttpResponse("Quantity must be at least 1", status=400)
+        if item.is_container and quantity != 1:
+            return HttpResponse("Containers cannot stack", status=400)
+        item.quantity = quantity
     elif field_name == "is_container":
+        if raw_value == "on" and item.quantity != 1:
+            return HttpResponse("Stacked items cannot become containers", status=400)
         item.is_container = raw_value == "on"
         if not item.is_container:
             item.contents.update(container=None)
@@ -866,13 +887,13 @@ def add_item(request, pk):
     else:
         weight = D(0) * u.oz
 
-    for _ in range(quantity):
-        Item.objects.create(
-            owner=character,
-            name=name,
-            weight=str(weight),
-            is_worn=is_worn,
-        )
+    Item.objects.create(
+        owner=character,
+        name=name,
+        weight=str(weight),
+        is_worn=is_worn,
+        quantity=quantity,
+    )
 
     return _render_section(request, character, "inventory")
 
