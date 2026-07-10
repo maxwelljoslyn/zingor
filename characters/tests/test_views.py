@@ -161,6 +161,14 @@ class UserProfileViewTests(TestCase):
         self.assertContains(response, "Thorn")
         self.assertNotContains(response, "Grimble")
 
+    def test_inactive_character_shows_pill(self):
+        Character.objects.create(user=self.user, name="Alive")
+        Character.objects.create(user=self.user, name="Ghost", is_active=False)
+        response = self.client.get("/users/testuser/")
+        self.assertContains(response, "Alive")
+        self.assertContains(response, "Ghost")
+        self.assertContains(response, "badge-inactive")
+
 
 class DisplayNameTests(TestCase):
     def setUp(self):
@@ -239,6 +247,32 @@ class CharacterListViewTests(TestCase):
         response = self.client.get("/")
         self.assertContains(response, "0 / —")
 
+    def test_inactive_character_moves_to_inactive_section(self):
+        Character.objects.create(user=self.user, name="Alive")
+        Character.objects.create(user=self.user, name="Ghost", is_active=False)
+        response = self.client.get("/")
+        self.assertContains(response, "Alive")
+        self.assertContains(response, "Ghost")
+        self.assertContains(response, "Inactive characters")
+        active_names = [c.name for c in response.context["characters"]]
+        inactive_names = [c.name for c in response.context["inactive_characters"]]
+        self.assertEqual(active_names, ["Alive"])
+        self.assertEqual(inactive_names, ["Ghost"])
+
+    def test_no_inactive_section_when_all_active(self):
+        Character.objects.create(user=self.user, name="Alive")
+        response = self.client.get("/")
+        self.assertNotContains(response, "Inactive characters")
+
+    def test_inactive_character_items_excluded_from_party_inventory(self):
+        active = Character.objects.create(user=self.user, name="Alive")
+        dead = Character.objects.create(user=self.user, name="Ghost", is_active=False)
+        Item.objects.create(owner=active, name="Torch", weight="1 lb")
+        Item.objects.create(owner=dead, name="Cursed Sword", weight="3 lb")
+        response = self.client.get("/")
+        self.assertContains(response, "Torch")
+        self.assertNotContains(response, "Cursed Sword")
+
     def test_create_character(self):
         response = self.client.post("/character/create/")
         self.assertEqual(response.status_code, 302)
@@ -287,6 +321,42 @@ class CharacterSheetViewTests(TestCase):
         response = self.client.get(f"/character/{other_char.pk}/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Ally")
+
+    def test_inactive_character_sheet_still_renders(self):
+        self.character.is_active = False
+        self.character.save(update_fields=["is_active"])
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Thorn")
+        self.assertContains(response, "Inactive")
+
+
+class ToggleActiveTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+        self.character = Character.objects.create(user=self.user, name="Thorn")
+
+    def test_owner_can_toggle_inactive_and_back(self):
+        response = self.client.post(f"/character/{self.character.pk}/toggle-active/")
+        self.assertEqual(response.status_code, 200)
+        self.character.refresh_from_db()
+        self.assertFalse(self.character.is_active)
+        self.client.post(f"/character/{self.character.pk}/toggle-active/")
+        self.character.refresh_from_db()
+        self.assertTrue(self.character.is_active)
+
+    def test_non_owner_forbidden(self):
+        other = User.objects.create_user(username="other", password="testpass")
+        self.client.force_login(other)
+        response = self.client.post(f"/character/{self.character.pk}/toggle-active/")
+        self.assertEqual(response.status_code, 403)
+        self.character.refresh_from_db()
+        self.assertTrue(self.character.is_active)
+
+    def test_get_not_allowed(self):
+        response = self.client.get(f"/character/{self.character.pk}/toggle-active/")
+        self.assertEqual(response.status_code, 405)
 
 
 class FieldUpdateTests(TestCase):

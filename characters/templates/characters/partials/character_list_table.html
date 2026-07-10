@@ -1,0 +1,29 @@
+{% load character_tags %}
+<div class="section">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Player</th>
+        <th>Race</th>
+        <th>Class</th>
+        <th>Level</th>
+        <th>HP</th>
+        <th>Last Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for char in characters %}
+      <tr>
+        <td><a href="/character/{{ char.pk }}/">{{ char.name|default:"Unnamed" }}</a></td>
+        <td><a href="{% url 'characters:user_profile' char.user.username %}">{{ char.user|display_name }}</a></td>
+        <td>{{ char.race|default:"—" }}</td>
+        <td>{{ char.char_class|default:"—" }}</td>
+        <td>{{ char.level|default:"—" }}</td>
+        <td>{{ char.current_hp|default_if_none:"—" }} / {{ char.maximum_hp|default_if_none:"—" }}</td>
+        <td>{{ char.updated_at|date:"M d, Y H:i" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

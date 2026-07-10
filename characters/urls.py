@@ -61,6 +61,11 @@ urlpatterns = [
     path("character/create/", views.character_create, name="character_create"),
     # Character sheet
     path("character/<int:pk>/", views.character_sheet, name="character_sheet"),
+    path(
+        "character/<int:pk>/toggle-active/",
+        views.toggle_active,
+        name="toggle_active",
+    ),
     # Per-user layout preferences (not character-scoped)
     path("layout/order/<str:scope>/", views.save_order, name="save_order"),
     # HTMX field editing

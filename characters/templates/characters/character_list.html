@@ -8,36 +8,15 @@
   <button type="submit" class="btn">+ New Character</button>
 </form>
 {% if characters %}
-<div class="section">
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Player</th>
-        <th>Race</th>
-        <th>Class</th>
-        <th>Level</th>
-        <th>HP</th>
-        <th>Last Updated</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for char in characters %}
-      <tr>
-        <td><a href="/character/{{ char.pk }}/">{{ char.name|default:"Unnamed" }}</a></td>
-        <td><a href="{% url 'characters:user_profile' char.user.username %}">{{ char.user|display_name }}</a></td>
-        <td>{{ char.race|default:"—" }}</td>
-        <td>{{ char.char_class|default:"—" }}</td>
-        <td>{{ char.level|default:"—" }}</td>
-        <td>{{ char.current_hp|default_if_none:"—" }} / {{ char.maximum_hp|default_if_none:"—" }}</td>
-        <td>{{ char.updated_at|date:"M d, Y H:i" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+{% include "characters/partials/character_list_table.html" %}
 {% else %}
 <p class="muted">No characters yet. Create one to get started.</p>
+{% endif %}
+{% if inactive_characters %}
+<details class="mt-lg">
+  <summary>Inactive characters ({{ inactive_characters|length }})</summary>
+  {% include "characters/partials/character_list_table.html" with characters=inactive_characters %}
+</details>
 {% endif %}
 <h1 class="mt-lg">Party Inventory</h1>
 Click on Owner, Item, or Weight to sort the table by that column.

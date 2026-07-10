@@ -55,8 +55,16 @@ class LayoutOrder(models.Model):
         return f"{self.user.username} {self.scope}: {self.key}@{self.position}"
 
 
+class CharacterQuerySet(models.QuerySet):
+    def active(self):
+        """Only characters the player has not marked inactive (dead, retired, …)."""
+        return self.filter(is_active=True)
+
+
 class Character(models.Model):
     """A player character. Wide table with nullable columns so the sheet can start empty."""
+
+    objects = CharacterQuerySet.as_manager()
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -64,6 +72,10 @@ class Character(models.Model):
         related_name="characters",
     )
     name = models.CharField(max_length=200, default="", blank=True)
+
+    # Active status. Players mark a character inactive when it dies, retires, etc.;
+    # inactive characters drop out of the active party views but are not deleted.
+    is_active = models.BooleanField(default=True)
 
     # Identity
     race = models.CharField(max_length=100, null=True, blank=True)

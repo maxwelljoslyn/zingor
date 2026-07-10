@@ -38,6 +38,15 @@ class CharacterModelTests(TestCase):
         self.assertIsNone(c.height)
         self.assertIsNone(c.weight)
 
+    def test_new_character_is_active_by_default(self):
+        self.assertTrue(self.character.is_active)
+
+    def test_active_queryset_excludes_inactive(self):
+        dead = Character.objects.create(user=self.user, name="Ghost", is_active=False)
+        active = Character.objects.active()
+        self.assertIn(self.character, active)
+        self.assertNotIn(dead, active)
+
     def test_ability_score_with_no_conditions(self):
         self.character.strength = 15
         self.character.save()

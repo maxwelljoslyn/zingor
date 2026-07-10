@@ -445,21 +445,28 @@ def user_profile(request, username: str):
 
 @login_required
 def character_list(request):
-    characters = (
-        Character.objects.select_related("user", "user__profile")
-        .prefetch_related("hit_dice", "bonus_hit_points")
-        .order_by("user__username", "name")
+    base = Character.objects.select_related("user", "user__profile").prefetch_related(
+        "hit_dice", "bonus_hit_points"
     )
+    active_characters = base.active().order_by("user__username", "name")
+    inactive_characters = base.filter(is_active=False).order_by(
+        "user__username", "name"
+    )
+    # Dead/retired characters' gear should not clutter the party's item list.
     all_items = (
         Item.objects.select_related("owner", "owner__user")
-        .filter(container__isnull=True)
+        .filter(container__isnull=True, owner__is_active=True)
         .prefetch_related("contents", "contents__contents")
         .order_by("owner__name", "name")
     )
     return render(
         request,
         "characters/character_list.html",
-        {"characters": characters, "all_items": all_items},
+        {
+            "characters": active_characters,
+            "inactive_characters": inactive_characters,
+            "all_items": all_items,
+        },
     )
 
 
@@ -1139,6 +1146,17 @@ def toggle_spell_memorized(request, spell_id: int) -> HttpResponse:
     spell.is_memorized = "value" in request.POST
     spell.save(update_fields=["is_memorized"])
     return _render_section(request, spell.character, "spells")
+
+
+@login_required
+@character_owner_required
+@require_POST
+def toggle_active(request, pk: int) -> HttpResponse:
+    """Flip a character's active status (owner only) and re-render the identity section."""
+    character = get_object_or_404(Character, pk=pk)
+    character.is_active = not character.is_active
+    character.save(update_fields=["is_active"])
+    return _render_section(request, character, "identity")
 
 
 # --- Sage knowledge ---
