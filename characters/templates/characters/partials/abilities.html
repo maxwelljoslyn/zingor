@@ -21,13 +21,13 @@
           {% unknown_or_value ability.base_score ability.field_name character.pk %}
           {% if ability.name == "strength" and ability.base_score == 18 %}
             {% if ability.percentile_strength is not None %}
-              /{{ ability.percentile_strength|stringformat:"02d" }}
+              /{% unknown_or_value ability.percentile_strength "percentile_strength" character.pk ability.percentile_strength|stringformat:"02d" %}
             {% elif is_owner %}
-              <a href="#"
-                 hx-get="/character/{{ character.pk }}/edit-field/?field=percentile_strength"
-                 hx-target="closest td"
-                 hx-swap="innerHTML"
-                 class="text-xs">(set %)</a>
+              <span class="clickable text-xs"
+                    id="field-percentile_strength"
+                    hx-get="/character/{{ character.pk }}/edit-field/?field=percentile_strength"
+                    hx-target="#field-percentile_strength"
+                    hx-swap="outerHTML">(set %)</span>
             {% endif %}
           {% endif %}
         </td>
