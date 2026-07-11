@@ -84,6 +84,9 @@ class Character(models.Model):
     level = models.IntegerField(null=True, blank=True)
     xp = models.IntegerField(null=True, blank=True)
 
+    # Link to the character's page on the Adventure wiki, surfaced on the sheet.
+    wiki_url = models.URLField(null=True, blank=True)
+
     # Ability scores (base values, before modifiers)
     strength = models.IntegerField(null=True, blank=True)
     percentile_strength = models.IntegerField(null=True, blank=True)

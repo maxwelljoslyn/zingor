@@ -1,0 +1,11 @@
+<span id="wiki-controls" class="wiki-controls">
+  {% if character.wiki_url %}
+  <a href="{{ character.wiki_url }}" target="_blank" rel="noopener noreferrer">Wiki Page</a>
+  {% endif %}
+  {% if is_owner %}
+  <button type="button" class="btn btn-secondary btn-small"
+          hx-get="/character/{{ character.pk }}/wiki-url/edit/"
+          hx-target="#wiki-controls"
+          hx-swap="outerHTML">{% if character.wiki_url %}Edit Wiki URL{% else %}Add Wiki URL{% endif %}</button>
+  {% endif %}
+</span>

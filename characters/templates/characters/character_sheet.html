@@ -10,6 +10,7 @@
     {% endif %}
   </h1>
   <div class="toolbar">
+    {% include "characters/partials/wiki_controls.html" %}
     {% if user.is_authenticated %}
     <button type="button" class="btn btn-secondary btn-small"
             data-reorder-toggle="sections"

@@ -1159,6 +1159,38 @@ def toggle_active(request, pk: int) -> HttpResponse:
     return _render_section(request, character, "identity")
 
 
+@login_required
+@character_owner_required
+def wiki_url_edit(request, pk: int) -> HttpResponse:
+    """Return the inline form for editing the character's wiki URL (owner only)."""
+    character = get_object_or_404(Character, pk=pk)
+    return render(
+        request, "characters/partials/wiki_url_edit.html", {"character": character}
+    )
+
+
+@login_required
+def wiki_url_control(request, pk: int) -> HttpResponse:
+    """Render (GET) or save (POST) the toolbar wiki-page control.
+
+    GET restores the resting control (used by the edit form's Cancel). POST
+    saves the URL; only the owner may change it.
+    """
+    character = get_object_or_404(Character, pk=pk)
+    is_owner = character.user == request.user
+    if request.method == "POST":
+        if not is_owner:
+            return HttpResponse(status=403)
+        raw = request.POST.get("wiki_url", "").strip()
+        character.wiki_url = raw or None
+        character.save(update_fields=["wiki_url", "updated_at"])
+    return render(
+        request,
+        "characters/partials/wiki_controls.html",
+        {"character": character, "is_owner": is_owner},
+    )
+
+
 # --- Sage knowledge ---
 
 

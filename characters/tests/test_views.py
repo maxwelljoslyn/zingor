@@ -359,6 +359,72 @@ class ToggleActiveTests(TestCase):
         self.assertEqual(response.status_code, 405)
 
 
+class WikiUrlControlTests(TestCase):
+    URL = "https://adventure.alexissmolensk.com/index.php/Lexent"
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+        self.character = Character.objects.create(user=self.user, name="Thorn")
+
+    def test_add_button_shown_when_no_url(self):
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, "Add Wiki URL")
+        self.assertNotContains(response, ">Wiki Page<")
+
+    def test_link_and_edit_button_shown_when_url_set(self):
+        self.character.wiki_url = self.URL
+        self.character.save(update_fields=["wiki_url"])
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, "Edit Wiki URL")
+        self.assertContains(response, ">Wiki Page<")
+        self.assertContains(response, f'href="{self.URL}"')
+
+    def test_owner_can_set_url(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/wiki-url/", {"wiki_url": self.URL}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.wiki_url, self.URL)
+        self.assertContains(response, "Edit Wiki URL")
+
+    def test_owner_can_clear_url(self):
+        self.character.wiki_url = self.URL
+        self.character.save(update_fields=["wiki_url"])
+        self.client.post(f"/character/{self.character.pk}/wiki-url/", {"wiki_url": ""})
+        self.character.refresh_from_db()
+        self.assertIsNone(self.character.wiki_url)
+
+    def test_edit_form_prefilled(self):
+        self.character.wiki_url = self.URL
+        self.character.save(update_fields=["wiki_url"])
+        response = self.client.get(f"/character/{self.character.pk}/wiki-url/edit/")
+        self.assertContains(response, 'name="wiki_url"')
+        self.assertContains(response, f'value="{self.URL}"')
+
+    def test_non_owner_cannot_edit_or_save(self):
+        other = User.objects.create_user(username="other", password="testpass")
+        self.client.force_login(other)
+        edit = self.client.get(f"/character/{self.character.pk}/wiki-url/edit/")
+        self.assertEqual(edit.status_code, 403)
+        save = self.client.post(
+            f"/character/{self.character.pk}/wiki-url/", {"wiki_url": self.URL}
+        )
+        self.assertEqual(save.status_code, 403)
+        self.character.refresh_from_db()
+        self.assertIsNone(self.character.wiki_url)
+
+    def test_non_owner_sees_link_but_no_button(self):
+        self.character.wiki_url = self.URL
+        self.character.save(update_fields=["wiki_url"])
+        other = User.objects.create_user(username="other", password="testpass")
+        self.client.force_login(other)
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, ">Wiki Page<")
+        self.assertNotContains(response, "Edit Wiki URL")
+
+
 class FieldUpdateTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")

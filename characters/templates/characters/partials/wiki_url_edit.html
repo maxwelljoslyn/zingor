@@ -1,0 +1,12 @@
+<form id="wiki-controls" class="wiki-controls inline-form"
+      hx-post="/character/{{ character.pk }}/wiki-url/"
+      hx-target="#wiki-controls"
+      hx-swap="outerHTML">
+  {% csrf_token %}
+  <input type="url" name="wiki_url" value="{{ character.wiki_url|default:'' }}" autofocus class="w-min-14" placeholder="https://…">
+  <button type="submit" class="btn btn-small">Save</button>
+  <button type="button" class="btn btn-secondary btn-small"
+          hx-get="/character/{{ character.pk }}/wiki-url/"
+          hx-target="#wiki-controls"
+          hx-swap="outerHTML">Cancel</button>
+</form>

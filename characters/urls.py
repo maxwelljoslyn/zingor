@@ -66,6 +66,16 @@ urlpatterns = [
         views.toggle_active,
         name="toggle_active",
     ),
+    path(
+        "character/<int:pk>/wiki-url/",
+        views.wiki_url_control,
+        name="wiki_url_control",
+    ),
+    path(
+        "character/<int:pk>/wiki-url/edit/",
+        views.wiki_url_edit,
+        name="wiki_url_edit",
+    ),
     # Per-user layout preferences (not character-scoped)
     path("layout/order/<str:scope>/", views.save_order, name="save_order"),
     # HTMX field editing

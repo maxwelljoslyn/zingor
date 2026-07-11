@@ -219,7 +219,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-danger:hover { background: var(--danger-hover); }
 .btn-secondary { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover { background: var(--bg); }
-.toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.toolbar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+.wiki-controls { display: inline-flex; align-items: center; gap: 0.5rem; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
 .modifier-positive { color: var(--success); }
