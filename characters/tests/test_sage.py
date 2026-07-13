@@ -4,7 +4,11 @@ from django.test import TestCase
 
 from characters.sage import (
     CLASS_FIELDS,
+    alexisify,
+    linkify_field,
+    linkify_study,
     rank_for_points,
+    rank_studies,
     sage_fields,
     sort_sage_entries,
 )
@@ -37,6 +41,68 @@ class RankForPointsTests(TestCase):
 
     def test_hundred_is_sage(self):
         self.assertEqual(rank_for_points(100), "sage")
+
+    def test_below_lowest_threshold_is_unranked(self):
+        # Negative points fall through every threshold to the "unranked" default.
+        self.assertEqual(rank_for_points(-5), "unranked")
+
+
+class RankStudiesTests(TestCase):
+    def test_studies_bucketed_by_rank(self):
+        result = rank_studies({"Sage One": 100, "Amateur One": 15, "Nobody": 0})
+        self.assertEqual(result["sage"], {"Sage One": 100})
+        self.assertEqual(result["amateur"], {"Amateur One": 15})
+        self.assertEqual(result["unranked"], {"Nobody": 0})
+        self.assertEqual(result["expert"], {})
+
+    def test_empty_input_yields_empty_buckets(self):
+        result = rank_studies({})
+        self.assertEqual(
+            set(result), {"sage", "expert", "authority", "amateur", "unranked"}
+        )
+        self.assertTrue(all(bucket == {} for bucket in result.values()))
+
+
+class AlexisifyTests(TestCase):
+    def test_empty_string_raises(self):
+        with self.assertRaises(ValueError):
+            alexisify("")
+
+    def test_plain_name_passes_through(self):
+        self.assertEqual(alexisify("Forgery"), "Forgery")
+
+    def test_and_becomes_ampersand(self):
+        self.assertEqual(alexisify("Music and Design"), "Music & Design")
+
+    def test_parenthetical_is_stripped(self):
+        self.assertEqual(alexisify("Horseback Riding (mounted)"), "Horseback Riding")
+
+    def test_alexis_name_alias_is_preferred(self):
+        # "Double-Dealing" is stored under the wiki's spelling "Double-dealing".
+        self.assertEqual(alexisify("Double-Dealing"), "Double-dealing")
+
+
+class SageLinkifyTests(TestCase):
+    def test_linkify_field_wraps_display_text_and_field_url(self):
+        html = linkify_field("Forgery")
+        self.assertIn(">Forgery</a>", html)
+        self.assertIn("Forgery_(sage_field)", html)
+
+    def test_linkify_study_uses_study_suffix(self):
+        html = linkify_study("Forgery")
+        self.assertIn("Forgery_(sage_study)", html)
+
+
+class SortSageEntriesByPointsTests(TestCase):
+    def test_ascending_points_sort(self):
+        entries = {"Low": 10, "High": 100, "Mid": 30}
+        result = sort_sage_entries(entries, sort_keys=["points"])
+        self.assertEqual([e["name"] for e in result], ["Low", "Mid", "High"])
+
+    def test_descending_points_sort(self):
+        entries = {"Low": 10, "High": 100, "Mid": 30}
+        result = sort_sage_entries(entries, sort_keys=["-points"])
+        self.assertEqual([e["name"] for e in result], ["High", "Mid", "Low"])
 
 
 class SortSageEntriesTests(TestCase):
