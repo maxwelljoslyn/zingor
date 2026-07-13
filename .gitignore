@@ -5,3 +5,8 @@ __pycache__/
 db.sqlite3
 .python-version
 staticfiles/
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
