@@ -6,6 +6,7 @@ hit mutation endpoints; non-owners get 403.
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils.html import escape
 
 from characters.models import Character, Condition, HitDie, Item, SageStudyPoints, Spell
 
@@ -399,8 +400,10 @@ class HomepageTests(TestCase):
 
     def test_homepage_shows_all_characters(self):
         response = self.client.get("/")
-        self.assertContains(response, "Alice&#x27;s Fighter")
-        self.assertContains(response, "Bob&#x27;s Mage")
+        # Assert the names appear correctly escaped without hardcoding which
+        # numeric entity Django emits for the apostrophe (&#x27; vs &#39;).
+        self.assertContains(response, escape("Alice's Fighter"))
+        self.assertContains(response, escape("Bob's Mage"))
 
     def test_homepage_shows_player_column(self):
         response = self.client.get("/")
