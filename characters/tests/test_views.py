@@ -17,7 +17,7 @@ from characters.models import (
     Profile,
     Spell,
 )
-from characters.units import D
+from characters.units import D, u
 
 
 class AuthViewTests(TestCase):
@@ -476,7 +476,9 @@ class ItemCRUDTests(TestCase):
         self.assertEqual(items.count(), 1)
         item = items.get()
         self.assertEqual(item.quantity, 5)
-        self.assertEqual(str(item.weight), "1 ounce")
+        # Compare the stored Quantity, not pint's canonical string ("1 ounce"),
+        # so the test tracks the value rather than pint's repr formatting.
+        self.assertEqual(item.weight, D(1) * u.oz)
         self.assertEqual(item.adjusted_weight.magnitude, D(5))
 
     def test_update_item_quantity(self):
