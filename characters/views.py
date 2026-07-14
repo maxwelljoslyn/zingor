@@ -663,23 +663,25 @@ def _render_section(request, character, section, oob_sections=None):
 
     if oob_sections:
         primary_html = response.content.decode()
-        oob_parts = []
-        for oob_section in oob_sections:
-            if oob_section == section:
-                continue
-            oob_template = f"characters/partials/{oob_section}.html"
-            oob_html = render(request, oob_template, ctx).content.decode()
-            # Inject hx-swap-oob into the outermost div
-            oob_html = oob_html.replace(
-                f'id="section-{oob_section}"',
-                f'id="section-{oob_section}" hx-swap-oob="outerHTML"',
-                1,
-            )
-            oob_parts.append(oob_html)
+        oob_parts = [
+            _oob_section_html(request, ctx, oob_section)
+            for oob_section in oob_sections
+            if oob_section != section
+        ]
         full_html = primary_html + "\n".join(oob_parts)
         return HttpResponse(full_html)
 
     return response
+
+
+def _oob_section_html(request, ctx, section: str) -> str:
+    """Render a section partial with hx-swap-oob injected on its outermost div."""
+    html = render(request, f"characters/partials/{section}.html", ctx).content.decode()
+    return html.replace(
+        f'id="section-{section}"',
+        f'id="section-{section}" hx-swap-oob="outerHTML"',
+        1,
+    )
 
 
 # --- Section refresh endpoints ---
@@ -1196,16 +1198,27 @@ def wiki_url_control(request, pk: int) -> HttpResponse:
     """
     character = get_object_or_404(Character, pk=pk)
     is_owner = character.user == request.user
+    saved = False
     if request.method == "POST":
         if not is_owner:
             return HttpResponse(status=403)
         raw = urldefrag(request.POST.get("wiki_url", "").strip()).url
         character.wiki_url = raw or None
         character.save(update_fields=["wiki_url", "updated_at"])
-    return render(
+        saved = True
+    response = render(
         request,
         "characters/partials/wiki_controls.html",
         {"character": character, "is_owner": is_owner},
+    )
+    if not saved:
+        return response
+    # The identity section's wiki-sync toggle appears only when a wiki URL is
+    # set, so re-render it out-of-band whenever the URL changes.
+    ctx = _sheet_context(character, request.user)
+    ctx["is_owner"] = is_owner
+    return HttpResponse(
+        response.content.decode() + _oob_section_html(request, ctx, "identity")
     )
 
 

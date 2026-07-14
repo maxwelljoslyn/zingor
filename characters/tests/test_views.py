@@ -389,6 +389,13 @@ class WikiUrlControlTests(TestCase):
         self.assertEqual(self.character.wiki_url, self.URL)
         self.assertContains(response, "Edit Wiki URL")
 
+    def test_saving_url_refreshes_identity_section_oob(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/wiki-url/", {"wiki_url": self.URL}
+        )
+        self.assertContains(response, 'id="section-identity" hx-swap-oob="outerHTML"')
+        self.assertContains(response, "Sync from wiki")
+
     def test_anchor_stripped_from_url(self):
         self.client.post(
             f"/character/{self.character.pk}/wiki-url/",
