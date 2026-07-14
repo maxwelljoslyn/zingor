@@ -452,7 +452,12 @@ def character_list(request):
     base = Character.objects.select_related("user", "user__profile").prefetch_related(
         "hit_dice", "bonus_hit_points"
     )
-    active_characters = base.active().order_by("user__username", "name")
+    active = base.active().order_by("user__username", "name")
+    # Split the active roster: primaries and their henchmen are the party proper;
+    # followers, hirelings, and pets are the supporting cast (see #85).
+    party_kinds = ["primary", "hench"]
+    party_characters = active.filter(kind__in=party_kinds)
+    other_characters = active.exclude(kind__in=party_kinds)
     inactive_characters = base.filter(is_active=False).order_by(
         "user__username", "name"
     )
@@ -467,7 +472,8 @@ def character_list(request):
         request,
         "characters/character_list.html",
         {
-            "characters": active_characters,
+            "party_characters": party_characters,
+            "other_characters": other_characters,
             "inactive_characters": inactive_characters,
             "all_items": all_items,
         },
