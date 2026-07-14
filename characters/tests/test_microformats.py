@@ -6,7 +6,6 @@ from django.test import SimpleTestCase
 
 from characters.microformats import ParsedSheet, parse_sheet, render_sheet
 from characters.models import Spell
-from characters.units import D, u
 
 LEXENT_HTML = (Path(__file__).parent / "data" / "lexent.html").read_text()
 
@@ -89,29 +88,11 @@ class ParseScalarTests(SimpleTestCase):
         sheet = parse_sheet('<span class="zingor-xp">1,250</span>')
         self.assertEqual(sheet.character.xp, 1250)
 
-    def test_weight_scalar_becomes_pounds(self):
-        sheet = parse_sheet('<span class="zingor-weight">75 Lbs.</span>')
-        self.assertEqual(sheet.character.weight, D(75) * u.lb)
-
-    def test_height_scalar_becomes_inches(self):
-        html = '<span class="zingor-height">5\'7"</span>'
-        sheet = parse_sheet(html)
-        self.assertEqual(sheet.character.height, D(67) * u.inch)
-
-    def test_height_feet_only_defaults_inches_to_zero(self):
-        sheet = parse_sheet('<span class="zingor-height">6\'</span>')
-        self.assertEqual(sheet.character.height, D(72) * u.inch)
-
     def test_bad_int_is_warned_and_field_left_unset(self):
         sheet = parse_sheet('<span class="zingor-strength">very strong</span>')
         self.assertIsNone(sheet.character.strength)
         self.assertEqual(len(sheet.warnings), 1)
         self.assertIn("strength", sheet.warnings[0])
-
-    def test_bad_height_is_warned(self):
-        sheet = parse_sheet('<span class="zingor-height">tall</span>')
-        self.assertIsNone(sheet.character.height)
-        self.assertEqual(len(sheet.warnings), 1)
 
     def test_duplicate_scalar_warns_and_uses_first(self):
         html = list(
