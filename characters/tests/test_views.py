@@ -516,6 +516,35 @@ class FieldUpdateTests(TestCase):
         self.character.refresh_from_db()
         self.assertEqual(self.character.race, "elf")
 
+    def test_default_kind_is_primary(self):
+        self.assertEqual(self.character.kind, "primary")
+
+    def test_update_kind(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/update-field/",
+            {"field_name": "kind", "value": "hench"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.kind, "hench")
+
+    def test_update_kind_ignores_blank_option(self):
+        """The generic select's blank option must not null a required field."""
+        self.character.kind = "pet"
+        self.character.save(update_fields=["kind"])
+        self.client.post(
+            f"/character/{self.character.pk}/update-field/",
+            {"field_name": "kind", "value": ""},
+        )
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.kind, "pet")
+
+    def test_kind_shows_on_identity_section(self):
+        self.character.kind = "follower"
+        self.character.save(update_fields=["kind"])
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, "Follower")
+
     def test_edit_field_returns_form(self):
         response = self.client.get(
             f"/character/{self.character.pk}/edit-field/?field=strength"

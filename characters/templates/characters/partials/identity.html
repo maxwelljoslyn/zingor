@@ -51,6 +51,10 @@
       <td>{% unknown_or_value character.sex "sex" character.pk %}</td>
     </tr>
     <tr>
+      <th>Kind</th>
+      <td colspan="3">{% unknown_or_value character.kind "kind" character.pk character.get_kind_display %}</td>
+    </tr>
+    <tr>
       <th>Level</th>
       <td>
         {% unknown_or_value character.level "level" character.pk %}

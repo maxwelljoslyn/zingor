@@ -81,6 +81,18 @@ class Character(models.Model):
     )
     name = models.CharField(max_length=200, default="", blank=True)
 
+    # What role this character plays in the party. Primary characters and their
+    # henchmen are the party proper; followers, hirelings, and pets are the
+    # supporting cast. Used to split the homepage roster.
+    KIND_CHOICES = [
+        ("primary", "Primary"),
+        ("hench", "Henchman"),
+        ("follower", "Follower"),
+        ("hireling", "Hireling"),
+        ("pet", "Pet"),
+    ]
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default="primary")
+
     # Active status. Players mark a character inactive when it dies, retires, etc.;
     # inactive characters drop out of the active party views but are not deleted.
     is_active = models.BooleanField(default=True)

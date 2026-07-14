@@ -215,6 +215,7 @@ def _build_notes_blocks(character, order):
 
 FIELD_TYPES = {
     "name": "text",
+    "kind": "select",
     "race": "select",
     "sex": "select",
     "char_class": "select",
@@ -237,6 +238,7 @@ FIELD_TYPES = {
 }
 
 FIELD_CHOICES = {
+    "kind": [value for value, _ in Character.KIND_CHOICES],
     "race": list(rules.races.keys()),
     "sex": ["male", "female"],
     "char_class": list(rules.classes.keys()),
@@ -282,6 +284,7 @@ PINT_UNIT_CHOICES = {
 
 SECTION_FOR_FIELD = {
     "name": "identity",
+    "kind": "identity",
     "race": "identity",
     "sex": "identity",
     "char_class": "identity",
@@ -630,6 +633,11 @@ def update_field(request, pk):
             new_value = None
     elif field_name == "encumbrance_multiplier":
         new_value = D(raw_value) if raw_value else D("1.0")
+    elif field_name == "kind":
+        # kind is a required categorization; ignore the blank "—" option rather
+        # than nulling a non-nullable field.
+        valid = {value for value, _ in Character.KIND_CHOICES}
+        new_value = raw_value if raw_value in valid else old_value
     else:
         new_value = raw_value if raw_value else None
 
