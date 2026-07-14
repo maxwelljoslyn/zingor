@@ -16,3 +16,4 @@ uv sync --frozen
 uv run python manage.py migrate --noinput
 uv run python manage.py collectstatic --noinput
 sudo systemctl restart zingor.service
+sudo systemctl restart zingor-huey.service

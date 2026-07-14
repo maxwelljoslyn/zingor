@@ -67,6 +67,11 @@ urlpatterns = [
         name="toggle_active",
     ),
     path(
+        "character/<int:pk>/toggle-wiki-sync/",
+        views.toggle_wiki_sync,
+        name="toggle_wiki_sync",
+    ),
+    path(
         "character/<int:pk>/wiki-url/",
         views.wiki_url_control,
         name="wiki_url_control",

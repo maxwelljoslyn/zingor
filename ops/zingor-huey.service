@@ -1,0 +1,12 @@
+[Unit]
+Description=Zingor Huey consumer for syncing character data from external URLs
+After=network.target
+
+[Service]
+User=maxwell
+WorkingDirectory=/home/maxwell/zingor
+ExecStart=/home/maxwell/.local/bin/uv run python manage.py run_huey
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

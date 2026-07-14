@@ -60,6 +60,14 @@ class CharacterQuerySet(models.QuerySet):
         """Only characters the player has not marked inactive (dead, retired, …)."""
         return self.filter(is_active=True)
 
+    def wiki_synced(self):
+        """Characters whose data should be pulled from their Adventure wiki page."""
+        return (
+            self.filter(sync_from_wiki=True)
+            .exclude(wiki_url__isnull=True)
+            .exclude(wiki_url="")
+        )
+
 
 class Character(models.Model):
     """A player character. Wide table with nullable columns so the sheet can start empty."""
@@ -86,6 +94,9 @@ class Character(models.Model):
 
     # Link to the character's page on the Adventure wiki, surfaced on the sheet.
     wiki_url = models.URLField(null=True, blank=True)
+    # When True (and wiki_url is set), the periodic job treats the wiki page as
+    # the source of truth and overwrites synced fields/spells/studies each run.
+    sync_from_wiki = models.BooleanField(default=False)
 
     # Ability scores (base values, before modifiers)
     strength = models.IntegerField(null=True, blank=True)

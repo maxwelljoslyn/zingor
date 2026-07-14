@@ -285,6 +285,12 @@ ul.spell-list { list-style: none; padding: 0; }
   padding-bottom: 0;
   margin-bottom: 0;
 }
+.section-head-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
 
 .badge {
   display: inline-block;
@@ -298,6 +304,10 @@ ul.spell-list { list-style: none; padding: 0; }
 }
 .badge-inactive {
   background: var(--danger, #b02a2a);
+  color: #fff;
+}
+.badge-sync {
+  background: var(--success, #4f7a3a);
   color: #fff;
 }
 

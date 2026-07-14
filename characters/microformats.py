@@ -33,14 +33,12 @@ from typing import Callable
 from bs4 import BeautifulSoup
 
 from .models import Character, SageStudyPoints, Spell
-from .units import D, u
 
 PREFIX = "zingor-"
 
 # --- Coercers: str -> Python value, raising on bad input -------------------------------
 
 _NUM_RE = re.compile(r"-?[\d,]+(?:\.\d+)?")
-_HEIGHT_RE = re.compile(r"\s*(\d+)\s*'\s*(\d+)?")
 
 
 def _num(text: str) -> str:
@@ -64,27 +62,11 @@ def _coerce_bool(text: str) -> bool:
     return text.strip().lower() in {"x", "yes", "true", "y", "✓", "1"}
 
 
-def _coerce_weight(text: str) -> object:
-    """e.g. "75 Lbs." -> 75 lb."""
-    return D(_num(text)) * u.lb
-
-
-def _coerce_height(text: str) -> object:
-    """e.g. ``3'4"`` -> 40 inches."""
-    m = _HEIGHT_RE.match(text)
-    if not m:
-        raise ValueError(f"unrecognized height {text!r} (want feet'inches\")")
-    feet = int(m.group(1))
-    inches = int(m.group(2) or 0)
-    return D(feet * 12 + inches) * u.inch
-
-
 # --- Vocabulary ------------------------------------------------------------------------
 
 # (class suffix, Character attribute, coercer). Suffix uses hyphens; a couple of
 # wiki-facing names are friendlier aliases for the underlying column.
 SCALARS: list[tuple[str, str, Callable[[str], object]]] = [
-    ("character-id", "id", _coerce_int),
     ("name", "name", _coerce_str),
     ("race", "race", _coerce_str),
     ("sex", "sex", _coerce_str),
@@ -98,8 +80,6 @@ SCALARS: list[tuple[str, str, Callable[[str], object]]] = [
     ("intelligence", "intelligence", _coerce_int),
     ("wisdom", "wisdom", _coerce_int),
     ("charisma", "charisma", _coerce_int),
-    ("height", "height", _coerce_height),
-    ("weight", "weight", _coerce_weight),
     ("current-hp", "current_hp", _coerce_int),
     ("notes", "notes", _coerce_str),
     ("background", "background", _coerce_str),
@@ -156,6 +136,10 @@ class ParsedSheet:
     sage_studies: list[SageStudyPoints] = dc_field(default_factory=list)
     money: dict[str, int] = dc_field(default_factory=dict)
     warnings: list[str] = dc_field(default_factory=list)
+    # Record models whose root markup appeared on the page, even if every row
+    # failed to parse. Lets the save step tell "section absent" (leave the DB
+    # alone) apart from "section present but empty" (an authoritative wipe).
+    sections_present: set[type] = dc_field(default_factory=set)
 
 
 # --- Parsing ---------------------------------------------------------------------------
@@ -203,7 +187,10 @@ def parse_sheet(html: str) -> ParsedSheet:
         SageStudyPoints: sheet.sage_studies,
     }
     for rt in RECORDS:
-        for n, root in enumerate(soup.select(f".{PREFIX}{rt.root}"), start=1):
+        roots = soup.select(f".{PREFIX}{rt.root}")
+        if roots:
+            sheet.sections_present.add(rt.model)
+        for n, root in enumerate(roots, start=1):
             record = _build_record(rt, root, n, sheet.warnings)
             if record is not None:
                 buckets[rt.model].append(record)
@@ -237,7 +224,6 @@ def _build_record(rt: RecordType, root, index: int, warnings: list[str]):
 # --- Rendering (for the runner) --------------------------------------------------------
 
 _DISPLAY_FIELDS = [
-    ("id", "id"),
     ("name", "name"),
     ("race", "race"),
     ("sex", "sex"),
@@ -250,8 +236,6 @@ _DISPLAY_FIELDS = [
     ("intelligence", "intelligence"),
     ("wisdom", "wisdom"),
     ("charisma", "charisma"),
-    ("height_display", "height"),
-    ("weight", "weight"),
     ("current_hp", "current_hp"),
 ]
 

@@ -41,7 +41,19 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "huey.contrib.djhuey",
 ]
+
+# Huey task queue. Uses its own SqliteHuey database file (separate from db.sqlite3
+# so the queue never contends with app writes). In DEBUG, tasks run inline
+# (immediate) so no consumer process is needed; in production the run_huey
+# consumer must be running (see zingor-huey.service).
+HUEY = {
+    "huey_class": "huey.SqliteHuey",
+    "filename": BASE_DIR / "huey.db",
+    "immediate": DEBUG,
+    "consumer": {"workers": 1, "worker_type": "thread"},
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

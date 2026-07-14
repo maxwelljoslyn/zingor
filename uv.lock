@@ -236,6 +236,15 @@ wheels = [
 ]
 
 [[package]]
+name = "huey"
+version = "3.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/55/59/de9e22fa4be35ee03eff7be144a92c32c63c9a80e323a45f260089162b97/huey-3.2.1.tar.gz", hash = "sha256:79cd63d117e5b8da2de58420dcde4e2d0f963e362d67a9b3872ce565eec5c3dc", size = 601509, upload_time = "2026-07-09T21:22:41.187Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a4/9e/7fe3bdca0b2749f4b80a50bf033e9f83db6310b75f93c7aa74543f667dbe/huey-3.2.1-py3-none-any.whl", hash = "sha256:da9e004b80941a718f33f9714697a67e6d5cf12e0707fc4f3dbb5d9c796e7224", size = 120963, upload_time = "2026-07-09T21:22:40.023Z" },
+]
+
+[[package]]
 name = "idna"
 version = "3.16"
 source = { registry = "https://pypi.org/simple" }
@@ -468,6 +477,7 @@ dependencies = [
     { name = "django", version = "5.2.11", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "django", version = "6.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "gunicorn" },
+    { name = "huey" },
     { name = "pint" },
     { name = "python-dotenv" },
     { name = "requests" },
@@ -488,6 +498,7 @@ requires-dist = [
     { name = "bs4", specifier = ">=0.0.2" },
     { name = "django", specifier = ">=5.1" },
     { name = "gunicorn", specifier = ">=26.0.0" },
+    { name = "huey", specifier = ">=3.2.1" },
     { name = "pint", specifier = ">=0.24" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "requests", specifier = ">=2.34.2" },

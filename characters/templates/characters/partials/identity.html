@@ -4,20 +4,37 @@
     <h2>
       Identity
       {% if not character.is_active %}<span class="badge badge-inactive">Inactive</span>{% endif %}
+      {% if character.sync_from_wiki %}<span class="badge badge-sync">Sync</span>{% endif %}
     </h2>
     {% if is_owner %}
-    <form hx-post="/character/{{ character.pk }}/toggle-active/"
-          hx-target="#section-identity"
-          hx-swap="outerHTML"
-          class="inline no-shrink">
-      {% csrf_token %}
-      {% if character.is_active %}
-      <button type="submit" class="btn btn-small btn-danger"
-              hx-confirm="Mark {{ character.name|default:'this character' }} inactive? They'll drop out of the active party views.">Mark inactive</button>
-      {% else %}
-      <button type="submit" class="btn btn-small">Reactivate</button>
+    <div class="section-head-controls">
+      {% if character.wiki_url %}
+      <form hx-post="/character/{{ character.pk }}/toggle-wiki-sync/"
+            hx-target="#section-identity"
+            hx-swap="outerHTML"
+            class="inline no-shrink">
+        {% csrf_token %}
+        {% if character.sync_from_wiki %}
+        <button type="submit" class="btn btn-small btn-secondary">Stop wiki sync</button>
+        {% else %}
+        <button type="submit" class="btn btn-small"
+                hx-confirm="Sync {{ character.name|default:'this character' }} from the wiki? Zingor will overwrite this character's fields, spells, and sage studies from the wiki page every minute.">Sync from wiki</button>
+        {% endif %}
+      </form>
       {% endif %}
-    </form>
+      <form hx-post="/character/{{ character.pk }}/toggle-active/"
+            hx-target="#section-identity"
+            hx-swap="outerHTML"
+            class="inline no-shrink">
+        {% csrf_token %}
+        {% if character.is_active %}
+        <button type="submit" class="btn btn-small btn-danger"
+                hx-confirm="Mark {{ character.name|default:'this character' }} inactive? They'll drop out of the active party views.">Mark inactive</button>
+        {% else %}
+        <button type="submit" class="btn btn-small">Reactivate</button>
+        {% endif %}
+      </form>
+    </div>
     {% endif %}
   </div>
   <table class="kv-table">

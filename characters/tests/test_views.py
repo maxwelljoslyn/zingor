@@ -389,6 +389,14 @@ class WikiUrlControlTests(TestCase):
         self.assertEqual(self.character.wiki_url, self.URL)
         self.assertContains(response, "Edit Wiki URL")
 
+    def test_anchor_stripped_from_url(self):
+        self.client.post(
+            f"/character/{self.character.pk}/wiki-url/",
+            {"wiki_url": self.URL + "#Equipment"},
+        )
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.wiki_url, self.URL)
+
     def test_owner_can_clear_url(self):
         self.character.wiki_url = self.URL
         self.character.save(update_fields=["wiki_url"])
@@ -423,6 +431,59 @@ class WikiUrlControlTests(TestCase):
         response = self.client.get(f"/character/{self.character.pk}/")
         self.assertContains(response, ">Wiki Page<")
         self.assertNotContains(response, "Edit Wiki URL")
+
+
+class ToggleWikiSyncTests(TestCase):
+    URL = "https://adventure.alexissmolensk.com/index.php/Lexent"
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+        self.character = Character.objects.create(
+            user=self.user, name="Thorn", wiki_url=self.URL
+        )
+
+    def test_owner_can_toggle_on_and_off(self):
+        response = self.client.post(f"/character/{self.character.pk}/toggle-wiki-sync/")
+        self.assertEqual(response.status_code, 200)
+        self.character.refresh_from_db()
+        self.assertTrue(self.character.sync_from_wiki)
+        self.client.post(f"/character/{self.character.pk}/toggle-wiki-sync/")
+        self.character.refresh_from_db()
+        self.assertFalse(self.character.sync_from_wiki)
+
+    def test_cannot_enable_without_wiki_url(self):
+        self.character.wiki_url = None
+        self.character.save(update_fields=["wiki_url"])
+        response = self.client.post(f"/character/{self.character.pk}/toggle-wiki-sync/")
+        self.assertEqual(response.status_code, 400)
+        self.character.refresh_from_db()
+        self.assertFalse(self.character.sync_from_wiki)
+
+    def test_toggle_control_hidden_without_wiki_url(self):
+        self.character.wiki_url = None
+        self.character.save(update_fields=["wiki_url"])
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertNotContains(response, "Sync from wiki")
+
+    def test_sync_pill_shown_when_enabled(self):
+        self.character.sync_from_wiki = True
+        self.character.save(update_fields=["sync_from_wiki"])
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, "badge-sync")
+        self.assertContains(response, "Stop wiki sync")
+
+    def test_non_owner_forbidden(self):
+        other = User.objects.create_user(username="other", password="testpass")
+        self.client.force_login(other)
+        response = self.client.post(f"/character/{self.character.pk}/toggle-wiki-sync/")
+        self.assertEqual(response.status_code, 403)
+        self.character.refresh_from_db()
+        self.assertFalse(self.character.sync_from_wiki)
+
+    def test_get_not_allowed(self):
+        response = self.client.get(f"/character/{self.character.pk}/toggle-wiki-sync/")
+        self.assertEqual(response.status_code, 405)
 
 
 class FieldUpdateTests(TestCase):

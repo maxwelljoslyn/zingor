@@ -47,6 +47,25 @@ class CharacterModelTests(TestCase):
         self.assertIn(self.character, active)
         self.assertNotIn(dead, active)
 
+    def test_sync_from_wiki_defaults_false(self):
+        self.assertFalse(self.character.sync_from_wiki)
+
+    def test_wiki_synced_queryset_requires_flag_and_url(self):
+        url = "https://adventure.alexissmolensk.com/index.php/Lexent"
+        synced = Character.objects.create(
+            user=self.user, name="On", wiki_url=url, sync_from_wiki=True
+        )
+        flag_off = Character.objects.create(
+            user=self.user, name="FlagOff", wiki_url=url, sync_from_wiki=False
+        )
+        no_url = Character.objects.create(
+            user=self.user, name="NoUrl", sync_from_wiki=True
+        )
+        result = Character.objects.wiki_synced()
+        self.assertIn(synced, result)
+        self.assertNotIn(flag_off, result)
+        self.assertNotIn(no_url, result)
+
     def test_ability_score_with_no_conditions(self):
         self.character.strength = 15
         self.character.save()

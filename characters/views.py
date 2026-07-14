@@ -5,6 +5,7 @@ import json
 import logging
 from collections import OrderedDict
 from decimal import InvalidOperation
+from urllib.parse import urldefrag
 from urllib.request import Request, urlopen
 
 from django.conf import settings as django_settings
@@ -1161,6 +1162,23 @@ def toggle_active(request, pk: int) -> HttpResponse:
 
 @login_required
 @character_owner_required
+@require_POST
+def toggle_wiki_sync(request, pk: int) -> HttpResponse:
+    """Flip a character's wiki-sync flag (owner only) and re-render identity.
+
+    Enabling requires a wiki URL to be set; without one there is nothing to
+    sync from.
+    """
+    character = get_object_or_404(Character, pk=pk)
+    if not character.sync_from_wiki and not character.wiki_url:
+        return HttpResponse("Set a wiki URL before enabling sync", status=400)
+    character.sync_from_wiki = not character.sync_from_wiki
+    character.save(update_fields=["sync_from_wiki"])
+    return _render_section(request, character, "identity")
+
+
+@login_required
+@character_owner_required
 def wiki_url_edit(request, pk: int) -> HttpResponse:
     """Return the inline form for editing the character's wiki URL (owner only)."""
     character = get_object_or_404(Character, pk=pk)
@@ -1181,7 +1199,7 @@ def wiki_url_control(request, pk: int) -> HttpResponse:
     if request.method == "POST":
         if not is_owner:
             return HttpResponse(status=403)
-        raw = request.POST.get("wiki_url", "").strip()
+        raw = urldefrag(request.POST.get("wiki_url", "").strip()).url
         character.wiki_url = raw or None
         character.save(update_fields=["wiki_url", "updated_at"])
     return render(
