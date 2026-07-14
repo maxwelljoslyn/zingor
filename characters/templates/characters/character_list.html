@@ -7,8 +7,15 @@
   {% csrf_token %}
   <button type="submit" class="btn">+ New Character</button>
 </form>
-{% if characters %}
-{% include "characters/partials/character_list_table.html" %}
+{% if party_characters or other_characters %}
+{% if party_characters %}
+<h2>Party</h2>
+{% include "characters/partials/character_list_table.html" with characters=party_characters %}
+{% endif %}
+{% if other_characters %}
+<h2 class="mt-lg">Followers, Hirelings &amp; Pets</h2>
+{% include "characters/partials/character_list_table.html" with characters=other_characters %}
+{% endif %}
 {% else %}
 <p class="muted">No characters yet. Create one to get started.</p>
 {% endif %}

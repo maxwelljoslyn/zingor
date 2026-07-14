@@ -254,10 +254,23 @@ class CharacterListViewTests(TestCase):
         self.assertContains(response, "Alive")
         self.assertContains(response, "Ghost")
         self.assertContains(response, "Inactive characters")
-        active_names = [c.name for c in response.context["characters"]]
+        active_names = [c.name for c in response.context["party_characters"]]
         inactive_names = [c.name for c in response.context["inactive_characters"]]
         self.assertEqual(active_names, ["Alive"])
         self.assertEqual(inactive_names, ["Ghost"])
+
+    def test_active_roster_split_by_kind(self):
+        """Primaries and henchmen go in the party table; the rest in the other table."""
+        Character.objects.create(user=self.user, name="Hero", kind="primary")
+        Character.objects.create(user=self.user, name="Squire", kind="hench")
+        Character.objects.create(user=self.user, name="Torchbearer", kind="hireling")
+        Character.objects.create(user=self.user, name="Rex", kind="pet")
+        response = self.client.get("/")
+        party = [c.name for c in response.context["party_characters"]]
+        others = [c.name for c in response.context["other_characters"]]
+        self.assertEqual(sorted(party), ["Hero", "Squire"])
+        self.assertEqual(sorted(others), ["Rex", "Torchbearer"])
+        self.assertContains(response, "Followers, Hirelings")
 
     def test_no_inactive_section_when_all_active(self):
         Character.objects.create(user=self.user, name="Alive")
