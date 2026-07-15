@@ -123,6 +123,7 @@
   </script>
   <script src="{% static 'characters/table-sort.js' %}" defer></script>
   <script src="{% static 'characters/inventory-collapse.js' %}" defer></script>
+  <script src="{% static 'characters/confirm-dialog.js' %}" defer></script>
   <link rel="stylesheet" href="{% static 'characters/styles.css' %}">
 </head>
 <body>
@@ -165,5 +166,15 @@
   <footer class="build-info">
     <span title="Running code version">Version {{ version }} (build {{ git_commit }})</span>
   </footer>
+  {# In-page confirmation for hx-confirm requests; driven by confirm-dialog.js. #}
+  <dialog class="confirm-dialog" data-confirm-dialog>
+    <form method="dialog">
+      <p class="confirm-dialog-question" data-confirm-question></p>
+      <div class="confirm-dialog-actions">
+        <button type="submit" value="" class="btn-secondary">Cancel</button>
+        <button type="submit" value="confirm" data-confirm-ok>Confirm</button>
+      </div>
+    </form>
+  </dialog>
 </body>
 </html>

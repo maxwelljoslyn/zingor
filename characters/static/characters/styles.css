@@ -423,6 +423,28 @@ th.sortable:hover { color: var(--accent-hover); }
   gap: 0.75rem;
 }
 .modal-title { color: var(--accent); margin: 0; }
+/* In-page confirmation dialog for hx-confirm requests (confirm-dialog.js).
+   A native <dialog>, so `margin: auto` restores the centering that the
+   global margin reset removes. */
+.confirm-dialog {
+  margin: auto;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  max-width: 26rem;
+  width: 90%;
+}
+.confirm-dialog::backdrop { background: var(--overlay); }
+.confirm-dialog-question { margin-bottom: 1rem; }
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 .wiki-export-area {
   flex: 1;
   min-height: 400px;
