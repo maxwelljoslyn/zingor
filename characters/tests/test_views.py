@@ -328,7 +328,7 @@ class CharacterListViewTests(TestCase):
         )
         response = self.client.get("/")
         self.assertContains(response, f'data-sort-value="{backpack.total_weight_oz}"')
-        self.assertContains(response, f"({backpack.total_weight} total)")
+        self.assertContains(response, "(7 lb total)")
 
 
 class CharacterSheetViewTests(TestCase):
@@ -352,7 +352,7 @@ class CharacterSheetViewTests(TestCase):
         )
         response = self.client.get(f"/character/{self.character.pk}/")
         self.assertContains(response, f'data-sort-value="{backpack.total_weight_oz}"')
-        self.assertContains(response, f"({backpack.total_weight} total)")
+        self.assertContains(response, "(7 lb total)")
 
     def test_other_users_character_viewable(self):
         other_user = User.objects.create_user(username="other", password="testpass")

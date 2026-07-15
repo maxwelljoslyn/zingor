@@ -1,3 +1,4 @@
+{% load character_tags %}
 {# One row of the inventory table, then recursively a row per contained item. #}
 {# Included with depth=0 from inventory.html (character sheet, editable when #}
 {# is_owner) and character_list.html (read-only, show_owner adds an Owner #}
@@ -47,7 +48,7 @@
                   hx-get="/item/{{ item.pk }}/edit-field/?field=capacity"
                   hx-target="#item-{{ item.pk }}-capacity"
                   hx-swap="outerHTML"
-                  class="clickable">{% if item.capacity %}{{ item.capacity }}{% else %}—{% endif %}</span>{% else %}{% if item.capacity %}{{ item.capacity }}{% else %}—{% endif %}{% endif %}]
+                  class="clickable">{% if item.capacity %}{{ item.capacity|short_units }}{% else %}—{% endif %}</span>{% else %}{% if item.capacity %}{{ item.capacity|short_units }}{% else %}—{% endif %}{% endif %}]
     </span>
     {% endif %}
   </td>
@@ -60,17 +61,17 @@
           hx-get="/item/{{ item.pk }}/edit-field/?field=weight"
           hx-target="#item-{{ item.pk }}-weight"
           hx-swap="outerHTML"
-          class="clickable">{{ item.adjusted_weight }}</span>
+          class="clickable">{{ item.adjusted_weight|short_units }}</span>
     {% else %}
-    {{ item.adjusted_weight }}
+    {{ item.adjusted_weight|short_units }}
     {% endif %}
     {% if item.contents.all %}
-    <span class="muted text-sm">({{ item.total_weight }} total)</span>
+    <span class="muted text-sm">({{ item.total_weight|short_units }} total)</span>
     {% endif %}
     {# The weight edit form takes per-unit weight, so remind owners what one unit weighs. #}
     {# block keeps the note on its own line instead of wrapping the cell mid-sentence. #}
     {% if item.quantity > 1 %}
-    <span class="muted text-sm block">{{ item.unit_weight }} each</span>
+    <span class="muted text-sm block">{{ item.unit_weight|short_units }} each</span>
     {% endif %}
   </td>
   {% if is_owner %}

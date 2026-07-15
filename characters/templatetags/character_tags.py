@@ -37,6 +37,15 @@ def format_pct(value):
 
 
 @register.filter
+def short_units(quantity):
+    """Format a Pint Quantity with abbreviated units: "5 lb" rather than "5 pound"."""
+    try:
+        return format(quantity, "~")
+    except (TypeError, ValueError):
+        return quantity
+
+
+@register.filter
 def floordiv(value, arg):
     """Integer division: {{ value|floordiv:4 }}"""
     try:
