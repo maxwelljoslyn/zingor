@@ -10,7 +10,8 @@
 {% if party_characters or other_characters %}
 {% if party_characters %}
 <h2>Primary Characters and Henches</h2>
-{% include "characters/partials/character_list_table.html" with characters=party_characters %}
+{% include "characters/partials/character_list_table.html" with characters=party_characters show_fel=True %}
+<p class="muted">Party total fighter equivalent levels: {{ party_fel_total }}</p>
 {% endif %}
 {% if other_characters %}
 <h2 class="mt-lg">Followers, Hirelings &amp; Pets</h2>

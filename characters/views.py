@@ -456,7 +456,12 @@ def character_list(request):
     # Split the active roster: primaries and their henchmen are the party proper;
     # followers, hirelings, and pets are the supporting cast (see #85).
     party_kinds = ["primary", "hench"]
-    party_characters = active.filter(kind__in=party_kinds)
+    party_characters = list(active.filter(kind__in=party_kinds))
+    # Fighter-equivalent level puts every class on one XP scale, which is how the
+    # party divides treasure: one share per FEL (see #88).
+    for char in party_characters:
+        char.fel = rules.fighter_equivalent_level(char.xp)
+    party_fel_total = sum(char.fel for char in party_characters if char.fel is not None)
     other_characters = active.exclude(kind__in=party_kinds)
     inactive_characters = base.filter(is_active=False).order_by(
         "user__username", "name"
@@ -473,6 +478,7 @@ def character_list(request):
         "characters/character_list.html",
         {
             "party_characters": party_characters,
+            "party_fel_total": party_fel_total,
             "other_characters": other_characters,
             "inactive_characters": inactive_characters,
             "all_items": all_items,

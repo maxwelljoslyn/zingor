@@ -272,6 +272,32 @@ class CharacterListViewTests(TestCase):
         self.assertEqual(sorted(others), ["Rex", "Torchbearer"])
         self.assertContains(response, "Followers, Hirelings")
 
+    def test_party_table_shows_fel_and_total(self):
+        Character.objects.create(
+            user=self.user, name="Hero", kind="primary", char_class="mage", xp=4_001
+        )
+        Character.objects.create(
+            user=self.user, name="Squire", kind="hench", char_class="fighter", xp=2_001
+        )
+        response = self.client.get("/")
+        fels = [c.fel for c in response.context["party_characters"]]
+        self.assertEqual(sorted(fels), [2, 3])
+        self.assertEqual(response.context["party_fel_total"], 5)
+        self.assertContains(response, "Party total fighter equivalent levels: 5")
+
+    def test_party_fel_total_ignores_characters_without_xp(self):
+        Character.objects.create(
+            user=self.user, name="Hero", kind="primary", char_class="mage", xp=4_001
+        )
+        Character.objects.create(user=self.user, name="Rookie", kind="primary")
+        response = self.client.get("/")
+        self.assertEqual(response.context["party_fel_total"], 3)
+
+    def test_fel_column_only_on_party_table(self):
+        Character.objects.create(user=self.user, name="Rex", kind="pet", xp=4_001)
+        response = self.client.get("/")
+        self.assertNotContains(response, "F.E.L.")
+
     def test_no_inactive_section_when_all_active(self):
         Character.objects.create(user=self.user, name="Alive")
         response = self.client.get("/")
