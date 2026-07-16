@@ -1,3 +1,5 @@
+import os
+
 extensions = [
     "sphinx_rtd_theme",
 ]
