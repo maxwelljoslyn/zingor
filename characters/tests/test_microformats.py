@@ -43,30 +43,6 @@ class ParseLexentFixtureTests(SimpleTestCase):
         self.assertTrue(any("spell" in w and "level" in w for w in self.sheet.warnings))
 
 
-class ParseMoneyTests(SimpleTestCase):
-    def test_money_is_parsed_into_sheet_money(self):
-        """Coins land on sheet.money, not on the (now money-less) Character."""
-        html = (
-            '<div><span class="zingor-name">Zoltan</span>'
-            + '<span class="zingor-gp">670</span>'
-            + '<span class="zingor-sp">224</span>'
-            + '<span class="zingor-cp">227</span></div>'
-        )
-        sheet = parse_sheet(html)
-        self.assertEqual(sheet.character.name, "Zoltan")
-        self.assertEqual(sheet.money, {"gp": 670, "sp": 224, "cp": 227})
-        self.assertEqual(sheet.warnings, [])
-
-    def test_absent_money_leaves_sheet_money_empty(self):
-        sheet = parse_sheet('<span class="zingor-name">Zoltan</span>')
-        self.assertEqual(sheet.money, {})
-
-    def test_unparseable_money_is_warned_not_stored(self):
-        sheet = parse_sheet('<span class="zingor-gp">lots</span>')
-        self.assertEqual(sheet.money, {})
-        self.assertEqual(len(sheet.warnings), 1)
-
-
 class ParseScalarTests(SimpleTestCase):
     def test_string_and_int_scalars_map_to_character_columns(self):
         html = list(
@@ -185,14 +161,13 @@ class ParseRecordTests(SimpleTestCase):
 
 
 class RenderSheetTests(SimpleTestCase):
-    def test_render_lists_fields_records_money_and_warnings(self):
+    def test_render_lists_fields_records_and_warnings(self):
         sheet = parse_sheet(
             "".join(
                 list(
                     [
                         '<span class="zingor-name">Zoltan</span>',
                         '<span class="zingor-strength">17</span>',
-                        '<span class="zingor-gp">670</span>',
                         '<div class="zingor-spell">',
                         '<span class="zingor-spell-name">Fireball</span>',
                         '<span class="zingor-spell-level">3</span>',
@@ -209,7 +184,6 @@ class RenderSheetTests(SimpleTestCase):
         self.assertIn("Zoltan", out)
         self.assertIn("Fireball", out)
         self.assertIn("Forgery", out)
-        self.assertIn("gp", out)
         self.assertIn("=== Spells (1) ===", out)
         self.assertIn("=== Sage studies (1) ===", out)
 

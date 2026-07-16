@@ -88,10 +88,6 @@ SCALARS: list[tuple[str, str, Callable[[str], object]]] = [
     ("chosen-study", "chosen_study", _coerce_str),
 ]
 
-# Coins are inventory items, not Character columns, so they parse into
-# ParsedSheet.money (currency -> coin count) for the save step to turn into items.
-MONEY_SUFFIXES = ["gp", "sp", "cp"]
-
 
 @dataclass(frozen=True)
 class Subfield:
@@ -134,7 +130,6 @@ class ParsedSheet:
     character: Character
     spells: list[Spell] = dc_field(default_factory=list)
     sage_studies: list[SageStudyPoints] = dc_field(default_factory=list)
-    money: dict[str, int] = dc_field(default_factory=dict)
     warnings: list[str] = dc_field(default_factory=list)
     # Record models whose root markup appeared on the page, even if every row
     # failed to parse. Lets the save step tell "section absent" (leave the DB
@@ -165,20 +160,6 @@ def parse_sheet(html: str) -> ParsedSheet:
         raw = _text(els[0])
         try:
             setattr(sheet.character, attr, coerce(raw))
-        except Exception as exc:
-            sheet.warnings.append(f"scalar '{suffix}': could not parse {raw!r} ({exc})")
-
-    for suffix in MONEY_SUFFIXES:
-        els = soup.select(f".{PREFIX}{suffix}")
-        if not els:
-            continue
-        if len(els) > 1:
-            sheet.warnings.append(
-                f"scalar '{suffix}': {len(els)} elements found; using the first"
-            )
-        raw = _text(els[0])
-        try:
-            sheet.money[suffix] = _coerce_int(raw)
         except Exception as exc:
             sheet.warnings.append(f"scalar '{suffix}': could not parse {raw!r} ({exc})")
 
@@ -247,9 +228,6 @@ def render_sheet(sheet: ParsedSheet) -> str:
         val = getattr(c, attr)
         if val is not None and val != "":
             lines.append(f"  {label:<14} {val}")
-    for currency in MONEY_SUFFIXES:
-        if currency in sheet.money:
-            lines.append(f"  {currency:<14} {sheet.money[currency]}")
 
     lines.append("")
     lines.append(f"=== Spells ({len(sheet.spells)}) ===")

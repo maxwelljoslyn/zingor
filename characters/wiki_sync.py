@@ -2,8 +2,10 @@
 
 ``microformats.py`` stays a pure parser; this module owns HTTP and persistence.
 The wiki is treated as the source of truth for the scalar fields, spells, and
-sage studies it carries. Inventory and coins are intentionally left untouched
-this pass.
+sage studies it carries. Inventory — including coins, which are inventory
+items — is intentionally out of scope: money belongs to whichever character
+carries it, and stack/container arrangement can't round-trip through a flat
+wiki page.
 """
 
 from __future__ import annotations

@@ -83,13 +83,9 @@ Tag any element with one of the class names below, and its text becomes that fie
 
 Any field you leave out is simply not synchronized — Zingor keeps whatever value it already has. If the same class appears more than once on the page, the first occurrence wins.
 
-### Money
-
-Coins get their own classes: `zingor-gp`, `zingor-sp`, and `zingor-cp`. These don't set a character field; instead, the counts become gold, silver, and copper coin items in your inventory.
-
-```html
-Purse: <span class="zingor-gp">102</span> gold, <span class="zingor-sp">14</span> silver
-```
+:::{note}
+Money and inventory are not synchronized. Coins are inventory items in Zingor, and inventory (which containers hold what, how stacks are split) is managed in Zingor itself.
+:::
 
 ### Repeating Records: Spells and Sage Studies
 
