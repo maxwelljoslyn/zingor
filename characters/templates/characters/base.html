@@ -136,6 +136,7 @@
         <span class="theme-icon theme-icon-light"><span aria-hidden="true">☀</span> light</span>
         <span class="theme-icon theme-icon-dark"><span aria-hidden="true">☾</span> dark</span>
       </button>
+      <a class="btn" href="https://zingor.readthedocs.io">Docs</a>
       {% if user.is_authenticated %}
         <a class="btn" href="{% url 'characters:feedback' %}">Feedback</a>
         <a href="{% url 'characters:user_profile' user.username %}">{{ user|display_name }}</a>
