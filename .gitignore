@@ -13,3 +13,6 @@ staticfiles/
 .coverage
 coverage.xml
 htmlcov/
+
+# Sphinx build output
+docs/_build/
