@@ -42,7 +42,7 @@ The button that previously said "Sync from wiki" will now say "Stop wiki sync". 
 
 ## Marking Up Your External Webpage
 
-Zingor finds your character's data on the external page by looking for **Zingor microformats** (ZMF): ordinary HTML elements tagged with special `class` names starting with `zingor-`. You keep full control over how the page looks — Zingor only cares about the class names and reads each tagged element's visible text as the value.
+Zingor finds your character's data on the external page by looking for **Zingor microformats** (ZMF): ordinary HTML elements tagged with special `class` names starting with `zingor-`. You keep full control over how the page looks: Zingor only cares about the class names and reads each tagged element's visible text as the value.
 
 :::{note}
 ZMF uses `class` attributes (rather than, say, `data-*` attributes) because wiki software such as MediaWiki strips most HTML attributes when saving a page, but preserves `class`.
@@ -81,7 +81,7 @@ Tag any element with one of the class names below, and its text becomes that fie
 | `zingor-chosen-field` | Chosen sage field |
 | `zingor-chosen-study` | Chosen sage study |
 
-Any field you leave out is simply not synchronized — Zingor keeps whatever value it already has. If the same class appears more than once on the page, the first occurrence wins.
+Any field you leave out is simply not synchronized: Zingor keeps whatever value it already has. If the same class appears more than once on the page, the first occurrence wins.
 
 :::{note}
 Money and inventory are not synchronized. Coins are inventory items in Zingor, and inventory (which containers hold what, how stacks are split) is managed in Zingor itself.
@@ -101,6 +101,10 @@ Lists of things use one level of nesting: a *root* element tagged with the recor
 </tr>
 ```
 
+:::{warning}
+The `zingor-spell-memorized` field, if it evaluates as "yes", means that the spell *is currently memorized*, not that it has been cast/is not memorized.
+:::
+
 **Sage studies** use root class `zingor-sage-study` with subfields `-name` (required) and `-points` (required):
 
 ```html
@@ -118,8 +122,8 @@ For spells and sage studies, the page is authoritative *when the markup is prese
 
 Zingor is forgiving about formatting, so your page can stay human-readable:
 
-- **Text fields** use the element's visible text, with surrounding whitespace trimmed. Formatting markup inside the element (bold, links, etc.) is fine — only the text is kept.
-- **Number fields** pick out the first number in the text, ignoring thousands separators — `<td class="zingor-xp">12,450 xp</td>` reads as 12450.
-- **Yes/no fields** like `zingor-spell-memorized` treat `X`, `✓`, `yes`, `y`, `true`, or `1` (in any letter case) as yes; anything else — including leaving the cell empty — as no.
+- **Text fields** use the element's visible text, with surrounding whitespace trimmed. Formatting markup inside the element (bold, links, etc.) is fine; only the text is kept.
+- **Number fields** pick out the first number in the text, ignoring thousands separators: `<td class="zingor-xp">12,450 xp</td>` reads as 12450.
+- **Yes/no fields** like `zingor-spell-memorized` treat `X`, `✓`, `yes`, `y`, `true`, or `1` (in any letter case) as "yes"; anything else (including leaving the cell empty) as "no".
 
-When a value can't be understood (say, a level cell containing no number), Zingor never guesses: that field is skipped — or for spells and sage studies, that whole record is skipped — and the rest of the page still syncs.
+When a value can't be understood (say, a level cell containing no number), Zingor never guesses: the rest of the page still syncs, but that field is skipped (or, for spells and sage studies, that whole record is skipped).
