@@ -24,5 +24,23 @@ fi
 uv sync --frozen
 uv run python manage.py migrate --noinput
 uv run python manage.py collectstatic --noinput
+
+# Install version-controlled systemd unit changes from ops/. Copy only when the
+# installed unit differs, so an unchanged deploy skips the daemon-reload. These
+# units carry no secrets (config comes from .env via load_dotenv), so
+# overwriting the installed copy never clobbers server-only state. Installed
+# units are world-readable, so cmp needs no sudo; only cp and daemon-reload do.
+units_changed=0
+for unit in zingor.service zingor-huey.service; do
+  if ! cmp -s "/home/maxwell/zingor/ops/$unit" "/etc/systemd/system/$unit"; then
+    sudo cp "/home/maxwell/zingor/ops/$unit" "/etc/systemd/system/$unit"
+    echo "updated $unit"
+    units_changed=1
+  fi
+done
+if [[ "$units_changed" == 1 ]]; then
+  sudo systemctl daemon-reload
+fi
+
 sudo systemctl restart zingor.service
 sudo systemctl restart zingor-huey.service

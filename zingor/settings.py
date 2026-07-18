@@ -16,7 +16,7 @@ sentry_sdk.init(
     send_default_pii=True,
     enable_logs=True,
     traces_sample_rate=1.0,  # 1.0 captures 100% of transactions for tracing
-    profile_session_sample_rate=1.0,  # 1.0 captures 100% of profile sessions
+    profile_session_sample_rate=0.1,  # profile ~10% of sessions to conserve profile hours
     profile_lifecycle="trace",  # "trace" automatically runs the profiler during an active transaction
 )
 
