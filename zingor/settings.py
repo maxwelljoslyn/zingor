@@ -42,12 +42,17 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "huey.contrib.djhuey",
+    "huey.contrib.djhuey.stats",
 ]
 
 # Huey task queue. Uses its own SqliteHuey database file (separate from db.sqlite3
 # so the queue never contends with app writes). In DEBUG, tasks run inline
 # (immediate) so no consumer process is needed; in production the run_huey
 # consumer must be running (see zingor-huey.service).
+# The djhuey.stats app (admin dashboard + event log) needs no HUEY_STATS setting:
+# its AppConfig.ready() calls enable_stats() in every process and records events
+# to a huey_event table it creates in DATABASES["default"]. It must stay there —
+# the Events admin is an unmanaged ModelAdmin that always reads the default DB.
 HUEY = {
     "huey_class": "huey.SqliteHuey",
     "filename": BASE_DIR / "huey.db",

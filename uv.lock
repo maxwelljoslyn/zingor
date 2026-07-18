@@ -534,6 +534,15 @@ wheels = [
 ]
 
 [[package]]
+name = "peewee"
+version = "4.2.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/6d/45b139fba589e185dcee447414c2e0efaebb0a247c06329fdc9bd84ba4aa/peewee-4.2.6.tar.gz", hash = "sha256:f40655c64a62eaa447af228e4b84a5e80d3c812d2de34c7b9c621a3ef0c6555c", size = 779493, upload_time = "2026-07-17T18:11:21.3Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c0/63/26ec789e68e994d64ed957dd6ee5a08bb78c2f401c40e46fc142669cd8b0/peewee-4.2.6-py3-none-any.whl", hash = "sha256:b54c0f6e09c987465f8268bb2b4c1cba2e1b2788fcc0974c8e2233af1fd5af8f", size = 173774, upload_time = "2026-07-17T18:11:19.787Z" },
+]
+
+[[package]]
 name = "pint"
 version = "0.25.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1025,6 +1034,7 @@ dependencies = [
     { name = "django", version = "6.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "gunicorn" },
     { name = "huey" },
+    { name = "peewee" },
     { name = "pint" },
     { name = "python-dotenv" },
     { name = "requests" },
@@ -1054,6 +1064,7 @@ requires-dist = [
     { name = "django", specifier = ">=5.1" },
     { name = "gunicorn", specifier = ">=26.0.0" },
     { name = "huey", specifier = ">=3.2.1" },
+    { name = "peewee", specifier = ">=4.2.6" },
     { name = "pint", specifier = ">=0.24" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "requests", specifier = ">=2.34.2" },
