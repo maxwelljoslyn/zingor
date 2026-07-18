@@ -8,6 +8,7 @@ def set_sqlite_pragmas(sender, connection, **kwargs):
         cursor.execute("PRAGMA journal_mode=WAL;")
         cursor.execute("PRAGMA synchronous=NORMAL;")
         cursor.execute("PRAGMA cache_size=-64000;")
+        cursor.execute("PRAGMA temp_store=MEMORY;")
         cursor.execute("PRAGMA mmap_size=134217728;")
         cursor.execute("PRAGMA journal_size_limit=67108864;")
         cursor.execute("PRAGMA busy_timeout=5000;")
