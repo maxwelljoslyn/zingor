@@ -6,7 +6,11 @@ def set_sqlite_pragmas(sender, connection, **kwargs):
     if connection.vendor == "sqlite":
         cursor = connection.cursor()
         cursor.execute("PRAGMA journal_mode=WAL;")
+        cursor.execute("PRAGMA synchronous=NORMAL;")
         cursor.execute("PRAGMA cache_size=-64000;")
+        cursor.execute("PRAGMA mmap_size=134217728;")
+        cursor.execute("PRAGMA journal_size_limit=67108864;")
+        cursor.execute("PRAGMA busy_timeout=5000;")
         cursor.execute("PRAGMA foreign_keys=ON;")
         cursor.execute("PRAGMA ignore_check_constraints=OFF;")
 
