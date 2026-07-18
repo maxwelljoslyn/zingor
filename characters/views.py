@@ -3,7 +3,7 @@
 import functools
 import json
 import logging
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from decimal import InvalidOperation
 from urllib.parse import urldefrag
 from urllib.request import Request, urlopen
@@ -144,6 +144,53 @@ def _build_ability_data(character, derived, order):
     return ability_data
 
 
+def _prefetched_qs(manager, objects):
+    """A queryset preloaded with `objects`, mimicking prefetch_related's cache.
+
+    Stored in `_prefetched_objects_cache`, this (rather than a bare list) keeps
+    manager semantics intact: `.all()`/iteration are served from `objects` in
+    memory, while `.filter()`/`.aggregate()` clone it, drop the result cache, and
+    fall through to the database as usual. Setting `_result_cache` without
+    iterating means no query is issued to build it.
+    """
+    qs = manager.all()
+    qs._result_cache = list(objects)
+    qs._prefetch_related_lookups = ()
+    return qs
+
+
+def _stitch_container_tree(items):
+    """Prime each item's contents cache from a flat item list; return top-level.
+
+    The inventory table and `Item.total_weight` recurse through `contents.all()`
+    to arbitrary depth. A fixed-depth `prefetch_related` leaves containers nested
+    past that depth re-querying one row at a time (the classic N+1). Fetching the
+    whole scope in one query and priming `_prefetched_objects_cache["contents"]`
+    at every node makes those walks cache-served regardless of nesting depth.
+
+    `items` must already cover every depth in scope (no `container__isnull`
+    filter). Returns the top-level items (`container` is null) in input order.
+    """
+    items = list(items)
+    items_by_id = {item.id: item for item in items}
+    children_by_container = defaultdict(list)
+    for item in items:
+        if item.container_id is not None:
+            children_by_container[item.container_id].append(item)
+    for item in items:
+        # Prime the reverse relation (contents.all() during the recursive walk)
+        # and the forward one (item.container, read by the editable row's "Take
+        # out" control) so neither issues a per-item query at any depth.
+        item._prefetched_objects_cache = {
+            "contents": _prefetched_qs(
+                item.contents, children_by_container.get(item.id, [])
+            )
+        }
+        if item.container_id is not None:
+            item.container = items_by_id[item.container_id]
+    return [item for item in items if item.container_id is None]
+
+
 def _sheet_context(character, user):
     """Build the full template context for a character sheet.
 
@@ -156,8 +203,16 @@ def _sheet_context(character, user):
     )
     bodymass_die = character.hit_dice.filter(is_bodymass=True).first()
     level_dice = character.hit_dice.filter(is_bodymass=False)
-    items = character.inventory.filter(container__isnull=True).prefetch_related(
-        "contents", "contents__contents"
+    # One query for the whole inventory (all depths); stitch the container tree
+    # for the item table, then prime the character's inventory cache with the
+    # same instances so encumbrance (weight_of_carried_items) reuses them
+    # instead of re-querying every container.
+    inventory = list(character.inventory.all())
+    items = _stitch_container_tree(inventory)
+    if not hasattr(character, "_prefetched_objects_cache"):
+        character._prefetched_objects_cache = {}
+    character._prefetched_objects_cache["inventory"] = _prefetched_qs(
+        character.inventory, inventory
     )
     conditions = character.conditions.all()
     spells = character.spells.all()
@@ -470,10 +525,12 @@ def character_list(request):
         "user__username", "name"
     )
     # Dead/retired characters' gear should not clutter the party's item list.
-    all_items = (
+    # Fetch every active owner's items in one query and stitch the container
+    # tree in Python (see _stitch_container_tree) so contents.all() is
+    # cache-served at any nesting depth instead of an N+1 per container.
+    all_items = _stitch_container_tree(
         Item.objects.select_related("owner", "owner__user")
-        .filter(container__isnull=True, owner__is_active=True)
-        .prefetch_related("contents", "contents__contents")
+        .filter(owner__is_active=True)
         .order_by("owner__name", "name")
     )
     return render(

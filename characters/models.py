@@ -284,8 +284,14 @@ class Character(models.Model):
     def weight_of_carried_items(self):
         """Weight of carried inventory items, coins included."""
         total = D(0) * u.lb
-        for item in self.inventory.filter(is_carried=True, container__isnull=True):
-            total += item.carried_weight
+        # Iterate .all() and filter in Python so a primed inventory prefetch
+        # cache is reused; a queryset .filter() bypasses the cache and, via the
+        # carried_weight recursion below, re-queries every container (N+1). When
+        # the cache is not primed this is one query for all items (see
+        # views._stitch_container_tree / _sheet_context).
+        for item in self.inventory.all():
+            if item.is_carried and item.container_id is None:
+                total += item.carried_weight
         return total
 
     @property
@@ -551,8 +557,13 @@ class Item(models.Model):
         a character's encumbrance.
         """
         total = self.adjusted_weight
-        for content in self.contents.filter(is_carried=True):
-            total += content.carried_weight.to(total.units)
+        # Filter carried contents in Python rather than with .contents.filter():
+        # a queryset filter bypasses any primed prefetch cache, re-querying once
+        # per container (N+1), whereas .all() is cache-served when contents were
+        # prefetched (see views._stitch_container_tree).
+        for content in self.contents.all():
+            if content.is_carried:
+                total += content.carried_weight.to(total.units)
         return total
 
 

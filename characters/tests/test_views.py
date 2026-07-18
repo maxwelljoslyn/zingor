@@ -3,7 +3,9 @@
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
@@ -330,6 +332,35 @@ class CharacterListViewTests(TestCase):
         self.assertContains(response, f'data-sort-value="{backpack.total_weight_oz}"')
         self.assertContains(response, "(7 lb total)")
 
+    def test_deeply_nested_containers_do_not_cause_n_plus_one(self):
+        """The party item list stitches the container tree in one query.
+
+        The item table and total_weight recurse through contents.all() to any
+        depth, so a fixed prefetch depth would leave deeper containers issuing
+        one query apiece. Assert the query count is the same for a shallow and
+        a deeply nested inventory (no growth per nesting level).
+        """
+        character = Character.objects.create(user=self.user, name="Thorn")
+
+        def build_chain(depth: int) -> None:
+            parent = None
+            for i in range(depth):
+                parent = Item.objects.create(
+                    owner=character,
+                    name="Box " + str(i),
+                    weight="1 lb",
+                    is_container=True,
+                    container=parent,
+                )
+
+        build_chain(1)
+        with CaptureQueriesContext(connection) as shallow:
+            self.assertEqual(self.client.get("/").status_code, 200)
+        build_chain(8)
+        with CaptureQueriesContext(connection) as deep:
+            self.assertEqual(self.client.get("/").status_code, 200)
+        self.assertEqual(len(deep.captured_queries), len(shallow.captured_queries))
+
 
 class CharacterSheetViewTests(TestCase):
     def setUp(self):
@@ -353,6 +384,34 @@ class CharacterSheetViewTests(TestCase):
         response = self.client.get(f"/character/{self.character.pk}/")
         self.assertContains(response, f'data-sort-value="{backpack.total_weight_oz}"')
         self.assertContains(response, "(7 lb total)")
+
+    def test_deeply_nested_containers_do_not_cause_n_plus_one(self):
+        """The sheet stitches the container tree in one query at any depth.
+
+        The inventory table and total_weight recurse through contents.all() to
+        any depth; assert the query count is the same for a shallow and a
+        deeply nested inventory (no growth per nesting level).
+        """
+
+        def build_chain(depth: int) -> None:
+            parent = None
+            for i in range(depth):
+                parent = Item.objects.create(
+                    owner=self.character,
+                    name="Box " + str(i),
+                    weight="1 lb",
+                    is_container=True,
+                    container=parent,
+                )
+
+        url = f"/character/{self.character.pk}/"
+        build_chain(1)
+        with CaptureQueriesContext(connection) as shallow:
+            self.assertEqual(self.client.get(url).status_code, 200)
+        build_chain(8)
+        with CaptureQueriesContext(connection) as deep:
+            self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertEqual(len(deep.captured_queries), len(shallow.captured_queries))
 
     def test_other_users_character_viewable(self):
         other_user = User.objects.create_user(username="other", password="testpass")
