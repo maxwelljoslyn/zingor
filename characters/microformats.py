@@ -81,6 +81,7 @@ SCALARS: list[tuple[str, str, Callable[[str], object]]] = [
     ("wisdom", "wisdom", _coerce_int),
     ("charisma", "charisma", _coerce_int),
     ("current-hp", "current_hp", _coerce_int),
+    ("armor-class", "armor_class", _coerce_int),
     ("notes", "notes", _coerce_str),
     ("background", "background", _coerce_str),
     ("appearance", "appearance", _coerce_str),

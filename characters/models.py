@@ -126,6 +126,11 @@ class Character(models.Model):
     # HP
     current_hp = models.IntegerField(null=True, blank=True)
 
+    # Combat. Stored, not derived: computing AC from worn armor/shields would
+    # have to model padding-underneath rules, degraded armor, spell effects,
+    # etc. (see issue #39), so the player just records the final number.
+    armor_class = models.IntegerField(null=True, blank=True)
+
     # Encumbrance tuning
     encumbrance_multiplier = models.DecimalField(
         max_digits=5, decimal_places=2, default=Decimal("1.0")

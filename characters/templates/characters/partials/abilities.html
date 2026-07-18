@@ -55,6 +55,10 @@
     </tbody>
   </table>
 
+  <div class="mt-sm text-meta">
+    <strong>AC:</strong> {% unknown_or_value character.armor_class "armor_class" character.pk %}
+  </div>
+
   {% if derived.thac0 is not None %}
   <div class="mt-sm text-meta">
     <strong>THAC0:</strong> {{ derived.thac0 }}

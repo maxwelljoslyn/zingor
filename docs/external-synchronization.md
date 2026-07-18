@@ -75,6 +75,7 @@ Tag any element with one of the class names below, and its text becomes that fie
 | `zingor-wisdom` | Wisdom |
 | `zingor-charisma` | Charisma |
 | `zingor-current-hp` | Current hit points |
+| `zingor-armor-class` | Armor class (AC) |
 | `zingor-notes` | Notes |
 | `zingor-background` | Background |
 | `zingor-appearance` | Appearance |

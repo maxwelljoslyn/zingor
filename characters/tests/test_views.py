@@ -547,6 +547,15 @@ class FieldUpdateTests(TestCase):
         self.character.refresh_from_db()
         self.assertEqual(self.character.strength, 15)
 
+    def test_update_armor_class(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/update-field/",
+            {"field_name": "armor_class", "value": "4"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.armor_class, 4)
+
     def test_update_race(self):
         self.client.post(
             f"/character/{self.character.pk}/update-field/",

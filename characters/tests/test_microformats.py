@@ -60,6 +60,11 @@ class ParseScalarTests(SimpleTestCase):
         self.assertEqual(sheet.character.level, 3)
         self.assertEqual(sheet.warnings, [])
 
+    def test_armor_class_is_parsed(self):
+        sheet = parse_sheet('<span class="zingor-armor-class">4</span>')
+        self.assertEqual(sheet.character.armor_class, 4)
+        self.assertEqual(sheet.warnings, [])
+
     def test_int_scalar_strips_thousands_separators(self):
         sheet = parse_sheet('<span class="zingor-xp">1,250</span>')
         self.assertEqual(sheet.character.xp, 1250)

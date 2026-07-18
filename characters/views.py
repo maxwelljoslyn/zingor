@@ -229,6 +229,7 @@ FIELD_TYPES = {
     "wisdom": "number",
     "charisma": "number",
     "current_hp": "number",
+    "armor_class": "number",
     "height": "text",
     "weight": "text",
     "notes": "textarea",
@@ -255,6 +256,7 @@ INTEGER_FIELDS = {
     "wisdom",
     "charisma",
     "current_hp",
+    "armor_class",
 }
 
 PINT_FIELDS = {"height", "weight"}
@@ -300,6 +302,7 @@ SECTION_FOR_FIELD = {
     "wisdom": "abilities",
     "charisma": "abilities",
     "current_hp": "hp",
+    "armor_class": "abilities",
     "notes": "notes",
     "background": "notes",
     "appearance": "notes",
