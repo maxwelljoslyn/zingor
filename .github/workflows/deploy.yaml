@@ -1,17 +1,43 @@
-name: deploy-to-production
-# Deploys when a version tag is pushed (what `release` does after `bump`);
-# plain pushes to master do NOT deploy, so work-in-progress commits are safe
-# to push. Can also be run manually from the Actions tab (or
-# `gh workflow run deploy.yaml`). Requires the SSH_PRIVATE_KEY and
-# KNOWN_HOSTS repo secrets.
+name: test-and-deploy
+# Tests run on every push to master (safekeeping pushes get CI feedback
+# but do NOT deploy). Deployment happens only when a version tag is
+# pushed (what `release` does after `bump`) or on a manual run from the
+# Actions tab / `gh workflow run deploy.yaml` (what `redeploy` does) —
+# and only after tests pass. Tag deploys ship the tagged commit; manual
+# deploys ship master HEAD (see deploy.sh). Requires the SSH_PRIVATE_KEY and KNOWN_HOSTS
+# repo secrets.
 on:
   push:
+    branches: [master]
     tags: ["v*"]
   workflow_dispatch:
 
 jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    env:
+      # settings.py requires SECRET_KEY; any value works for tests.
+      SECRET_KEY: ci-only-not-a-secret
+      DEBUG: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run tests
+        run: uv run pytest -n auto
+
   deploy:
     name: Deploy Code to Production
+    needs: test
+    # Deploy only for version tags or manual dispatch — never for plain
+    # branch pushes, which exist here just to run the tests.
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Install SSH Key
@@ -21,5 +47,7 @@ jobs:
           known_hosts: ${{ secrets.KNOWN_HOSTS }}
 
       - name: Deploy to Server
+        # Tag-triggered deploys ship exactly the tagged commit; manual
+        # dispatches ship origin/master HEAD.
         run: |
-          ssh maxwell@maxwelljoslyn.com '/home/maxwell/zingor/deploy.sh'
+          ssh maxwell@maxwelljoslyn.com "/home/maxwell/zingor/deploy.sh '${{ github.ref_type == 'tag' && github.ref_name || 'origin/master' }}'"
