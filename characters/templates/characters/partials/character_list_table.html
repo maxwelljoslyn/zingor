@@ -23,7 +23,7 @@
         <td>{{ char.level|default:"—" }}</td>
         {% if show_fel %}<td>{{ char.fel|default_if_none:"—" }}</td>{% endif %}
         <td>{{ char.current_hp|default_if_none:"—" }} / {{ char.maximum_hp|default_if_none:"—" }}</td>
-        <td>{{ char.updated_at|date:"M d, Y H:i" }}</td>
+        <td><time data-localize-time datetime="{{ char.updated_at|date:'c' }}">{{ char.updated_at|date:"M d, Y H:i" }} UTC</time></td>
       </tr>
       {% endfor %}
     </tbody>
