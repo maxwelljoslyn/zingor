@@ -85,6 +85,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "characters.context_processors.registration_enabled",
                 "characters.context_processors.build_info",
+                "characters.context_processors.debug_flag",
             ],
         },
     },
