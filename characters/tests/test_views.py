@@ -171,6 +171,14 @@ class UserProfileViewTests(TestCase):
         self.assertContains(response, "Ghost")
         self.assertContains(response, "badge-inactive")
 
+    def test_last_updated_is_localizable(self):
+        """The timestamp ships as a <time> the client can localize, with a
+        UTC-labelled fallback for the no-JS case."""
+        Character.objects.create(user=self.user, name="Thorn")
+        response = self.client.get("/users/testuser/")
+        self.assertContains(response, "data-localize-time")
+        self.assertContains(response, "UTC")
+
 
 class DisplayNameTests(TestCase):
     def setUp(self):
@@ -234,6 +242,14 @@ class CharacterListViewTests(TestCase):
         Character.objects.create(user=self.user, name="Thorn")
         response = self.client.get("/")
         self.assertContains(response, "Thorn")
+
+    def test_last_updated_is_localizable(self):
+        """The timestamp ships as a <time> the client can localize, with a
+        UTC-labelled fallback for the no-JS case."""
+        Character.objects.create(user=self.user, name="Thorn")
+        response = self.client.get("/")
+        self.assertContains(response, "data-localize-time")
+        self.assertContains(response, "UTC")
 
     def test_hp_column_shows_current_and_max(self):
         character = Character.objects.create(

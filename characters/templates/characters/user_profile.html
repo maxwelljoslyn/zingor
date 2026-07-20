@@ -39,7 +39,7 @@
         <td>{{ char.race|default:"—" }}</td>
         <td>{{ char.char_class|default:"—" }}</td>
         <td>{{ char.level|default:"—" }}</td>
-        <td>{{ char.updated_at|date:"M d, Y H:i" }}</td>
+        <td><time data-localize-time datetime="{{ char.updated_at|date:'c' }}">{{ char.updated_at|date:"M d, Y H:i" }} UTC</time></td>
       </tr>
       {% endfor %}
     </tbody>
