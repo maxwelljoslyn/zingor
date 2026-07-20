@@ -94,6 +94,10 @@ body {
   line-height: 1.6;
   min-height: 100vh;
 }
+/* Development builds (DEBUG=True) get a deliberately clashing page ground so it's
+   obvious at a glance you're not on production. Set on <body> so it wins over the
+   theme's --bg in both light and dark mode. */
+body[data-debug] { background: #ff00cc; }
 
 a {
   color: var(--link);

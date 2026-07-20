@@ -126,7 +126,7 @@
   <script src="{% static 'characters/confirm-dialog.js' %}" defer></script>
   <link rel="stylesheet" href="{% static 'characters/styles.css' %}">
 </head>
-<body>
+<body{% if debug_build %} data-debug{% endif %}>
   {% csrf_token %}
   <header>
     <a class="logo" href="/">Zingor</a>

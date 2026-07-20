@@ -51,3 +51,8 @@ def registration_enabled(request):
 def build_info(request):
     """Expose the running code's version and git commit hash for debugging."""
     return {"version": VERSION, "git_commit": GIT_COMMIT}
+
+
+def debug_flag(request):
+    """Expose settings.DEBUG so templates can flag a development build."""
+    return {"debug_build": settings.DEBUG}
