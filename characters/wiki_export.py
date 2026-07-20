@@ -7,19 +7,32 @@ from .sage import rank_for_points, sage_studies as SAGE_STUDIES
 
 
 def character_to_wiki(character):
-    """Return a MediaWiki-syntax string representing the full character sheet."""
+    """Return a MediaWiki-syntax string representing the full character sheet.
+
+    Values the ZMF parser understands are wrapped in ``zingor-`` classed markup
+    (see ``_zmf``), so an exported page bootstraps a ZMF-compliant wiki page that
+    ``microformats.parse_sheet`` can scrape back (issue #91).
+    """
     lines = []
 
     # --- Identity ---
     lines.append("== Identity ==")
-    lines.append(f"* '''Name:''' {character.name or '?'}")
-    lines.append(f"* '''Race:''' {character.race or '?'}")
-    lines.append(f"* '''Sex:''' {character.sex or '?'}")
-    lines.append(f"* '''Class:''' {character.char_class or '?'}")
     lines.append(
-        f"* '''Level:''' {character.level if character.level is not None else '?'}"
+        f"* '''Name:''' {_zmf('name', character.name) if character.name else '?'}"
     )
-    lines.append(f"* '''XP:''' {character.xp if character.xp is not None else '?'}")
+    lines.append(
+        f"* '''Race:''' {_zmf('race', character.race) if character.race else '?'}"
+    )
+    lines.append(f"* '''Sex:''' {_zmf('sex', character.sex) if character.sex else '?'}")
+    lines.append(
+        f"* '''Class:''' {_zmf('class', character.char_class) if character.char_class else '?'}"
+    )
+    lines.append(
+        f"* '''Level:''' {_zmf('level', character.level) if character.level is not None else '?'}"
+    )
+    lines.append(
+        f"* '''XP:''' {_zmf('xp', character.xp) if character.xp is not None else '?'}"
+    )
     lines.append(f"* '''Height:''' {character.height or '?'}")
     lines.append(f"* '''Weight (body):''' {character.weight or '?'}")
     lines.append(
@@ -39,33 +52,38 @@ def character_to_wiki(character):
                 lines.append(f"* '''{label}:''' ?")
             elif character.percentile_strength is not None:
                 pct_base = character.percentile_strength
+                score = (
+                    f"{_zmf('strength', base)}/{_zmf('percentile-strength', pct_base)}"
+                )
                 if base != eff_str or pct_base != eff_pct:
                     lines.append(
-                        f"* '''{label}:''' {base}/{pct_base} "
-                        f"(effective: {eff_str}/{eff_pct})"
+                        f"* '''{label}:''' {score} (effective: {eff_str}/{eff_pct})"
                     )
                 else:
-                    lines.append(f"* '''{label}:''' {base}/{pct_base}")
+                    lines.append(f"* '''{label}:''' {score}")
             else:
+                score = _zmf("strength", base)
                 if base != eff_str:
-                    lines.append(f"* '''{label}:''' {base} (effective: {eff_str})")
+                    lines.append(f"* '''{label}:''' {score} (effective: {eff_str})")
                 else:
-                    lines.append(f"* '''{label}:''' {base}")
+                    lines.append(f"* '''{label}:''' {score}")
         else:
             base = getattr(character, ability)
             current = character.current_ability_score(ability)
             if base is None:
                 lines.append(f"* '''{label}:''' ?")
-            elif base != current:
-                lines.append(f"* '''{label}:''' {base} (effective: {current})")
             else:
-                lines.append(f"* '''{label}:''' {base}")
+                score = _zmf(ability, base)
+                if base != current:
+                    lines.append(f"* '''{label}:''' {score} (effective: {current})")
+                else:
+                    lines.append(f"* '''{label}:''' {score}")
     lines.append("")
 
     # --- Hit Points ---
     lines.append("== Hit Points ==")
     lines.append(
-        f"* '''Current HP:''' {character.current_hp if character.current_hp is not None else '?'}"
+        f"* '''Current HP:''' {_zmf('current-hp', character.current_hp) if character.current_hp is not None else '?'}"
     )
     max_hp = character.maximum_hp
     lines.append(f"* '''Maximum HP:''' {max_hp if max_hp is not None else '?'}")
@@ -142,7 +160,13 @@ def character_to_wiki(character):
         for level, names in spells_by_level.items():
             lines.append(f"=== Level {level} ===")
             for name in names:
-                lines.append(f"* {name}")
+                # Root zingor-spell wraps the visible name plus a hidden level
+                # (already shown as the section heading) so each spell round-trips.
+                record = _zmf(
+                    "spell",
+                    _zmf("spell-name", name) + _zmf_hidden("spell-level", level),
+                )
+                lines.append(f"* {record}")
     else:
         lines.append("No spells known.")
     lines.append("")
@@ -150,8 +174,18 @@ def character_to_wiki(character):
     # --- Sage Knowledge ---
     lines.append("== Sage Knowledge ==")
     if character.chosen_field or character.chosen_study:
-        lines.append(f"* '''Chosen Field:''' {character.chosen_field or '?'}")
-        lines.append(f"* '''Chosen Study:''' {character.chosen_study or '?'}")
+        field = (
+            _zmf("chosen-field", character.chosen_field)
+            if character.chosen_field
+            else "?"
+        )
+        study = (
+            _zmf("chosen-study", character.chosen_study)
+            if character.chosen_study
+            else "?"
+        )
+        lines.append(f"* '''Chosen Field:''' {field}")
+        lines.append(f"* '''Chosen Study:''' {study}")
         lines.append("")
     sage_rows = list(character.sage_studies.order_by("study"))
     if sage_rows:
@@ -177,8 +211,11 @@ def character_to_wiki(character):
             lines.append("! Study !! Points !! Rank")
             for row in sorted(field_map[field], key=lambda r: r.study):
                 rank = rank_for_points(row.points)
-                lines.append("|-")
-                lines.append(f"| {row.study} || {row.points} || {rank}")
+                lines.append('|- class="zingor-sage-study"')
+                lines.append(
+                    f'| class="zingor-sage-study-name" | {row.study} '
+                    f'|| class="zingor-sage-study-points" | {row.points} || {rank}'
+                )
             lines.append("|}")
             lines.append("")
     else:
@@ -189,18 +226,36 @@ def character_to_wiki(character):
     lines.append("== Notes ==")
     if character.background:
         lines.append("=== Background ===")
-        lines.append(character.background)
+        lines.append(_zmf("background", character.background))
         lines.append("")
     if character.appearance:
         lines.append("=== Appearance ===")
-        lines.append(character.appearance)
+        lines.append(_zmf("appearance", character.appearance))
         lines.append("")
     if character.notes:
         lines.append("=== Notes ===")
-        lines.append(character.notes)
+        lines.append(_zmf("notes", character.notes))
         lines.append("")
 
     return "\n".join(lines)
+
+
+def _zmf(suffix: str, value) -> str:
+    """Wrap a value in an inline element carrying its Zingor microformat class.
+
+    MediaWiki preserves ``class`` on inline HTML (but strips ``data-*``), so a
+    ``zingor-`` class survives into the rendered page. That lets an exported
+    sheet round-trip: ``microformats.parse_sheet`` reads the value straight back
+    out. ``suffix`` is a ZMF vocabulary suffix (see ``microformats.SCALARS`` /
+    ``RECORDS``); ``value`` is rendered as its trimmed text content.
+    """
+    return f'<span class="zingor-{suffix}">{value}</span>'
+
+
+def _zmf_hidden(suffix: str, value) -> str:
+    """Like ``_zmf`` but visually hidden, for data already shown elsewhere on the
+    page (e.g. a spell's level, which also appears as its section heading)."""
+    return f'<span class="zingor-{suffix}" style="display:none">{value}</span>'
 
 
 def _fmt_weight(qty):
