@@ -97,7 +97,7 @@ body {
 /* Development builds (DEBUG=True) get a deliberately clashing page ground so it's
    obvious at a glance you're not on production. Set on <body> so it wins over the
    theme's --bg in both light and dark mode. */
-body[data-debug] { background: #ff00cc; }
+body[data-debug] { background: #98de95; }
 
 a {
   color: var(--link);
