@@ -1,8 +1,9 @@
 """Fetch a character's wiki page and apply its Zingor microformats to the DB.
 
 ``microformats.py`` stays a pure parser; this module owns HTTP and persistence.
-The wiki is treated as the source of truth for the scalar fields, spells, and
-sage studies it carries. Inventory — including coins, which are inventory
+The wiki is treated as the source of truth for the scalar fields, spells,
+sage studies, and standalone sage abilities it carries. Inventory — including
+coins, which are inventory
 items — is intentionally out of scope: money belongs to whichever character
 carries it, and stack/container arrangement can't round-trip through a flat
 wiki page.
@@ -14,7 +15,7 @@ import requests
 from django.db import transaction
 
 from .microformats import SCALARS, parse_sheet
-from .models import Character, SageStudyPoints, Spell
+from .models import Character, SageAbilityPoints, SageStudyPoints, Spell
 
 USER_AGENT = "Zingor wiki-sync (https://github.com/; character sheet importer)"
 FETCH_TIMEOUT = 20
@@ -35,8 +36,9 @@ def sync_character_from_wiki(character: Character) -> list[str]:
 
     Returns the parser's warnings for logging. Scalars are copied only when the
     parsed value is present, so a temporarily-absent field on the wiki never
-    nukes existing data. Spells and sage studies are replace-all, but only when
-    that collection's root markup is actually present on the page: the wiki is
+    nukes existing data. Spells, sage studies, and sage abilities are
+    replace-all, but only when that collection's root markup is actually
+    present on the page: the wiki is
     authoritative for a section it carries, yet a missing/broken section leaves
     the existing rows alone rather than wiping them.
     """
@@ -70,5 +72,21 @@ def sync_character_from_wiki(character: Character) -> list[str]:
             study.pk = None
             study.character = character
             study.save()
+
+    if SageAbilityPoints in parsed.sections_present:
+        # Same soft-delete preservation as studies: hidden abilities keep their
+        # rows and points, and the wiki can't resurrect them.
+        hidden_abilities = set(
+            character.sage_abilities.filter(hidden=True).values_list(
+                "ability", flat=True
+            )
+        )
+        character.sage_abilities.filter(hidden=False).delete()
+        for ability in parsed.sage_abilities:
+            if ability.ability in hidden_abilities:
+                continue
+            ability.pk = None
+            ability.character = character
+            ability.save()
 
     return parsed.warnings

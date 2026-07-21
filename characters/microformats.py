@@ -32,7 +32,7 @@ from typing import Callable
 
 from bs4 import BeautifulSoup
 
-from .models import Character, SageStudyPoints, Spell
+from .models import Character, SageAbilityPoints, SageStudyPoints, Spell
 
 PREFIX = "zingor-"
 
@@ -123,6 +123,15 @@ RECORDS: list[RecordType] = [
             Subfield("points", "points", _coerce_int, required=True),
         ],
     ),
+    RecordType(
+        "sage-ability",
+        SageAbilityPoints,
+        [
+            Subfield("name", "ability", _coerce_str, required=True),
+            Subfield("points", "points", _coerce_int, required=True),
+            Subfield("source", "source", _coerce_str),
+        ],
+    ),
 ]
 
 
@@ -131,6 +140,7 @@ class ParsedSheet:
     character: Character
     spells: list[Spell] = dc_field(default_factory=list)
     sage_studies: list[SageStudyPoints] = dc_field(default_factory=list)
+    sage_abilities: list[SageAbilityPoints] = dc_field(default_factory=list)
     warnings: list[str] = dc_field(default_factory=list)
     # Record models whose root markup appeared on the page, even if every row
     # failed to parse. Lets the save step tell "section absent" (leave the DB
@@ -167,6 +177,7 @@ def parse_sheet(html: str) -> ParsedSheet:
     buckets: dict[type, list] = {
         Spell: sheet.spells,
         SageStudyPoints: sheet.sage_studies,
+        SageAbilityPoints: sheet.sage_abilities,
     }
     for rt in RECORDS:
         roots = soup.select(f".{PREFIX}{rt.root}")
@@ -243,6 +254,14 @@ def render_sheet(sheet: ParsedSheet) -> str:
     for ss in sheet.sage_studies:
         lines.append(f"  {ss.study}: {ss.points}")
     if not sheet.sage_studies:
+        lines.append("  (none)")
+
+    lines.append("")
+    lines.append(f"=== Sage abilities ({len(sheet.sage_abilities)}) ===")
+    for sa in sheet.sage_abilities:
+        source = f" [{sa.source}]" if sa.source else ""
+        lines.append(f"  {sa.ability}: {sa.points}{source}")
+    if not sheet.sage_abilities:
         lines.append("  (none)")
 
     lines.append("")

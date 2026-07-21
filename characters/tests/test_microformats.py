@@ -5,7 +5,7 @@ from pathlib import Path
 from django.test import SimpleTestCase
 
 from characters.microformats import ParsedSheet, parse_sheet, render_sheet
-from characters.models import Spell
+from characters.models import SageAbilityPoints, Spell
 
 LEXENT_HTML = (Path(__file__).parent / "data" / "lexent.html").read_text()
 
@@ -137,6 +137,53 @@ class ParseRecordTests(SimpleTestCase):
         self.assertEqual(sheet.sage_studies[0].study, "Forgery")
         self.assertEqual(sheet.sage_studies[0].points, 27)
 
+    def test_sage_ability_record_parsed(self):
+        html = list(
+            [
+                '<tr class="zingor-sage-ability">',
+                '<td class="zingor-sage-ability-name">Read Weather</td>',
+                '<td class="zingor-sage-ability-points">12</td>',
+                '<td class="zingor-sage-ability-source">Old sailor</td>',
+                "</tr>",
+            ]
+        )
+        sheet = parse_sheet("".join(html))
+        self.assertEqual(len(sheet.sage_abilities), 1)
+        ability = sheet.sage_abilities[0]
+        self.assertEqual(ability.ability, "Read Weather")
+        self.assertEqual(ability.points, 12)
+        self.assertEqual(ability.source, "Old sailor")
+        self.assertEqual(sheet.warnings, [])
+
+    def test_sage_ability_source_is_optional(self):
+        html = list(
+            [
+                '<tr class="zingor-sage-ability">',
+                '<td class="zingor-sage-ability-name">Read Weather</td>',
+                '<td class="zingor-sage-ability-points">12</td>',
+                "</tr>",
+            ]
+        )
+        sheet = parse_sheet("".join(html))
+        self.assertEqual(len(sheet.sage_abilities), 1)
+        self.assertEqual(sheet.sage_abilities[0].ability, "Read Weather")
+        self.assertEqual(sheet.warnings, [])
+        default = SageAbilityPoints._meta.get_field("source").default
+        self.assertEqual(sheet.sage_abilities[0].source, default)
+
+    def test_sage_ability_missing_points_skips_record_with_warning(self):
+        html = list(
+            [
+                '<tr class="zingor-sage-ability">',
+                '<td class="zingor-sage-ability-name">Read Weather</td>',
+                "</tr>",
+            ]
+        )
+        sheet = parse_sheet("".join(html))
+        self.assertEqual(sheet.sage_abilities, [])
+        self.assertEqual(len(sheet.warnings), 1)
+        self.assertIn("missing required", sheet.warnings[0])
+
     def test_missing_required_subfield_skips_record_with_warning(self):
         html = list(
             [
@@ -181,6 +228,10 @@ class RenderSheetTests(SimpleTestCase):
                         '<td class="zingor-sage-study-name">Forgery</td>',
                         '<td class="zingor-sage-study-points">27</td>',
                         "</tr>",
+                        '<tr class="zingor-sage-ability">',
+                        '<td class="zingor-sage-ability-name">Read Weather</td>',
+                        '<td class="zingor-sage-ability-points">12</td>',
+                        "</tr>",
                     ]
                 )
             )
@@ -189,8 +240,10 @@ class RenderSheetTests(SimpleTestCase):
         self.assertIn("Zoltan", out)
         self.assertIn("Fireball", out)
         self.assertIn("Forgery", out)
+        self.assertIn("Read Weather", out)
         self.assertIn("=== Spells (1) ===", out)
         self.assertIn("=== Sage studies (1) ===", out)
+        self.assertIn("=== Sage abilities (1) ===", out)
 
     def test_render_empty_sheet_shows_none_placeholders(self):
         out = render_sheet(ParsedSheet(character=parse_sheet("").character))

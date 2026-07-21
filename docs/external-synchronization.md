@@ -88,7 +88,7 @@ Any field you leave out is simply not synchronized: Zingor keeps whatever value 
 Money and inventory are not synchronized. Coins are inventory items in Zingor, and inventory (which containers hold what, how stacks are split) is managed in Zingor itself.
 :::
 
-### Repeating Records: Spells and Sage Studies
+### Repeating Records: Spells, Sage Studies, and Sage Abilities
 
 Lists of things use one level of nesting: a *root* element tagged with the record's class, containing elements tagged with the record's subfield classes. A table row per record is the natural fit, but any container element works.
 
@@ -115,8 +115,18 @@ The `zingor-spell-memorized` field, if it evaluates as "yes", means that the spe
 </tr>
 ```
 
+**Sage abilities** are standalone abilities that aren't part of the sage-study catalogue — individual knacks a character picks up from assorted sources. They use root class `zingor-sage-ability` with subfields `-name` (required), `-points` (required), and `-source` (optional freetext noting where the ability came from):
+
+```html
+<tr class="zingor-sage-ability">
+  <td class="zingor-sage-ability-name">Read Weather</td>
+  <td class="zingor-sage-ability-points">12</td>
+  <td class="zingor-sage-ability-source">Old sailor's mentorship</td>
+</tr>
+```
+
 :::{warning}
-For spells and sage studies, the page is authoritative *when the markup is present*. If your page contains any `zingor-spell` elements, the spells found there replace your character's spell list in Zingor on each sync. If the page contains no spell markup at all, your Zingor spell list is left alone. The same rule applies to sage studies.
+For spells, sage studies, and sage abilities, the page is authoritative *when the markup is present*. If your page contains any `zingor-spell` elements, the spells found there replace your character's spell list in Zingor on each sync. If the page contains no spell markup at all, your Zingor spell list is left alone. The same rule applies to sage studies and sage abilities.
 :::
 
 ### How Values Are Read
