@@ -20,11 +20,8 @@
               <input type="checkbox" name="value" {% if spell.is_memorized %}checked{% endif %}> Memorized
             </label>
           </form>
-          <button hx-delete="/spell/{{ spell.pk }}/delete/"
-                  hx-target="#section-spells"
-                  hx-swap="outerHTML"
-                  hx-confirm="Remove {{ spell.name }}?"
-                  class="btn btn-danger btn-small">x</button>
+          {% url 'characters:delete_spell' spell.pk as delete_url %}
+          {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-spells" confirm="Remove "|add:spell.name|add:"?" %}
           {% else %}
           <span class="text-sm muted">{% if spell.is_memorized %}Memorized{% else %}Not memorized{% endif %}</span>
           {% endif %}

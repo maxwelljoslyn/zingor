@@ -17,11 +17,8 @@
         {% if not cond.is_active %}<em>(inactive)</em>{% endif %}
       </span>
       {% if is_owner %}
-      <button hx-delete="/condition/{{ cond.pk }}/delete/"
-              hx-target="#section-conditions"
-              hx-swap="outerHTML"
-              hx-confirm="Remove condition?"
-              class="btn btn-danger btn-small">x</button>
+      {% url 'characters:delete_condition' cond.pk as delete_url %}
+      {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-conditions" confirm="Remove condition?" %}
       {% endif %}
     </div>
     {% endfor %}

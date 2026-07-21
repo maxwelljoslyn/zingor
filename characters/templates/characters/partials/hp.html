@@ -29,11 +29,8 @@
           <td>{{ bodymass_die.roll }}</td>
           {% if is_owner %}
           <td>
-            <button hx-delete="/hit-die/{{ bodymass_die.pk }}/delete/"
-                    hx-target="#section-hp"
-                    hx-swap="outerHTML"
-                    hx-confirm="Remove bodymass die?"
-                    class="btn btn-danger btn-small">x</button>
+            {% url 'characters:delete_hit_die' bodymass_die.pk as delete_url %}
+            {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-hp" confirm="Remove bodymass die?" %}
           </td>
           {% endif %}
         </tr>
@@ -73,11 +70,10 @@
         <td>{{ hd.roll|add:hd.con_bonus }}</td>
         {% if is_owner %}
         <td>
-          <button hx-delete="/hit-die/{{ hd.pk }}/delete/"
-                  hx-target="#section-hp"
-                  hx-swap="outerHTML"
-                  hx-confirm="Remove level {{ hd.level }} hit die?"
-                  class="btn btn-danger btn-small">x</button>
+          {% url 'characters:delete_hit_die' hd.pk as delete_url %}
+          {% with lvl=hd.level|stringformat:"s" %}
+          {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-hp" confirm="Remove level "|add:lvl|add:" hit die?" %}
+          {% endwith %}
         </td>
         {% endif %}
       </tr>
@@ -117,11 +113,8 @@
         <td>{{ bonus.note }}</td>
         {% if is_owner %}
         <td>
-          <button hx-delete="/bonus-hp/{{ bonus.pk }}/delete/"
-                  hx-target="#section-hp"
-                  hx-swap="outerHTML"
-                  hx-confirm="Remove this bonus HP?"
-                  class="btn btn-danger btn-small">x</button>
+          {% url 'characters:delete_bonus_hp' bonus.pk as delete_url %}
+          {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-hp" confirm="Remove this bonus HP?" %}
         </td>
         {% endif %}
       </tr>

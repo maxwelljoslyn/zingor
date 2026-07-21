@@ -132,11 +132,8 @@
                 hx-swap="outerHTML">Split</button>
       </span>
       {% endif %}
-      <button hx-delete="/item/{{ item.pk }}/delete/"
-              hx-target="#section-inventory"
-              hx-swap="outerHTML"
-              hx-confirm="Remove {{ item.name }}?"
-              class="btn btn-danger btn-small">x</button>
+      {% url 'characters:delete_item' item.pk as delete_url %}
+      {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-inventory" confirm="Remove "|add:item.name|add:"?" %}
     </span>
   </td>
   {% else %}
