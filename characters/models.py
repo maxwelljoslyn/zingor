@@ -598,6 +598,7 @@ class SageAbilityPoints(models.Model):
         Character, on_delete=models.CASCADE, related_name="sage_abilities"
     )
     ability = models.CharField(max_length=200)
+    source = models.CharField(max_length=100, blank=True, default="")
     points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     hidden = models.BooleanField(default=False)
 

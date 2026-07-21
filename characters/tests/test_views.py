@@ -1501,3 +1501,98 @@ class SageAbilityTests(TestCase):
         self.assertNotEqual(response.status_code, 200)
         row.refresh_from_db()
         self.assertEqual(row.ability, "Pick Locks")
+
+    def test_add_stores_optional_source(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/ability/add/",
+            {"ability": "Pick Locks", "source": "Thieves' Guild"},
+        )
+        self.assertEqual(response.status_code, 200)
+        row = SageAbilityPoints.objects.get(
+            character=self.character, ability="Pick Locks"
+        )
+        self.assertEqual(row.source, "Thieves' Guild")
+        self.assertContains(response, "Thieves&#x27; Guild")
+
+    def test_add_without_source_leaves_it_blank(self):
+        self.client.post(
+            f"/character/{self.character.pk}/sage/ability/add/",
+            {"ability": "Pick Locks"},
+        )
+        row = SageAbilityPoints.objects.get(
+            character=self.character, ability="Pick Locks"
+        )
+        self.assertEqual(row.source, "")
+
+    def test_edit_source_returns_inline_form(self):
+        row = SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks", source="Thieves' Guild"
+        )
+        response = self.client.get(
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/source/edit/"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="source"')
+        self.assertContains(response, "Thieves&#x27; Guild")
+
+    def test_source_updates(self):
+        row = SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks", points=30
+        )
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/source/",
+            {"source": "Wandering Sage"},
+        )
+        self.assertEqual(response.status_code, 200)
+        row.refresh_from_db()
+        self.assertEqual(row.source, "Wandering Sage")
+        # Points and name are untouched by a source edit.
+        self.assertEqual(row.points, 30)
+        self.assertEqual(row.ability, "Pick Locks")
+        self.assertContains(response, "Wandering Sage")
+
+    def test_source_trims_whitespace(self):
+        row = SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks"
+        )
+        self.client.post(
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/source/",
+            {"source": "  Wandering Sage  "},
+        )
+        row.refresh_from_db()
+        self.assertEqual(row.source, "Wandering Sage")
+
+    def test_source_can_be_cleared(self):
+        row = SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks", source="Thieves' Guild"
+        )
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/source/",
+            {"source": ""},
+        )
+        self.assertEqual(response.status_code, 200)
+        row.refresh_from_db()
+        self.assertEqual(row.source, "")
+
+    def test_source_cancel_renders_display_span(self):
+        row = SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks", source="Thieves' Guild"
+        )
+        response = self.client.get(
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/source/"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Thieves&#x27; Guild")
+        self.assertNotContains(response, 'name="source"')
+
+    def test_source_requires_owner(self):
+        other = User.objects.create_user(username="otheruser", password="testpass")
+        victim = Character.objects.create(user=other, name="Grimble")
+        row = SageAbilityPoints.objects.create(character=victim, ability="Pick Locks")
+        response = self.client.post(
+            f"/character/{victim.pk}/sage/ability/{row.pk}/source/",
+            {"source": "Wandering Sage"},
+        )
+        self.assertNotEqual(response.status_code, 200)
+        row.refresh_from_db()
+        self.assertEqual(row.source, "")

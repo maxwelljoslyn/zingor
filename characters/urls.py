@@ -238,6 +238,16 @@ urlpatterns = [
         views.sage_ability_name,
         name="sage_ability_name",
     ),
+    path(
+        "character/<int:pk>/sage/ability/<int:ability_pk>/source/edit/",
+        views.sage_ability_edit_source,
+        name="sage_ability_edit_source",
+    ),
+    path(
+        "character/<int:pk>/sage/ability/<int:ability_pk>/source/",
+        views.sage_ability_source,
+        name="sage_ability_source",
+    ),
     # Feedback
     path("feedback/", views.feedback, name="feedback"),
 ]

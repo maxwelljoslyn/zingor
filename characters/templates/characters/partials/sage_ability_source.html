@@ -1,0 +1,5 @@
+<span id="sage-ability-{{ entry.pk }}-source"
+      hx-get="{% url 'characters:sage_ability_edit_source' character.pk entry.pk %}"
+      hx-target="#sage-ability-{{ entry.pk }}-source"
+      hx-swap="outerHTML"
+      class="clickable">{% if entry.source %}{{ entry.source }}{% else %}<span class="muted">Add source</span>{% endif %}</span>

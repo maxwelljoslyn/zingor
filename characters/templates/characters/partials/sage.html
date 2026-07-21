@@ -106,6 +106,7 @@
       <thead>
         <tr>
           <th>Ability</th>
+          <th>Source</th>
           <th>Points</th>
           <th>Status</th>
           {% if is_owner %}<th></th>{% endif %}
@@ -119,6 +120,13 @@
                 {% include "characters/partials/sage_ability_name.html" %}
               {% else %}
                 {{ entry.name }}
+              {% endif %}
+            </td>
+            <td>
+              {% if is_owner %}
+                {% include "characters/partials/sage_ability_source.html" %}
+              {% else %}
+                {{ entry.source }}
               {% endif %}
             </td>
             <td>
@@ -161,6 +169,7 @@
   >
     {% csrf_token %}
     <input type="text" name="ability" placeholder="Ability name" required>
+    <input type="text" name="source" placeholder="Source (optional)">
     <button type="submit">Add Ability</button>
   </form>
   {% endif %}

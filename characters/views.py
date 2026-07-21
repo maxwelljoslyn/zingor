@@ -1345,7 +1345,9 @@ def _build_sage_context(character, restore_message=None):
         sort_keys=["name"],
     )
     for entry in sage_abilities:
-        entry["pk"] = ability_rows[entry["name"]].pk
+        row = ability_rows[entry["name"]]
+        entry["pk"] = row.pk
+        entry["source"] = row.source
 
     return {
         "character": character,
@@ -1575,17 +1577,52 @@ def sage_ability_name(request, pk, ability_pk):
 
 @login_required
 @character_owner_required
+@require_GET
+def sage_ability_edit_source(request, pk, ability_pk):
+    """Return an inline edit form for a standalone ability's freetext source."""
+    character = get_object_or_404(Character, pk=pk)
+    row = get_object_or_404(SageAbilityPoints, pk=ability_pk, character=character)
+    ctx = {"character": character, "entry": {"pk": row.pk, "source": row.source}}
+    return render(request, "characters/partials/sage_ability_source_edit.html", ctx)
+
+
+@login_required
+@character_owner_required
+def sage_ability_source(request, pk, ability_pk):
+    """Show or update a standalone ability's freetext source.
+
+    Renders only the single source cell (not the whole sage section) so editing
+    one ability's source never disturbs focus elsewhere. A GET re-renders the
+    display span (used to cancel an edit); a POST saves the new source first.
+    The source is optional, so an empty value is accepted (clears it).
+    """
+    character = get_object_or_404(Character, pk=pk)
+    row = get_object_or_404(SageAbilityPoints, pk=ability_pk, character=character)
+
+    if request.method == "POST":
+        source = request.POST.get("source", "").strip()
+        if source != row.source:
+            row.source = source
+            row.save(update_fields=["source"])
+
+    ctx = {"character": character, "entry": {"pk": row.pk, "source": row.source}}
+    return render(request, "characters/partials/sage_ability_source.html", ctx)
+
+
+@login_required
+@character_owner_required
 @require_POST
 def sage_ability_add(request, pk):
-    """Add a new standalone sage ability row (freetext name)."""
+    """Add a new standalone sage ability row (freetext name, optional source)."""
     character = get_object_or_404(Character, pk=pk)
     ability = request.POST.get("ability", "").strip()
+    source = request.POST.get("source", "").strip()
 
     if not ability:
         return HttpResponse("Ability name is required", status=400)
 
     row, _created = SageAbilityPoints.objects.get_or_create(
-        character=character, ability=ability, defaults={"points": 0}
+        character=character, ability=ability, defaults={"points": 0, "source": source}
     )
     restore_message = None
     if row.hidden:
