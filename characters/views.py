@@ -1127,6 +1127,97 @@ def delete_condition(request, condition_id):
     )
 
 
+# The Condition fields a user may edit inline, mirroring the add-condition form.
+CONDITION_EDITABLE_FIELDS = {"modifier_type", "target", "value", "source", "scope"}
+
+
+def _condition_row_html(request, condition, is_owner):
+    """Render a single condition's display row partial to an HTML string."""
+    ctx = {"cond": condition, "character": condition.character, "is_owner": is_owner}
+    return render(
+        request, "characters/partials/condition_row.html", ctx
+    ).content.decode()
+
+
+@login_required
+@character_owner_required
+@require_GET
+def edit_condition_field(request, condition_id):
+    """Return an inline edit form for a single field of a condition."""
+    condition = get_object_or_404(Condition, pk=condition_id)
+    field_name = request.GET.get("field", "")
+    if field_name not in CONDITION_EDITABLE_FIELDS:
+        return HttpResponse("Invalid field", status=400)
+    current_value = getattr(condition, field_name)
+    ctx = {
+        "condition": condition,
+        "field_name": field_name,
+        "current_value": current_value if current_value is not None else "",
+        "modifier_type_choices": Condition.MODIFIER_TYPES,
+        "scope_choices": Condition.SCOPE_CHOICES,
+    }
+    return render(request, "characters/partials/condition_edit_field.html", ctx)
+
+
+@login_required
+@character_owner_required
+def update_condition_field(request, condition_id):
+    """Show or update a single field of a condition.
+
+    Renders only the single condition's row (not the whole conditions section)
+    so editing one condition never disturbs an in-progress edit on another row
+    or the add-condition form. A GET re-renders the display row (used to cancel
+    an edit). A POST validates and saves the one field first, then re-renders
+    the row and, because a condition feeds derived stats, out-of-band updates
+    the abilities and inventory sections.
+    """
+    condition = get_object_or_404(Condition, pk=condition_id)
+    character = condition.character
+    is_owner = character.user == request.user
+
+    if request.method != "POST":
+        return HttpResponse(_condition_row_html(request, condition, is_owner))
+
+    field_name = request.POST.get("field_name", "")
+    if field_name not in CONDITION_EDITABLE_FIELDS:
+        return HttpResponse("Invalid field", status=400)
+    raw_value = request.POST.get("value", "")
+
+    if field_name == "source":
+        source = raw_value.strip()
+        if not source:
+            return HttpResponse("Source is required", status=400)
+        condition.source = source
+    elif field_name == "value":
+        try:
+            condition.value = int(raw_value)
+        except (TypeError, ValueError):
+            return HttpResponse("Value must be a whole number", status=400)
+    elif field_name == "target":
+        condition.target = raw_value.strip() or None
+    elif field_name == "modifier_type":
+        valid = {choice for choice, _ in Condition.MODIFIER_TYPES}
+        if raw_value not in valid:
+            return HttpResponse("Invalid modifier type", status=400)
+        condition.modifier_type = raw_value
+    elif field_name == "scope":
+        valid = {choice for choice, _ in Condition.SCOPE_CHOICES}
+        if raw_value and raw_value not in valid:
+            return HttpResponse("Invalid scope", status=400)
+        condition.scope = raw_value or None
+
+    condition.save(update_fields=[field_name])
+
+    ctx = _sheet_context(character, request.user)
+    ctx["is_owner"] = is_owner
+    row_html = _condition_row_html(request, condition, is_owner)
+    oob_parts = [
+        _oob_section_html(request, ctx, section)
+        for section in ("abilities", "inventory")
+    ]
+    return HttpResponse(row_html + "\n".join(oob_parts))
+
+
 # --- Hit Die CRUD ---
 
 

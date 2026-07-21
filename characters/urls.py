@@ -133,6 +133,16 @@ urlpatterns = [
         views.delete_condition,
         name="delete_condition",
     ),
+    path(
+        "condition/<int:condition_id>/edit-field/",
+        views.edit_condition_field,
+        name="edit_condition_field",
+    ),
+    path(
+        "condition/<int:condition_id>/update-field/",
+        views.update_condition_field,
+        name="update_condition_field",
+    ),
     # Hit dice
     path(
         "character/<int:pk>/add-hit-die/",
