@@ -13,7 +13,13 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from characters import wiki_sync
-from characters.models import Character, Item, SageStudyPoints, Spell
+from characters.models import (
+    Character,
+    Item,
+    SageAbilityPoints,
+    SageStudyPoints,
+    Spell,
+)
 
 LEXENT_HTML = (Path(__file__).parent / "data" / "lexent.html").read_text()
 # Lexent's real page has no zingor-spell-level, so its spells are skipped (level
@@ -22,6 +28,18 @@ LEXENT_HTML_WITH_SPELL_LEVELS = LEXENT_HTML.replace(
     '<td class="zingor-spell-memorized">X</td>',
     '<td class="zingor-spell-memorized">X</td>'
     + '<td class="zingor-spell-level">1</td>',
+)
+SAGE_ABILITY_MARKUP = "".join(
+    [
+        '<tr class="zingor-sage-ability">',
+        '<td class="zingor-sage-ability-name">Read Weather</td>',
+        '<td class="zingor-sage-ability-points">12</td>',
+        '<td class="zingor-sage-ability-source">Old sailor</td>',
+        "</tr>",
+    ]
+)
+LEXENT_HTML_WITH_SAGE_ABILITY = LEXENT_HTML.replace(
+    "</body>", SAGE_ABILITY_MARKUP + "</body>"
 )
 WIKI_URL = "https://adventure.alexissmolensk.com/index.php/Lexent"
 
@@ -52,6 +70,17 @@ class SyncCharacterFromWikiTests(TestCase):
     def test_sage_studies_are_written(self):
         wiki_sync.sync_character_from_wiki(self.character)
         self.assertEqual(self.character.sage_studies.count(), 5)
+
+    def test_sage_abilities_are_written(self):
+        with mock.patch.object(
+            wiki_sync, "fetch_page", return_value=LEXENT_HTML_WITH_SAGE_ABILITY
+        ):
+            wiki_sync.sync_character_from_wiki(self.character)
+        self.assertEqual(self.character.sage_abilities.count(), 1)
+        ability = self.character.sage_abilities.first()
+        self.assertEqual(ability.ability, "Read Weather")
+        self.assertEqual(ability.points, 12)
+        self.assertEqual(ability.source, "Old sailor")
 
     def test_spells_are_written(self):
         with mock.patch.object(
@@ -104,6 +133,34 @@ class SyncCharacterFromWikiTests(TestCase):
             wiki_sync.sync_character_from_wiki(self.character)
         self.assertEqual(self.character.sage_studies.count(), 1)
         self.assertEqual(self.character.sage_studies.first().study, "Faith")
+
+    def test_absent_sage_ability_section_does_not_wipe_existing_abilities(self):
+        """A page with no sage-ability markup leaves the DB's abilities alone."""
+        SageAbilityPoints.objects.create(
+            character=self.character, ability="Read Weather", points=12
+        )
+        wiki_sync.sync_character_from_wiki(self.character)
+        self.assertEqual(self.character.sage_abilities.count(), 1)
+        self.assertEqual(self.character.sage_abilities.first().ability, "Read Weather")
+
+    def test_hidden_sage_ability_is_preserved_across_sync(self):
+        """A soft-deleted (hidden) ability keeps its row and points, and the wiki
+        can't resurrect it."""
+        SageAbilityPoints.objects.create(
+            character=self.character,
+            ability="Read Weather",
+            points=99,
+            hidden=True,
+        )
+        with mock.patch.object(
+            wiki_sync, "fetch_page", return_value=LEXENT_HTML_WITH_SAGE_ABILITY
+        ):
+            wiki_sync.sync_character_from_wiki(self.character)
+        self.assertEqual(self.character.sage_abilities.count(), 1)
+        preserved = self.character.sage_abilities.first()
+        self.assertEqual(preserved.ability, "Read Weather")
+        self.assertEqual(preserved.points, 99)
+        self.assertTrue(preserved.hidden)
 
     def test_absent_spell_section_does_not_wipe_existing_spells(self):
         """A page with no spell markup leaves the DB's spells alone."""
