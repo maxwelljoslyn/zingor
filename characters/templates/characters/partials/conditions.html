@@ -3,24 +3,7 @@
   <h2>Conditions</h2>
   {% if conditions %}
     {% for cond in conditions %}
-    <div class="sheet-row sheet-row--between">
-      <span>
-        <strong>{{ cond.source }}</strong>:
-        {% if cond.modifier_type == "ability" %}
-          <span class="{% if cond.value >= 0 %}modifier-positive{% else %}modifier-negative{% endif %}">
-            {{ cond.value|format_modifier }}
-          </span> to {{ cond.target }}
-          {% if cond.scope %}<em>({{ cond.get_scope_display }} only)</em>{% endif %}
-        {% else %}
-          {{ cond.value|format_modifier }}
-        {% endif %}
-        {% if not cond.is_active %}<em>(inactive)</em>{% endif %}
-      </span>
-      {% if is_owner %}
-      {% url 'characters:delete_condition' cond.pk as delete_url %}
-      {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-conditions" confirm="Remove condition?" %}
-      {% endif %}
-    </div>
+      {% include "characters/partials/condition_row.html" %}
     {% endfor %}
   {% else %}
     <p class="empty-note">No active conditions.</p>

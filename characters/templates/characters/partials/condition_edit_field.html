@@ -1,0 +1,31 @@
+<form class="inline-form"
+      id="condition-{{ condition.pk }}-{{ field_name }}"
+      hx-post="{% url 'characters:update_condition_field' condition.pk %}"
+      hx-target="#condition-{{ condition.pk }}"
+      hx-swap="outerHTML">
+  {% csrf_token %}
+  <input type="hidden" name="field_name" value="{{ field_name }}">
+  {% if field_name == "value" %}
+    <input type="number" name="value" value="{{ condition.value }}" step="1" autofocus class="w-4" required>
+  {% elif field_name == "modifier_type" %}
+    <select name="value" autofocus>
+      {% for val, label in modifier_type_choices %}
+        <option value="{{ val }}" {% if val == condition.modifier_type %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  {% elif field_name == "scope" %}
+    <select name="value" autofocus>
+      <option value="" {% if not condition.scope %}selected{% endif %}>All (no scope)</option>
+      {% for val, label in scope_choices %}
+        <option value="{{ val }}" {% if val == condition.scope %}selected{% endif %}>{{ label }} only</option>
+      {% endfor %}
+    </select>
+  {% else %}
+    <input type="text" name="value" value="{{ current_value }}" autofocus class="w-12" {% if field_name == "source" %}required{% endif %}>
+  {% endif %}
+  <button type="submit" class="btn btn-small">Save</button>
+  <button type="button" class="btn btn-secondary btn-small"
+          hx-get="{% url 'characters:update_condition_field' condition.pk %}"
+          hx-target="#condition-{{ condition.pk }}"
+          hx-swap="outerHTML">Cancel</button>
+</form>

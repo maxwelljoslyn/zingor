@@ -1,0 +1,51 @@
+{% load character_tags %}
+<div class="sheet-row sheet-row--between" id="condition-{{ cond.pk }}">
+  <span>
+    {% if is_owner %}
+      <span id="condition-{{ cond.pk }}-modifier_type"
+            class="clickable muted"
+            hx-get="{% url 'characters:edit_condition_field' cond.pk %}?field=modifier_type"
+            hx-target="#condition-{{ cond.pk }}-modifier_type"
+            hx-swap="outerHTML">[{{ cond.get_modifier_type_display }}]</span>
+      <strong id="condition-{{ cond.pk }}-source"
+              class="clickable"
+              hx-get="{% url 'characters:edit_condition_field' cond.pk %}?field=source"
+              hx-target="#condition-{{ cond.pk }}-source"
+              hx-swap="outerHTML">{{ cond.source }}</strong>:
+    {% else %}
+      <strong>{{ cond.source }}</strong>:
+    {% endif %}
+    {% if is_owner %}
+      <span id="condition-{{ cond.pk }}-value"
+            class="clickable {% if cond.value >= 0 %}modifier-positive{% else %}modifier-negative{% endif %}"
+            hx-get="{% url 'characters:edit_condition_field' cond.pk %}?field=value"
+            hx-target="#condition-{{ cond.pk }}-value"
+            hx-swap="outerHTML">{{ cond.value|format_modifier }}</span>
+    {% else %}
+      <span class="{% if cond.value >= 0 %}modifier-positive{% else %}modifier-negative{% endif %}">{{ cond.value|format_modifier }}</span>
+    {% endif %}
+    {% if cond.modifier_type == "ability" %}
+      to
+      {% if is_owner %}
+        <span id="condition-{{ cond.pk }}-target"
+              class="clickable"
+              hx-get="{% url 'characters:edit_condition_field' cond.pk %}?field=target"
+              hx-target="#condition-{{ cond.pk }}-target"
+              hx-swap="outerHTML">{% if cond.target %}{{ cond.target }}{% else %}<span class="muted">set target</span>{% endif %}</span>
+        <span id="condition-{{ cond.pk }}-scope"
+              class="clickable"
+              hx-get="{% url 'characters:edit_condition_field' cond.pk %}?field=scope"
+              hx-target="#condition-{{ cond.pk }}-scope"
+              hx-swap="outerHTML">{% if cond.scope %}<em>({{ cond.get_scope_display }} only)</em>{% else %}<span class="muted">add scope</span>{% endif %}</span>
+      {% else %}
+        {{ cond.target }}
+        {% if cond.scope %}<em>({{ cond.get_scope_display }} only)</em>{% endif %}
+      {% endif %}
+    {% endif %}
+    {% if not cond.is_active %}<em>(inactive)</em>{% endif %}
+  </span>
+  {% if is_owner %}
+  {% url 'characters:delete_condition' cond.pk as delete_url %}
+  {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-conditions" confirm="Remove condition?" %}
+  {% endif %}
+</div>

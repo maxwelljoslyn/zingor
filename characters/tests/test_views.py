@@ -1174,6 +1174,172 @@ class ConditionViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Condition.objects.filter(character=self.character).count(), 0)
 
+    def _make_condition(self, **overrides):
+        defaults = {
+            "character": self.character,
+            "modifier_type": "ability",
+            "target": "strength",
+            "value": -2,
+            "source": "Trog Stench",
+        }
+        defaults.update(overrides)
+        return Condition.objects.create(**defaults)
+
+    def test_edit_field_returns_form_for_value(self):
+        cond = self._make_condition()
+        response = self.client.get(
+            f"/condition/{cond.pk}/edit-field/", {"field": "value"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="field_name"')
+        self.assertContains(response, 'value="value"')
+        self.assertContains(response, 'name="value"')
+
+    def test_edit_field_rejects_unknown_field(self):
+        cond = self._make_condition()
+        response = self.client.get(
+            f"/condition/{cond.pk}/edit-field/", {"field": "is_active"}
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_update_value(self):
+        cond = self._make_condition(value=-2)
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "value", "value": "-3"},
+        )
+        self.assertEqual(response.status_code, 200)
+        cond.refresh_from_db()
+        self.assertEqual(cond.value, -3)
+        # Other fields untouched by a value edit.
+        self.assertEqual(cond.source, "Trog Stench")
+        # Dependent sections come back for out-of-band refresh.
+        self.assertContains(response, 'hx-swap-oob="outerHTML"')
+
+    def test_update_value_rejects_non_integer(self):
+        cond = self._make_condition(value=-2)
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "value", "value": "heavy"},
+        )
+        self.assertEqual(response.status_code, 400)
+        cond.refresh_from_db()
+        self.assertEqual(cond.value, -2)
+
+    def test_update_source(self):
+        cond = self._make_condition(source="Trog Stench")
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "source", "value": "  Sickened  "},
+        )
+        self.assertEqual(response.status_code, 200)
+        cond.refresh_from_db()
+        self.assertEqual(cond.source, "Sickened")
+
+    def test_update_source_requires_nonblank(self):
+        cond = self._make_condition(source="Trog Stench")
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "source", "value": "   "},
+        )
+        self.assertEqual(response.status_code, 400)
+        cond.refresh_from_db()
+        self.assertEqual(cond.source, "Trog Stench")
+
+    def test_update_target(self):
+        cond = self._make_condition(target="strength")
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "target", "value": "dexterity"},
+        )
+        self.assertEqual(response.status_code, 200)
+        cond.refresh_from_db()
+        self.assertEqual(cond.target, "dexterity")
+
+    def test_update_target_blank_clears_to_null(self):
+        cond = self._make_condition(target="strength")
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "target", "value": ""},
+        )
+        self.assertEqual(response.status_code, 200)
+        cond.refresh_from_db()
+        self.assertIsNone(cond.target)
+
+    def test_update_modifier_type(self):
+        cond = self._make_condition(modifier_type="ability")
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "modifier_type", "value": "weight"},
+        )
+        self.assertEqual(response.status_code, 200)
+        cond.refresh_from_db()
+        self.assertEqual(cond.modifier_type, "weight")
+
+    def test_update_modifier_type_rejects_invalid(self):
+        cond = self._make_condition(modifier_type="ability")
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "modifier_type", "value": "nonsense"},
+        )
+        self.assertEqual(response.status_code, 400)
+        cond.refresh_from_db()
+        self.assertEqual(cond.modifier_type, "ability")
+
+    def test_update_scope_set_and_clear(self):
+        cond = self._make_condition(scope=None)
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "scope", "value": "encumbrance"},
+        )
+        self.assertEqual(response.status_code, 200)
+        cond.refresh_from_db()
+        self.assertEqual(cond.scope, "encumbrance")
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "scope", "value": ""},
+        )
+        self.assertEqual(response.status_code, 200)
+        cond.refresh_from_db()
+        self.assertIsNone(cond.scope)
+
+    def test_update_scope_rejects_invalid(self):
+        cond = self._make_condition(scope=None)
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "scope", "value": "bogus"},
+        )
+        self.assertEqual(response.status_code, 400)
+        cond.refresh_from_db()
+        self.assertIsNone(cond.scope)
+
+    def test_update_rejects_unknown_field(self):
+        cond = self._make_condition()
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "is_active", "value": "false"},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_cancel_renders_display_row(self):
+        cond = self._make_condition()
+        response = self.client.get(f"/condition/{cond.pk}/update-field/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'id="condition-{cond.pk}"')
+        self.assertNotContains(response, 'name="field_name"')
+
+    def test_update_requires_owner(self):
+        other = User.objects.create_user(username="otheruser", password="testpass")
+        victim = Character.objects.create(user=other, name="Grimble")
+        cond = self._make_condition(character=victim)
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "value", "value": "5"},
+        )
+        self.assertNotEqual(response.status_code, 200)
+        cond.refresh_from_db()
+        self.assertEqual(cond.value, -2)
+
 
 class SpellViewTests(TestCase):
     def setUp(self):
