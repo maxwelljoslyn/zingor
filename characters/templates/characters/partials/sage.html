@@ -1,6 +1,7 @@
 {% load character_tags %}
 <div class="section" id="section-sage" data-section="sage" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <h2>Sage Knowledge</h2>
+  {% include "characters/partials/_notice.html" with notice=restore_message notice_level="success" %}
   {{ sage_fields_json|json_script:"sage-fields-data" }}
   <script>window.SAGE_FIELDS = JSON.parse(document.getElementById('sage-fields-data').textContent);</script>
   <table class="kv-table">
@@ -44,6 +45,7 @@
             <th>Study</th>
             <th>Points</th>
             <th>Status</th>
+            {% if is_owner %}<th></th>{% endif %}
           </tr>
         </thead>
         <tbody>
@@ -68,6 +70,12 @@
                 {% endif %}
               </td>
               <td>{{ entry.rank }}</td>
+              {% if is_owner %}
+              <td>
+                {% url 'characters:sage_study_hide' character.pk entry.pk as hide_url %}
+                {% include "characters/partials/_delete_button.html" with url=hide_url target="#section-sage" confirm="Delete "|add:entry.name|add:"? Your points are kept in case you re-add it." method="post" %}
+              </td>
+              {% endif %}
             </tr>
           {% endfor %}
         </tbody>

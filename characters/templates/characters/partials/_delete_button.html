@@ -1,0 +1,8 @@
+{% comment %}Reusable danger "remove" button for HTMX sections.
+Usage: {% include "characters/partials/_delete_button.html" with url=... target="#section-x" confirm="Remove foo?" %}
+Optional: method = delete (default) | post. Use post for soft-deletes.{% endcomment %}
+{% if method == "post" %}
+<button type="button" hx-post="{{ url }}" hx-target="{{ target }}" hx-swap="outerHTML" hx-confirm="{{ confirm }}" class="btn btn-danger btn-small">x</button>
+{% else %}
+<button type="button" hx-delete="{{ url }}" hx-target="{{ target }}" hx-swap="outerHTML" hx-confirm="{{ confirm }}" class="btn btn-danger btn-small">x</button>
+{% endif %}

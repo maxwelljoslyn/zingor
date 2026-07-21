@@ -1305,11 +1305,15 @@ def wiki_url_control(request, pk: int) -> HttpResponse:
 # --- Sage knowledge ---
 
 
-def _build_sage_context(character):
-    """Build template context for the sage.html partial."""
+def _build_sage_context(character, restore_message=None):
+    """Build template context for the sage.html partial.
+
+    restore_message: optional transient notice shown near the top of the
+    section (e.g. after re-adding a hidden study restores its points).
+    """
     from .sage import CLASS_FIELDS, sage_fields, sage_studies, sort_sage_entries
 
-    rows = {r.study: r for r in character.sage_studies.all()}
+    rows = {r.study: r for r in character.sage_studies.filter(hidden=False)}
     sorted_entries = sort_sage_entries(
         {study: row.points for study, row in rows.items()},
         sort_keys=["name"],
@@ -1340,6 +1344,7 @@ def _build_sage_context(character):
         "sage_fields": sage_fields,
         "sage_fields_json": json.dumps(sage_fields),
         "all_study_names": sorted(sage_studies.keys()),
+        "restore_message": restore_message,
     }
 
 
@@ -1463,9 +1468,29 @@ def sage_study_add(request, pk):
     if study not in sage_studies:
         return HttpResponse("Unknown study", status=400)
 
-    SageStudyPoints.objects.get_or_create(
+    row, _created = SageStudyPoints.objects.get_or_create(
         character=character, study=study, defaults={"points": 0}
     )
+    restore_message = None
+    if row.hidden:
+        # Re-adding a soft-deleted study: un-hide it, keeping its retained points.
+        row.hidden = False
+        row.save(update_fields=["hidden"])
+        restore_message = f"Restored {study} with {row.points} points from before."
+    sage_ctx = _build_sage_context(character, restore_message=restore_message)
+    sage_ctx["is_owner"] = True
+    return render(request, "characters/partials/sage.html", sage_ctx)
+
+
+@login_required
+@character_owner_required
+@require_POST
+def sage_study_hide(request, pk, study_pk):
+    """Soft-delete a study row: hide it from the sheet but keep its points."""
+    character = get_object_or_404(Character, pk=pk)
+    row = get_object_or_404(SageStudyPoints, pk=study_pk, character=character)
+    row.hidden = True
+    row.save(update_fields=["hidden"])
     sage_ctx = _build_sage_context(character)
     sage_ctx["is_owner"] = True
     return render(request, "characters/partials/sage.html", sage_ctx)

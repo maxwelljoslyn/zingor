@@ -575,6 +575,7 @@ class SageStudyPoints(models.Model):
     )
     study = models.CharField(max_length=200)
     points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    hidden = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ("character", "study")

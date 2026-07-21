@@ -240,6 +240,10 @@ ul.spell-list { list-style: none; padding: 0; }
   border-radius: 0 4px 4px 0;
   margin-bottom: 0.5rem;
 }
+/* Severity variants for .flash (see partials/_notice.html). Base .flash is the
+ * neutral/info look; these recolor the accent stripe. */
+.flash--success { border-left-color: var(--success); }
+.flash--danger { border-left-color: var(--danger); }
 /* ---- Reusable sheet structure ----
  * Two row families share one vocabulary across every section:
  *   .sheet-row  — a horizontal row in a flex list (inventory, conditions, spells)

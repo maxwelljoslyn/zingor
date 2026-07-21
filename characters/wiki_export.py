@@ -187,7 +187,7 @@ def character_to_wiki(character):
         lines.append(f"* '''Chosen Field:''' {field}")
         lines.append(f"* '''Chosen Study:''' {study}")
         lines.append("")
-    sage_rows = list(character.sage_studies.order_by("study"))
+    sage_rows = list(character.sage_studies.filter(hidden=False).order_by("study"))
     if sage_rows:
         # Group by field (first field listed for the study, preferring class fields)
         from .sage import CLASS_FIELDS

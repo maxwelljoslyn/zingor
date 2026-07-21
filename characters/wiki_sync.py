@@ -58,8 +58,15 @@ def sync_character_from_wiki(character: Character) -> list[str]:
             spell.save()
 
     if SageStudyPoints in parsed.sections_present:
-        character.sage_studies.all().delete()
+        # Preserve soft-deleted (hidden) studies across a sync: keep their rows
+        # and retained points, and don't let the wiki resurrect them.
+        hidden_studies = set(
+            character.sage_studies.filter(hidden=True).values_list("study", flat=True)
+        )
+        character.sage_studies.filter(hidden=False).delete()
         for study in parsed.sage_studies:
+            if study.study in hidden_studies:
+                continue
             study.pk = None
             study.character = character
             study.save()

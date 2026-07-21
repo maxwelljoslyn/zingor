@@ -1,0 +1,5 @@
+{% comment %}Reusable transient notice for HTMX-swapped partials.
+Usage: {% include "characters/partials/_notice.html" with notice="..." %}
+Optional: notice_level = info (default) | success | danger.
+Renders nothing when `notice` is empty.{% endcomment %}
+{% if notice %}<p class="flash flash--{{ notice_level|default:'info' }}">{{ notice }}</p>{% endif %}

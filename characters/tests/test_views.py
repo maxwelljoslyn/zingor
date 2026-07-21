@@ -17,6 +17,7 @@ from characters.models import (
     HitDie,
     Item,
     Profile,
+    SageStudyPoints,
     Spell,
 )
 from characters.units import D, u
@@ -1246,3 +1247,66 @@ class BonusHitPointsViewTests(TestCase):
         self.assertEqual(
             BonusHitPoints.objects.filter(character=self.character).count(), 0
         )
+
+
+class SageStudySoftDeleteTests(TestCase):
+    """Deleting a sage study hides it but keeps its points; re-adding restores them."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+        self.character = Character.objects.create(
+            user=self.user, name="Thorn", char_class="fighter"
+        )
+
+    def test_hide_soft_deletes_and_keeps_points(self):
+        row = SageStudyPoints.objects.create(
+            character=self.character, study="Athletics", points=45
+        )
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/study/{row.pk}/hide/"
+        )
+        self.assertEqual(response.status_code, 200)
+        row.refresh_from_db()
+        self.assertTrue(row.hidden)
+        self.assertEqual(row.points, 45)
+        # The dropdown lists every study, so assert the visible row link is gone.
+        self.assertNotContains(response, ">Athletics</a>")
+
+    def test_readd_restores_hidden_points_with_notice(self):
+        SageStudyPoints.objects.create(
+            character=self.character, study="Athletics", points=45, hidden=True
+        )
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/study/add/",
+            {"study": "Athletics"},
+        )
+        self.assertEqual(response.status_code, 200)
+        row = SageStudyPoints.objects.get(character=self.character, study="Athletics")
+        self.assertFalse(row.hidden)
+        self.assertEqual(row.points, 45)
+        self.assertContains(response, "45 points")
+        self.assertContains(response, ">Athletics</a>")
+
+    def test_hidden_study_excluded_from_section(self):
+        SageStudyPoints.objects.create(
+            character=self.character, study="Athletics", points=45, hidden=True
+        )
+        SageStudyPoints.objects.create(
+            character=self.character, study="Judgment", points=12
+        )
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, ">Judgment</a>")
+        self.assertNotContains(response, ">Athletics</a>")
+
+    def test_hide_requires_owner(self):
+        other = User.objects.create_user(username="otheruser", password="testpass")
+        victim = Character.objects.create(user=other, name="Grimble")
+        row = SageStudyPoints.objects.create(
+            character=victim, study="Athletics", points=45
+        )
+        response = self.client.post(f"/character/{victim.pk}/sage/study/{row.pk}/hide/")
+        self.assertNotEqual(response.status_code, 200)
+        row.refresh_from_db()
+        self.assertFalse(row.hidden)
