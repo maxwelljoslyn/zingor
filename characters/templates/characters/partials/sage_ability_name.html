@@ -1,0 +1,5 @@
+<span id="sage-ability-{{ entry.pk }}-name"
+      hx-get="{% url 'characters:sage_ability_edit_name' character.pk entry.pk %}"
+      hx-target="#sage-ability-{{ entry.pk }}-name"
+      hx-swap="outerHTML"
+      class="clickable">{{ entry.name }}</span>

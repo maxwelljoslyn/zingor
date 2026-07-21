@@ -1531,6 +1531,50 @@ def sage_ability_points(request, pk, ability_pk):
 
 @login_required
 @character_owner_required
+@require_GET
+def sage_ability_edit_name(request, pk, ability_pk):
+    """Return an inline edit form for a standalone ability's freetext name."""
+    character = get_object_or_404(Character, pk=pk)
+    row = get_object_or_404(SageAbilityPoints, pk=ability_pk, character=character)
+    ctx = {"character": character, "entry": {"pk": row.pk, "name": row.ability}}
+    return render(request, "characters/partials/sage_ability_name_edit.html", ctx)
+
+
+@login_required
+@character_owner_required
+def sage_ability_name(request, pk, ability_pk):
+    """Show or update a standalone ability's freetext name.
+
+    Renders only the single name cell (not the whole sage section) so editing
+    one ability's name never disturbs focus elsewhere. A GET re-renders the
+    display span (used to cancel an edit); a POST saves the new name first.
+    """
+    character = get_object_or_404(Character, pk=pk)
+    row = get_object_or_404(SageAbilityPoints, pk=ability_pk, character=character)
+
+    if request.method == "POST":
+        ability = request.POST.get("ability", "").strip()
+        if not ability:
+            return HttpResponse("Ability name is required", status=400)
+        if ability != row.ability:
+            clash = (
+                SageAbilityPoints.objects.filter(character=character, ability=ability)
+                .exclude(pk=row.pk)
+                .exists()
+            )
+            if clash:
+                return HttpResponse(
+                    f"You already have an ability named {ability}.", status=400
+                )
+            row.ability = ability
+            row.save(update_fields=["ability"])
+
+    ctx = {"character": character, "entry": {"pk": row.pk, "name": row.ability}}
+    return render(request, "characters/partials/sage_ability_name.html", ctx)
+
+
+@login_required
+@character_owner_required
 @require_POST
 def sage_ability_add(request, pk):
     """Add a new standalone sage ability row (freetext name)."""

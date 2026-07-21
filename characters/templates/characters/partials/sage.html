@@ -114,7 +114,13 @@
       <tbody>
         {% for entry in sage_abilities %}
           <tr>
-            <td>{{ entry.name }}</td>
+            <td>
+              {% if is_owner %}
+                {% include "characters/partials/sage_ability_name.html" %}
+              {% else %}
+                {{ entry.name }}
+              {% endif %}
+            </td>
             <td>
               {% if is_owner %}
               <input

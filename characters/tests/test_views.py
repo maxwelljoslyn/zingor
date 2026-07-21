@@ -1416,3 +1416,88 @@ class SageAbilityTests(TestCase):
         self.assertNotEqual(response.status_code, 200)
         row.refresh_from_db()
         self.assertFalse(row.hidden)
+
+    def test_edit_name_returns_inline_form(self):
+        row = SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks", points=30
+        )
+        response = self.client.get(
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/name/edit/"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="ability"')
+        self.assertContains(response, 'value="Pick Locks"')
+
+    def test_name_updates_ability(self):
+        row = SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks", points=30
+        )
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/name/",
+            {"ability": "Open Locks"},
+        )
+        self.assertEqual(response.status_code, 200)
+        row.refresh_from_db()
+        self.assertEqual(row.ability, "Open Locks")
+        # Points are untouched by a rename.
+        self.assertEqual(row.points, 30)
+        self.assertContains(response, "Open Locks")
+
+    def test_name_trims_whitespace(self):
+        row = SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks"
+        )
+        self.client.post(
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/name/",
+            {"ability": "  Open Locks  "},
+        )
+        row.refresh_from_db()
+        self.assertEqual(row.ability, "Open Locks")
+
+    def test_name_requires_nonblank(self):
+        row = SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks"
+        )
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/name/",
+            {"ability": "   "},
+        )
+        self.assertEqual(response.status_code, 400)
+        row.refresh_from_db()
+        self.assertEqual(row.ability, "Pick Locks")
+
+    def test_name_rejects_clash_with_existing_ability(self):
+        SageAbilityPoints.objects.create(character=self.character, ability="Open Locks")
+        row = SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks"
+        )
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/name/",
+            {"ability": "Open Locks"},
+        )
+        self.assertEqual(response.status_code, 400)
+        row.refresh_from_db()
+        self.assertEqual(row.ability, "Pick Locks")
+
+    def test_name_cancel_renders_display_span(self):
+        row = SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks"
+        )
+        response = self.client.get(
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/name/"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Pick Locks")
+        self.assertNotContains(response, 'name="ability"')
+
+    def test_name_requires_owner(self):
+        other = User.objects.create_user(username="otheruser", password="testpass")
+        victim = Character.objects.create(user=other, name="Grimble")
+        row = SageAbilityPoints.objects.create(character=victim, ability="Pick Locks")
+        response = self.client.post(
+            f"/character/{victim.pk}/sage/ability/{row.pk}/name/",
+            {"ability": "Open Locks"},
+        )
+        self.assertNotEqual(response.status_code, 200)
+        row.refresh_from_db()
+        self.assertEqual(row.ability, "Pick Locks")
