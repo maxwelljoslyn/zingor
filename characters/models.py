@@ -584,3 +584,27 @@ class SageStudyPoints(models.Model):
 
     def __str__(self):
         return f"{self.study}: {self.points} pts"
+
+
+class SageAbilityPoints(models.Model):
+    """Knowledge point total for one standalone sage ability on a character.
+
+    Unlike a study, a standalone ability is not tied to the static sage
+    catalogue: characters gain individual abilities from assorted sources, so
+    the name is freetext.
+    """
+
+    character = models.ForeignKey(
+        Character, on_delete=models.CASCADE, related_name="sage_abilities"
+    )
+    ability = models.CharField(max_length=200)
+    points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    hidden = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("character", "ability")
+        ordering = ["ability"]
+        verbose_name_plural = "Sage ability points"
+
+    def __str__(self):
+        return f"{self.ability}: {self.points} pts"

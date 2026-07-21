@@ -100,4 +100,62 @@
     <button type="submit">Add Study</button>
   </form>
   {% endif %}
+  <h3>Standalone Sage Abilities</h3>
+  {% if sage_abilities %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Ability</th>
+          <th>Points</th>
+          <th>Status</th>
+          {% if is_owner %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in sage_abilities %}
+          <tr>
+            <td>{{ entry.name }}</td>
+            <td>
+              {% if is_owner %}
+              <input
+                type="number"
+                name="points"
+                value="{{ entry.points }}"
+                min="0"
+                hx-post="{% url 'characters:sage_ability_points' character.pk entry.pk %}"
+                hx-target="#section-sage"
+                hx-swap="outerHTML"
+                hx-trigger="blur"
+                class="w-5"
+              >
+              {% else %}
+              {{ entry.points }}
+              {% endif %}
+            </td>
+            <td>{{ entry.rank }}</td>
+            {% if is_owner %}
+            <td>
+              {% url 'characters:sage_ability_hide' character.pk entry.pk as hide_url %}
+              {% include "characters/partials/_delete_button.html" with url=hide_url target="#section-sage" confirm="Delete "|add:entry.name|add:"? Your points are kept in case you re-add it." method="post" %}
+            </td>
+            {% endif %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No standalone abilities tracked yet.</p>
+  {% endif %}
+  {% if is_owner %}
+  <h3>Add Standalone Ability</h3>
+  <form
+    hx-post="{% url 'characters:sage_ability_add' character.pk %}"
+    hx-target="#section-sage"
+    hx-swap="outerHTML"
+  >
+    {% csrf_token %}
+    <input type="text" name="ability" placeholder="Ability name" required>
+    <button type="submit">Add Ability</button>
+  </form>
+  {% endif %}
 </div>

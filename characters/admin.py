@@ -1,6 +1,14 @@
 from django.contrib import admin
 
-from .models import Character, Condition, HitDie, Item, SageStudyPoints, Spell
+from .models import (
+    Character,
+    Condition,
+    HitDie,
+    Item,
+    SageAbilityPoints,
+    SageStudyPoints,
+    Spell,
+)
 
 # The "extra" field on Inline classes controls how many blank/empty forms Django shows for adding new related objects.
 # With the default (3) the admin sees see 3 empty rows for hit dice, 3 for spells, etc. That clutter is unecessary in Zingor.
@@ -32,6 +40,11 @@ class SageStudyPointsInline(admin.TabularInline):
     extra = 0
 
 
+class SageAbilityPointsInline(admin.TabularInline):
+    model = SageAbilityPoints
+    extra = 0
+
+
 @admin.register(Character)
 class CharacterAdmin(admin.ModelAdmin):
     list_display = ["name", "user", "race", "char_class", "level"]
@@ -43,4 +56,5 @@ class CharacterAdmin(admin.ModelAdmin):
         ConditionInline,
         ItemInline,
         SageStudyPointsInline,
+        SageAbilityPointsInline,
     ]

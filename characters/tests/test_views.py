@@ -17,6 +17,7 @@ from characters.models import (
     HitDie,
     Item,
     Profile,
+    SageAbilityPoints,
     SageStudyPoints,
     Spell,
 )
@@ -1307,6 +1308,111 @@ class SageStudySoftDeleteTests(TestCase):
             character=victim, study="Athletics", points=45
         )
         response = self.client.post(f"/character/{victim.pk}/sage/study/{row.pk}/hide/")
+        self.assertNotEqual(response.status_code, 200)
+        row.refresh_from_db()
+        self.assertFalse(row.hidden)
+
+
+class SageAbilityTests(TestCase):
+    """Creating and (soft-)deleting standalone, freetext sage abilities."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+        self.character = Character.objects.create(
+            user=self.user, name="Thorn", char_class="fighter"
+        )
+
+    def test_add_creates_ability(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/ability/add/",
+            {"ability": "Pick Locks"},
+        )
+        self.assertEqual(response.status_code, 200)
+        row = SageAbilityPoints.objects.get(
+            character=self.character, ability="Pick Locks"
+        )
+        self.assertEqual(row.points, 0)
+        self.assertFalse(row.hidden)
+        self.assertContains(response, "Pick Locks")
+
+    def test_add_requires_nonblank_name(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/ability/add/",
+            {"ability": "   "},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(
+            SageAbilityPoints.objects.filter(character=self.character).exists()
+        )
+
+    def test_add_is_idempotent(self):
+        self.client.post(
+            f"/character/{self.character.pk}/sage/ability/add/",
+            {"ability": "Pick Locks"},
+        )
+        self.client.post(
+            f"/character/{self.character.pk}/sage/ability/add/",
+            {"ability": "Pick Locks"},
+        )
+        self.assertEqual(
+            SageAbilityPoints.objects.filter(
+                character=self.character, ability="Pick Locks"
+            ).count(),
+            1,
+        )
+
+    def test_hide_soft_deletes_and_keeps_points(self):
+        row = SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks", points=30
+        )
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/hide/"
+        )
+        self.assertEqual(response.status_code, 200)
+        row.refresh_from_db()
+        self.assertTrue(row.hidden)
+        self.assertEqual(row.points, 30)
+        self.assertNotContains(response, "Pick Locks")
+
+    def test_readd_restores_hidden_points_with_notice(self):
+        SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks", points=30, hidden=True
+        )
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/ability/add/",
+            {"ability": "Pick Locks"},
+        )
+        self.assertEqual(response.status_code, 200)
+        row = SageAbilityPoints.objects.get(
+            character=self.character, ability="Pick Locks"
+        )
+        self.assertFalse(row.hidden)
+        self.assertEqual(row.points, 30)
+        self.assertContains(response, "30 points")
+        self.assertContains(response, "Pick Locks")
+
+    def test_hidden_ability_excluded_from_section(self):
+        SageAbilityPoints.objects.create(
+            character=self.character, ability="Pick Locks", points=30, hidden=True
+        )
+        SageAbilityPoints.objects.create(
+            character=self.character, ability="Disarm Traps", points=12
+        )
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Disarm Traps")
+        self.assertNotContains(response, "Pick Locks")
+
+    def test_hide_requires_owner(self):
+        other = User.objects.create_user(username="otheruser", password="testpass")
+        victim = Character.objects.create(user=other, name="Grimble")
+        row = SageAbilityPoints.objects.create(
+            character=victim, ability="Pick Locks", points=30
+        )
+        response = self.client.post(
+            f"/character/{victim.pk}/sage/ability/{row.pk}/hide/"
+        )
         self.assertNotEqual(response.status_code, 200)
         row.refresh_from_db()
         self.assertFalse(row.hidden)

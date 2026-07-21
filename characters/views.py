@@ -40,6 +40,7 @@ from .models import (
     Item,
     LayoutOrder,
     Profile,
+    SageAbilityPoints,
     SageStudyPoints,
     Spell,
 )
@@ -1338,9 +1339,18 @@ def _build_sage_context(character, restore_message=None):
         {"field": f, "entries": field_map[f]} for f in sorted(field_map)
     ]
 
+    ability_rows = {r.ability: r for r in character.sage_abilities.filter(hidden=False)}
+    sage_abilities = sort_sage_entries(
+        {ability: row.points for ability, row in ability_rows.items()},
+        sort_keys=["name"],
+    )
+    for entry in sage_abilities:
+        entry["pk"] = ability_rows[entry["name"]].pk
+
     return {
         "character": character,
         "sage_studies_by_field": sage_studies_by_field,
+        "sage_abilities": sage_abilities,
         "sage_fields": sage_fields,
         "sage_fields_json": json.dumps(sage_fields),
         "all_study_names": sorted(sage_studies.keys()),
@@ -1489,6 +1499,68 @@ def sage_study_hide(request, pk, study_pk):
     """Soft-delete a study row: hide it from the sheet but keep its points."""
     character = get_object_or_404(Character, pk=pk)
     row = get_object_or_404(SageStudyPoints, pk=study_pk, character=character)
+    row.hidden = True
+    row.save(update_fields=["hidden"])
+    sage_ctx = _build_sage_context(character)
+    sage_ctx["is_owner"] = True
+    return render(request, "characters/partials/sage.html", sage_ctx)
+
+
+@login_required
+@character_owner_required
+@require_POST
+def sage_ability_points(request, pk, ability_pk):
+    """Update points for a single standalone sage ability row."""
+    character = get_object_or_404(Character, pk=pk)
+    row = get_object_or_404(SageAbilityPoints, pk=ability_pk, character=character)
+
+    raw = request.POST.get("points")
+    try:
+        points = int(raw)
+        if points < 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return HttpResponse("Points must be a non-negative integer", status=400)
+
+    row.points = points
+    row.save(update_fields=["points"])
+    sage_ctx = _build_sage_context(character)
+    sage_ctx["is_owner"] = True
+    return render(request, "characters/partials/sage.html", sage_ctx)
+
+
+@login_required
+@character_owner_required
+@require_POST
+def sage_ability_add(request, pk):
+    """Add a new standalone sage ability row (freetext name)."""
+    character = get_object_or_404(Character, pk=pk)
+    ability = request.POST.get("ability", "").strip()
+
+    if not ability:
+        return HttpResponse("Ability name is required", status=400)
+
+    row, _created = SageAbilityPoints.objects.get_or_create(
+        character=character, ability=ability, defaults={"points": 0}
+    )
+    restore_message = None
+    if row.hidden:
+        # Re-adding a soft-deleted ability: un-hide it, keeping its retained points.
+        row.hidden = False
+        row.save(update_fields=["hidden"])
+        restore_message = f"Restored {ability} with {row.points} points from before."
+    sage_ctx = _build_sage_context(character, restore_message=restore_message)
+    sage_ctx["is_owner"] = True
+    return render(request, "characters/partials/sage.html", sage_ctx)
+
+
+@login_required
+@character_owner_required
+@require_POST
+def sage_ability_hide(request, pk, ability_pk):
+    """Soft-delete a standalone sage ability row: hide it but keep its points."""
+    character = get_object_or_404(Character, pk=pk)
+    row = get_object_or_404(SageAbilityPoints, pk=ability_pk, character=character)
     row.hidden = True
     row.save(update_fields=["hidden"])
     sage_ctx = _build_sage_context(character)

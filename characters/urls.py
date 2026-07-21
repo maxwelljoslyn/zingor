@@ -213,6 +213,21 @@ urlpatterns = [
         views.sage_study_hide,
         name="sage_study_hide",
     ),
+    path(
+        "character/<int:pk>/sage/ability/<int:ability_pk>/points/",
+        views.sage_ability_points,
+        name="sage_ability_points",
+    ),
+    path(
+        "character/<int:pk>/sage/ability/add/",
+        views.sage_ability_add,
+        name="sage_ability_add",
+    ),
+    path(
+        "character/<int:pk>/sage/ability/<int:ability_pk>/hide/",
+        views.sage_ability_hide,
+        name="sage_ability_hide",
+    ),
     # Feedback
     path("feedback/", views.feedback, name="feedback"),
 ]
