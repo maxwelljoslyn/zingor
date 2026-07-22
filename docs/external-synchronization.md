@@ -115,7 +115,7 @@ The `zingor-spell-memorized` field, if it evaluates as "yes", means that the spe
 </tr>
 ```
 
-**Sage abilities** are standalone abilities that aren't part of the sage-study catalogue — individual knacks a character picks up from assorted sources. They use root class `zingor-sage-ability` with subfields `-name` (required), `-points` (required), and `-source` (optional freetext noting where the ability came from):
+**Sage abilities** (also "standalone sage abilities") are one-off sage abilities gained other than through the sage study system, such as through a character's [progenitor](https://wiki.alexissmolensk.com/index.php/Progenitor). They use root class `zingor-sage-ability` with subfields `-name` (required), `-points` (required), and `-source` (optional freetext noting where the ability came from):
 
 ```html
 <tr class="zingor-sage-ability">
