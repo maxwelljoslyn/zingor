@@ -364,6 +364,36 @@ SECTION_FOR_FIELD = {
     "appearance": "notes",
     "encumbrance_multiplier": "inventory",
 }
+CONDITION_EDITABLE_FIELDS = {"modifier_type", "target", "value", "source", "scope"}
+# When a datum's field changes, which OTHER sheet sections show derived values that
+# must refresh out-of-band. Keyed by model, then field name. A field's own primary
+# section may be listed harmlessly (_render_section filters it out).
+# Deliberately NOT here: value-conditional deps such as "an item that is currency also
+# touches identity" — that predicate stays inline in update_item_field.
+SECTION_DEPENDENCIES = {
+    "character": {
+        "strength": ["abilities", "inventory"],
+        "percentile_strength": ["abilities", "inventory"],
+        "level": ["abilities"],
+        "weight": ["inventory"],
+        "encumbrance_multiplier": ["inventory"],
+    },
+    "condition": {
+        field: ["abilities", "inventory"] for field in CONDITION_EDITABLE_FIELDS
+    },
+    # Fields that change an item's carried weight invalidate the encumbrance-derived
+    # action-point stats shown in the abilities section (the inventory encumbrance
+    # header is refreshed separately, in update_item_field).
+    "item": {
+        field: ["abilities"]
+        for field in ("weight", "quantity", "is_carried", "is_worn")
+    },
+}
+
+
+def dependent_sections(model_key: str, field_name: str) -> list[str]:
+    """Sections whose derived values a change to model_key.field_name invalidates."""
+    return SECTION_DEPENDENCIES.get(model_key, {}).get(field_name, [])
 
 
 # --- Auth views ---
@@ -719,16 +749,7 @@ def update_field(request, pk):
 
     # Return the updated section, with OOB updates for cross-section dependencies
     section = SECTION_FOR_FIELD.get(field_name, "identity")
-    oob = []
-    if field_name in {
-        "strength",
-        "percentile_strength",
-        "weight",
-        "encumbrance_multiplier",
-    }:
-        oob.append("inventory")
-    if field_name in {"strength", "percentile_strength", "level"}:
-        oob.append("abilities")
+    oob = dependent_sections("character", field_name)
     return _render_section(request, character, section, oob_sections=oob or None)
 
 
@@ -755,13 +776,24 @@ def _render_section(request, character, section, oob_sections=None):
     return response
 
 
-def _oob_section_html(request, ctx, section: str) -> str:
-    """Render a section partial with hx-swap-oob injected on its outermost div."""
-    html = render(request, f"characters/partials/{section}.html", ctx).content.decode()
+def _oob_fragment_html(request, ctx, target_id: str, template_name: str) -> str:
+    """Render a partial with hx-swap-oob injected on its outermost element.
+
+    The element carrying id=target_id becomes an out-of-band swap, so the fragment
+    can ride along in a response whose primary target is something else.
+    """
+    html = render(request, template_name, ctx).content.decode()
     return html.replace(
-        f'id="section-{section}"',
-        f'id="section-{section}" hx-swap-oob="outerHTML"',
+        f'id="{target_id}"',
+        f'id="{target_id}" hx-swap-oob="outerHTML"',
         1,
+    )
+
+
+def _oob_section_html(request, ctx, section: str) -> str:
+    """Render a section partial as an out-of-band swap of its own section id."""
+    return _oob_fragment_html(
+        request, ctx, f"section-{section}", f"characters/partials/{section}.html"
     )
 
 
@@ -1140,9 +1172,6 @@ def delete_condition(request, condition_id):
 
 
 # The Condition fields a user may edit inline, mirroring the add-condition form.
-CONDITION_EDITABLE_FIELDS = {"modifier_type", "target", "value", "source", "scope"}
-
-
 def _condition_row_html(request, condition, is_owner):
     """Render a single condition's display row partial to an HTML string."""
     ctx = {"cond": condition, "character": condition.character, "is_owner": is_owner}
@@ -1236,7 +1265,7 @@ def update_condition_field(request, condition_id):
     row_html = _condition_row_html(request, condition, is_owner)
     oob_parts = [
         _oob_section_html(request, ctx, section)
-        for section in ("abilities", "inventory")
+        for section in dependent_sections("condition", field_name)
     ]
     return HttpResponse(row_html + "\n".join(oob_parts))
 
