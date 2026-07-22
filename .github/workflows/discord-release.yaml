@@ -48,12 +48,21 @@ jobs:
           # full notes on GitHub.
           DESC_LIMIT=4000
           printf '%s' "$RELEASE_JSON" \
-          | jq --argjson limit "$DESC_LIMIT" '
+          | jq --argjson limit "$DESC_LIMIT" --arg repo "$GITHUB_REPOSITORY" '
             (.name // .tagName) as $name
             | .url as $url
             | .publishedAt as $time
             | (.body // "") as $body
-            | ($body | if length > $limit
+            # GitHub auto-linkifies "#123" shorthand only on GitHub; Discord
+            # sees plain text, so rewrite each into a real markdown link.
+            # The /issues/N path redirects to /pull/N for PRs, so it covers both.
+            # Only fire at a real boundary (start, whitespace, or an opening
+            # "(" / "[") so a "#123" glued to a URL fragment (MediaWiki TOC
+            # anchors, wiki section links) is left untouched; the boundary char
+            # is captured in `pre` and re-emitted.
+            | ($body | gsub("(?<pre>^|[\\s([])#(?<n>[0-9]+)";
+                            .pre + "[#" + .n + "](https://github.com/" + $repo + "/issues/" + .n + ")")) as $linked
+            | ($linked | if length > $limit
                        then (.[0:$limit] + "…\n\n[View full release notes](" + $url + ")")
                        else . end) as $desc
             | { embeds: [ { title: ($name | .[0:256]), url: $url,
