@@ -1674,82 +1674,92 @@ def sage_ability_points(request, pk, ability_pk):
     return render(request, "characters/partials/sage.html", sage_ctx)
 
 
+SAGE_ABILITY_EDITABLE_FIELDS = {"ability", "source"}
+
+
+def _sage_ability_entry(row) -> dict:
+    """The display-cell context shape used by both the section render and the
+    row-level swap (matches the dicts built in _sheet_context's sage_abilities)."""
+    return {"pk": row.pk, "name": row.ability, "source": row.source}
+
+
+def _sage_ability_field_display(request, character, row, field_name):
+    """Render a single sage-ability display cell (ability or source) to a response."""
+    ctx = {
+        "character": character,
+        "entry": _sage_ability_entry(row),
+        "field_name": field_name,
+    }
+    return render(request, "characters/partials/sage_ability_field.html", ctx)
+
+
 @login_required
 @character_owner_required
 @require_GET
-def sage_ability_edit_name(request, pk, ability_pk):
-    """Return an inline edit form for a standalone ability's freetext name."""
+def edit_sage_ability_field(request, pk, ability_pk):
+    """Return an inline edit form for one freetext field of a standalone ability."""
     character = get_object_or_404(Character, pk=pk)
     row = get_object_or_404(SageAbilityPoints, pk=ability_pk, character=character)
-    ctx = {"character": character, "entry": {"pk": row.pk, "name": row.ability}}
-    return render(request, "characters/partials/sage_ability_name_edit.html", ctx)
+    field_name = request.GET.get("field", "")
+    if field_name not in SAGE_ABILITY_EDITABLE_FIELDS:
+        return HttpResponse("Invalid field", status=400)
+    ctx = {
+        "character": character,
+        "entry": _sage_ability_entry(row),
+        "field_name": field_name,
+        "current_value": getattr(
+            row, "ability" if field_name == "ability" else "source"
+        ),
+    }
+    return render(request, "characters/partials/sage_ability_edit_field.html", ctx)
 
 
 @login_required
 @character_owner_required
-def sage_ability_name(request, pk, ability_pk):
-    """Show or update a standalone ability's freetext name.
+def sage_ability_field(request, pk, ability_pk):
+    """Show or update one freetext field of a standalone sage ability.
 
-    Renders only the single name cell (not the whole sage section) so editing
-    one ability's name never disturbs focus elsewhere. A GET re-renders the
-    display span (used to cancel an edit); a POST saves the new name first.
+    Renders only the single edited cell (not the whole sage section) so editing
+    one field never disturbs an in-progress edit of the sibling cell. A GET
+    re-renders the display span (used to cancel an edit); a POST validates and
+    saves the one field first. Standalone abilities feed no derived stats, so
+    there are no cross-section out-of-band updates.
     """
     character = get_object_or_404(Character, pk=pk)
     row = get_object_or_404(SageAbilityPoints, pk=ability_pk, character=character)
 
     if request.method == "POST":
-        ability = request.POST.get("ability", "").strip()
-        if not ability:
-            return HttpResponse("Ability name is required", status=400)
-        if ability != row.ability:
-            clash = (
-                SageAbilityPoints.objects.filter(character=character, ability=ability)
-                .exclude(pk=row.pk)
-                .exists()
-            )
-            if clash:
-                return HttpResponse(
-                    f"You already have an ability named {ability}.", status=400
+        field_name = request.POST.get("field_name", "")
+        if field_name not in SAGE_ABILITY_EDITABLE_FIELDS:
+            return HttpResponse("Invalid field", status=400)
+        raw_value = request.POST.get("value", "").strip()
+        if field_name == "ability":
+            if not raw_value:
+                return HttpResponse("Ability name is required", status=400)
+            if raw_value != row.ability:
+                clash = (
+                    SageAbilityPoints.objects.filter(
+                        character=character, ability=raw_value
+                    )
+                    .exclude(pk=row.pk)
+                    .exists()
                 )
-            row.ability = ability
-            row.save(update_fields=["ability"])
+                if clash:
+                    return HttpResponse(
+                        f"You already have an ability named {raw_value}.", status=400
+                    )
+                row.ability = raw_value
+                row.save(update_fields=["ability"])
+        else:
+            if raw_value != row.source:
+                row.source = raw_value
+                row.save(update_fields=["source"])
+    else:
+        field_name = request.GET.get("field", "")
+        if field_name not in SAGE_ABILITY_EDITABLE_FIELDS:
+            return HttpResponse("Invalid field", status=400)
 
-    ctx = {"character": character, "entry": {"pk": row.pk, "name": row.ability}}
-    return render(request, "characters/partials/sage_ability_name.html", ctx)
-
-
-@login_required
-@character_owner_required
-@require_GET
-def sage_ability_edit_source(request, pk, ability_pk):
-    """Return an inline edit form for a standalone ability's freetext source."""
-    character = get_object_or_404(Character, pk=pk)
-    row = get_object_or_404(SageAbilityPoints, pk=ability_pk, character=character)
-    ctx = {"character": character, "entry": {"pk": row.pk, "source": row.source}}
-    return render(request, "characters/partials/sage_ability_source_edit.html", ctx)
-
-
-@login_required
-@character_owner_required
-def sage_ability_source(request, pk, ability_pk):
-    """Show or update a standalone ability's freetext source.
-
-    Renders only the single source cell (not the whole sage section) so editing
-    one ability's source never disturbs focus elsewhere. A GET re-renders the
-    display span (used to cancel an edit); a POST saves the new source first.
-    The source is optional, so an empty value is accepted (clears it).
-    """
-    character = get_object_or_404(Character, pk=pk)
-    row = get_object_or_404(SageAbilityPoints, pk=ability_pk, character=character)
-
-    if request.method == "POST":
-        source = request.POST.get("source", "").strip()
-        if source != row.source:
-            row.source = source
-            row.save(update_fields=["source"])
-
-    ctx = {"character": character, "entry": {"pk": row.pk, "source": row.source}}
-    return render(request, "characters/partials/sage_ability_source.html", ctx)
+    return _sage_ability_field_display(request, character, row, field_name)
 
 
 @login_required

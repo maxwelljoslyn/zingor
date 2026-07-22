@@ -1688,10 +1688,10 @@ class SageAbilityTests(TestCase):
             character=self.character, ability="Pick Locks", points=30
         )
         response = self.client.get(
-            f"/character/{self.character.pk}/sage/ability/{row.pk}/name/edit/"
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/edit-field/?field=ability"
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'name="ability"')
+        self.assertContains(response, 'name="value"')
         self.assertContains(response, 'value="Pick Locks"')
 
     def test_name_updates_ability(self):
@@ -1699,8 +1699,8 @@ class SageAbilityTests(TestCase):
             character=self.character, ability="Pick Locks", points=30
         )
         response = self.client.post(
-            f"/character/{self.character.pk}/sage/ability/{row.pk}/name/",
-            {"ability": "Open Locks"},
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/field/",
+            {"field_name": "ability", "value": "Open Locks"},
         )
         self.assertEqual(response.status_code, 200)
         row.refresh_from_db()
@@ -1714,8 +1714,8 @@ class SageAbilityTests(TestCase):
             character=self.character, ability="Pick Locks"
         )
         self.client.post(
-            f"/character/{self.character.pk}/sage/ability/{row.pk}/name/",
-            {"ability": "  Open Locks  "},
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/field/",
+            {"field_name": "ability", "value": "  Open Locks  "},
         )
         row.refresh_from_db()
         self.assertEqual(row.ability, "Open Locks")
@@ -1725,8 +1725,8 @@ class SageAbilityTests(TestCase):
             character=self.character, ability="Pick Locks"
         )
         response = self.client.post(
-            f"/character/{self.character.pk}/sage/ability/{row.pk}/name/",
-            {"ability": "   "},
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/field/",
+            {"field_name": "ability", "value": "   "},
         )
         self.assertEqual(response.status_code, 400)
         row.refresh_from_db()
@@ -1738,8 +1738,8 @@ class SageAbilityTests(TestCase):
             character=self.character, ability="Pick Locks"
         )
         response = self.client.post(
-            f"/character/{self.character.pk}/sage/ability/{row.pk}/name/",
-            {"ability": "Open Locks"},
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/field/",
+            {"field_name": "ability", "value": "Open Locks"},
         )
         self.assertEqual(response.status_code, 400)
         row.refresh_from_db()
@@ -1750,19 +1750,19 @@ class SageAbilityTests(TestCase):
             character=self.character, ability="Pick Locks"
         )
         response = self.client.get(
-            f"/character/{self.character.pk}/sage/ability/{row.pk}/name/"
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/field/?field=ability"
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Pick Locks")
-        self.assertNotContains(response, 'name="ability"')
+        self.assertNotContains(response, 'name="value"')
 
     def test_name_requires_owner(self):
         other = User.objects.create_user(username="otheruser", password="testpass")
         victim = Character.objects.create(user=other, name="Grimble")
         row = SageAbilityPoints.objects.create(character=victim, ability="Pick Locks")
         response = self.client.post(
-            f"/character/{victim.pk}/sage/ability/{row.pk}/name/",
-            {"ability": "Open Locks"},
+            f"/character/{victim.pk}/sage/ability/{row.pk}/field/",
+            {"field_name": "ability", "value": "Open Locks"},
         )
         self.assertNotEqual(response.status_code, 200)
         row.refresh_from_db()
@@ -1795,10 +1795,10 @@ class SageAbilityTests(TestCase):
             character=self.character, ability="Pick Locks", source="Thieves' Guild"
         )
         response = self.client.get(
-            f"/character/{self.character.pk}/sage/ability/{row.pk}/source/edit/"
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/edit-field/?field=source"
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'name="source"')
+        self.assertContains(response, 'name="value"')
         self.assertContains(response, "Thieves&#x27; Guild")
 
     def test_source_updates(self):
@@ -1806,8 +1806,8 @@ class SageAbilityTests(TestCase):
             character=self.character, ability="Pick Locks", points=30
         )
         response = self.client.post(
-            f"/character/{self.character.pk}/sage/ability/{row.pk}/source/",
-            {"source": "Wandering Sage"},
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/field/",
+            {"field_name": "source", "value": "Wandering Sage"},
         )
         self.assertEqual(response.status_code, 200)
         row.refresh_from_db()
@@ -1822,8 +1822,8 @@ class SageAbilityTests(TestCase):
             character=self.character, ability="Pick Locks"
         )
         self.client.post(
-            f"/character/{self.character.pk}/sage/ability/{row.pk}/source/",
-            {"source": "  Wandering Sage  "},
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/field/",
+            {"field_name": "source", "value": "  Wandering Sage  "},
         )
         row.refresh_from_db()
         self.assertEqual(row.source, "Wandering Sage")
@@ -1833,8 +1833,8 @@ class SageAbilityTests(TestCase):
             character=self.character, ability="Pick Locks", source="Thieves' Guild"
         )
         response = self.client.post(
-            f"/character/{self.character.pk}/sage/ability/{row.pk}/source/",
-            {"source": ""},
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/field/",
+            {"field_name": "source", "value": ""},
         )
         self.assertEqual(response.status_code, 200)
         row.refresh_from_db()
@@ -1845,19 +1845,19 @@ class SageAbilityTests(TestCase):
             character=self.character, ability="Pick Locks", source="Thieves' Guild"
         )
         response = self.client.get(
-            f"/character/{self.character.pk}/sage/ability/{row.pk}/source/"
+            f"/character/{self.character.pk}/sage/ability/{row.pk}/field/?field=source"
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Thieves&#x27; Guild")
-        self.assertNotContains(response, 'name="source"')
+        self.assertNotContains(response, 'name="value"')
 
     def test_source_requires_owner(self):
         other = User.objects.create_user(username="otheruser", password="testpass")
         victim = Character.objects.create(user=other, name="Grimble")
         row = SageAbilityPoints.objects.create(character=victim, ability="Pick Locks")
         response = self.client.post(
-            f"/character/{victim.pk}/sage/ability/{row.pk}/source/",
-            {"source": "Wandering Sage"},
+            f"/character/{victim.pk}/sage/ability/{row.pk}/field/",
+            {"field_name": "source", "value": "Wandering Sage"},
         )
         self.assertNotEqual(response.status_code, 200)
         row.refresh_from_db()

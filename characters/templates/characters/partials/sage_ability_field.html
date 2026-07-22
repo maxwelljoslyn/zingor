@@ -1,0 +1,7 @@
+{# Display cell for one freetext field (field_name = "ability" or "source") of a standalone sage ability. #}
+{# Clicking swaps in the edit form; id is the cell's own htmx target. #}
+<span id="sage-ability-{{ entry.pk }}-{{ field_name }}"
+      hx-get="{% url 'characters:edit_sage_ability_field' character.pk entry.pk %}?field={{ field_name }}"
+      hx-target="#sage-ability-{{ entry.pk }}-{{ field_name }}"
+      hx-swap="outerHTML"
+      class="clickable">{% if field_name == "source" %}{% if entry.source %}{{ entry.source }}{% else %}<span class="muted">Add source</span>{% endif %}{% else %}{{ entry.name }}{% endif %}</span>

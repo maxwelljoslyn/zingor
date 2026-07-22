@@ -239,24 +239,14 @@ urlpatterns = [
         name="sage_ability_hide",
     ),
     path(
-        "character/<int:pk>/sage/ability/<int:ability_pk>/name/edit/",
-        views.sage_ability_edit_name,
-        name="sage_ability_edit_name",
+        "character/<int:pk>/sage/ability/<int:ability_pk>/edit-field/",
+        views.edit_sage_ability_field,
+        name="edit_sage_ability_field",
     ),
     path(
-        "character/<int:pk>/sage/ability/<int:ability_pk>/name/",
-        views.sage_ability_name,
-        name="sage_ability_name",
-    ),
-    path(
-        "character/<int:pk>/sage/ability/<int:ability_pk>/source/edit/",
-        views.sage_ability_edit_source,
-        name="sage_ability_edit_source",
-    ),
-    path(
-        "character/<int:pk>/sage/ability/<int:ability_pk>/source/",
-        views.sage_ability_source,
-        name="sage_ability_source",
+        "character/<int:pk>/sage/ability/<int:ability_pk>/field/",
+        views.sage_ability_field,
+        name="sage_ability_field",
     ),
     # Feedback
     path("feedback/", views.feedback, name="feedback"),

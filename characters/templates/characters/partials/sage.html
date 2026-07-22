@@ -117,14 +117,14 @@
           <tr>
             <td>
               {% if is_owner %}
-                {% include "characters/partials/sage_ability_name.html" %}
+                {% include "characters/partials/sage_ability_field.html" with field_name="ability" %}
               {% else %}
                 {{ entry.name }}
               {% endif %}
             </td>
             <td>
               {% if is_owner %}
-                {% include "characters/partials/sage_ability_source.html" %}
+                {% include "characters/partials/sage_ability_field.html" with field_name="source" %}
               {% else %}
                 {{ entry.source }}
               {% endif %}

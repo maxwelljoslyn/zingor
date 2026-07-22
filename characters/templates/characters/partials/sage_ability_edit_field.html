@@ -1,0 +1,16 @@
+{# Inline edit form for one freetext field (field_name = "ability" or "source") of a standalone sage ability. #}
+{# Submits field_name + value like the Character/Condition generic edit flow; Cancel re-fetches the display cell. #}
+<form class="inline-form"
+      id="sage-ability-{{ entry.pk }}-{{ field_name }}"
+      hx-post="{% url 'characters:sage_ability_field' character.pk entry.pk %}"
+      hx-target="#sage-ability-{{ entry.pk }}-{{ field_name }}"
+      hx-swap="outerHTML">
+  {% csrf_token %}
+  <input type="hidden" name="field_name" value="{{ field_name }}">
+  <input type="text" name="value" value="{{ current_value }}" autofocus class="w-12"{% if field_name == "ability" %} required{% endif %}>
+  <button type="submit" class="btn btn-small">Save</button>
+  <button type="button" class="btn btn-secondary btn-small"
+          hx-get="{% url 'characters:sage_ability_field' character.pk entry.pk %}?field={{ field_name }}"
+          hx-target="#sage-ability-{{ entry.pk }}-{{ field_name }}"
+          hx-swap="outerHTML">Cancel</button>
+</form>
