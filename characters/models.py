@@ -421,6 +421,13 @@ class Condition(models.Model):
         ("encumbrance", "Encumbrance"),
     ]
 
+    # Ability conditions target one of the six ability scores. The stored value
+    # must exactly match a lowercase ability name (see current_ability_score),
+    # so the UI offers this closed set rather than free text.
+    ABILITY_TARGET_CHOICES = [
+        (name, name.capitalize()) for name in Character.ABILITY_NAMES
+    ]
+
     character = models.ForeignKey(
         Character, on_delete=models.CASCADE, related_name="conditions"
     )

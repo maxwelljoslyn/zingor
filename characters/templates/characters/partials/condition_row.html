@@ -32,14 +32,16 @@
               hx-get="{% url 'characters:edit_condition_field' cond.pk %}?field=target"
               hx-target="#condition-{{ cond.pk }}-target"
               hx-swap="outerHTML">{% if cond.target %}{{ cond.target }}{% else %}<span class="muted">set target</span>{% endif %}</span>
-        <span id="condition-{{ cond.pk }}-scope"
-              class="clickable"
-              hx-get="{% url 'characters:edit_condition_field' cond.pk %}?field=scope"
-              hx-target="#condition-{{ cond.pk }}-scope"
-              hx-swap="outerHTML">{% if cond.scope %}<em>({{ cond.get_scope_display }} only)</em>{% else %}<span class="muted">add scope</span>{% endif %}</span>
+        {% if cond.target == "strength" %}
+          <span id="condition-{{ cond.pk }}-scope"
+                class="clickable"
+                hx-get="{% url 'characters:edit_condition_field' cond.pk %}?field=scope"
+                hx-target="#condition-{{ cond.pk }}-scope"
+                hx-swap="outerHTML">{% if cond.scope %}<em>({{ cond.get_scope_display }} only)</em>{% else %}<span class="muted">add scope</span>{% endif %}</span>
+        {% endif %}
       {% else %}
         {{ cond.target }}
-        {% if cond.scope %}<em>({{ cond.get_scope_display }} only)</em>{% endif %}
+        {% if cond.target == "strength" and cond.scope %}<em>({{ cond.get_scope_display }} only)</em>{% endif %}
       {% endif %}
     {% endif %}
     {% if not cond.is_active %}<em>(inactive)</em>{% endif %}

@@ -13,6 +13,13 @@
         <option value="{{ val }}" {% if val == condition.modifier_type %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
     </select>
+  {% elif field_name == "target" %}
+    <select name="value" autofocus>
+      <option value="" {% if not condition.target %}selected{% endif %}>(no target)</option>
+      {% for val, label in ability_target_choices %}
+        <option value="{{ val }}" {% if val == condition.target %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
   {% elif field_name == "scope" %}
     <select name="value" autofocus>
       <option value="" {% if not condition.scope %}selected{% endif %}>All (no scope)</option>

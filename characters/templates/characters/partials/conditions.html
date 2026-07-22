@@ -12,17 +12,27 @@
   <form hx-post="/character/{{ character.pk }}/add-condition/"
         hx-target="#section-conditions"
         hx-swap="outerHTML"
-        class="inline-form mt-sm">
+        class="inline-form mt-sm condition-add-form">
     {% csrf_token %}
     <select name="modifier_type" required>
       <option value="ability">Ability</option>
       <option value="weight">Weight</option>
       <option value="action_point">Action Point</option>
     </select>
-    <input type="text" name="target" placeholder="Target (e.g. strength)" class="w-8">
+    {# Target only applies to ability conditions; the .condition-target CSS rule hides this picker for other types (and the backend nulls target then regardless). #}
+    <select name="target" class="condition-target">
+      <option value="">Target (ability)</option>
+      <option value="strength">Strength</option>
+      <option value="dexterity">Dexterity</option>
+      <option value="constitution">Constitution</option>
+      <option value="intelligence">Intelligence</option>
+      <option value="wisdom">Wisdom</option>
+      <option value="charisma">Charisma</option>
+    </select>
     <input type="number" name="value" placeholder="Value" class="w-4" required>
     <input type="text" name="source" placeholder="Source" required>
-    <select name="scope">
+    {# Scope only refines Strength (via the encumbrance context); the .condition-scope CSS rule hides it otherwise, and the backend nulls scope then regardless. #}
+    <select name="scope" class="condition-scope">
       <option value="">All (no scope)</option>
       <option value="encumbrance">Encumbrance only</option>
     </select>

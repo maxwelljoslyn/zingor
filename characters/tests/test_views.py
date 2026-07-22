@@ -1266,6 +1266,55 @@ class ConditionViewTests(TestCase):
         cond.refresh_from_db()
         self.assertIsNone(cond.target)
 
+    def test_update_target_rejects_invalid(self):
+        # "Strength" (capitalized) is not the stored ability name, so it must be
+        # rejected rather than silently saved as a target that matches nothing.
+        cond = self._make_condition(target="strength")
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "target", "value": "Strength"},
+        )
+        self.assertEqual(response.status_code, 400)
+        cond.refresh_from_db()
+        self.assertEqual(cond.target, "strength")
+
+    def test_edit_target_field_renders_ability_options(self):
+        cond = self._make_condition(target="strength")
+        response = self.client.get(
+            f"/condition/{cond.pk}/edit-field/", {"field": "target"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "<select")
+        self.assertContains(response, 'value="dexterity"')
+        self.assertContains(response, 'value="charisma"')
+
+    def test_add_condition_rejects_invalid_target(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/add-condition/",
+            {
+                "modifier_type": "ability",
+                "target": "Strength",
+                "value": "2",
+                "source": "Bull's Strength",
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(Condition.objects.filter(character=self.character).count(), 0)
+
+    def test_add_non_ability_condition_ignores_target(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/add-condition/",
+            {
+                "modifier_type": "weight",
+                "target": "strength",
+                "value": "2",
+                "source": "Heavy load",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        cond = Condition.objects.get(character=self.character)
+        self.assertIsNone(cond.target)
+
     def test_update_modifier_type(self):
         cond = self._make_condition(modifier_type="ability")
         response = self.client.post(
@@ -1312,6 +1361,57 @@ class ConditionViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         cond.refresh_from_db()
         self.assertIsNone(cond.scope)
+
+    def test_add_condition_keeps_scope_for_strength(self):
+        response = self.client.post(
+            f"/character/{self.character.pk}/add-condition/",
+            {
+                "modifier_type": "ability",
+                "target": "strength",
+                "value": "-1",
+                "source": "Heavy pack",
+                "scope": "encumbrance",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        cond = Condition.objects.get(character=self.character)
+        self.assertEqual(cond.scope, "encumbrance")
+
+    def test_add_condition_nulls_scope_for_non_strength_target(self):
+        # Scope only refines Strength, so a scope on any other ability is dropped.
+        response = self.client.post(
+            f"/character/{self.character.pk}/add-condition/",
+            {
+                "modifier_type": "ability",
+                "target": "dexterity",
+                "value": "-1",
+                "source": "Slippery",
+                "scope": "encumbrance",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        cond = Condition.objects.get(character=self.character)
+        self.assertIsNone(cond.scope)
+
+    def test_update_target_off_strength_clears_scope(self):
+        cond = self._make_condition(target="strength", scope="encumbrance")
+        response = self.client.post(
+            f"/condition/{cond.pk}/update-field/",
+            {"field_name": "target", "value": "dexterity"},
+        )
+        self.assertEqual(response.status_code, 200)
+        cond.refresh_from_db()
+        self.assertEqual(cond.target, "dexterity")
+        self.assertIsNone(cond.scope)
+
+    def test_row_shows_scope_picker_only_for_strength(self):
+        # The scope picker is rendered in the display row only for Strength.
+        strength = self._make_condition(target="strength", source="Str cond")
+        dexterity = self._make_condition(target="dexterity", source="Dex cond")
+        str_row = self.client.get(f"/condition/{strength.pk}/update-field/")
+        dex_row = self.client.get(f"/condition/{dexterity.pk}/update-field/")
+        self.assertContains(str_row, "field=scope")
+        self.assertNotContains(dex_row, "field=scope")
 
     def test_update_rejects_unknown_field(self):
         cond = self._make_condition()

@@ -230,6 +230,21 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .modifier-positive { color: var(--success); }
 .modifier-negative { color: var(--accent); }
 .inline-form { display: inline-flex; gap: 0.3rem; align-items: center; }
+/* The add-condition target is an ability-score picker; target only applies to
+   ability conditions, so hide it whenever another modifier type is selected.
+   option:checked tracks the live selection, so this needs no JS. The backend
+   stores NULL for target on non-ability conditions regardless of what the
+   hidden picker submits, so this rule only governs appearance. */
+.condition-add-form:not(:has(select[name="modifier_type"] option[value="ability"]:checked)) .condition-target {
+  display: none;
+}
+/* Scope only refines Strength (via the encumbrance context), so show the scope
+   picker only when the condition targets Strength — i.e. both the modifier type
+   is ability and the target is strength. Chained :has() is an AND. Same as
+   above, the backend nulls scope outside this case, so this only affects UI. */
+.condition-add-form:not(:has(select[name="modifier_type"] option[value="ability"]:checked):has(select[name="target"] option[value="strength"]:checked)) .condition-scope {
+  display: none;
+}
 ul.spell-list { list-style: none; padding: 0; }
 .htmx-indicator { display: none; }
 .htmx-request .htmx-indicator { display: inline; }

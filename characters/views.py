@@ -1090,10 +1090,22 @@ def delete_item(request, item_id):
 def add_condition(request, pk):
     character = get_object_or_404(Character, pk=pk)
     modifier_type = request.POST.get("modifier_type", "ability")
-    target = request.POST.get("target", "") or None
+    # Target only applies to ability conditions, and must name one of the six
+    # ability scores exactly (see current_ability_score).
+    target = request.POST.get("target", "").strip() or None
+    if modifier_type != "ability":
+        target = None
+    elif target is not None:
+        valid = {choice for choice, _ in Condition.ABILITY_TARGET_CHOICES}
+        if target not in valid:
+            return HttpResponse("Invalid target", status=400)
     value = int(request.POST.get("value", 0))
     source = request.POST.get("source", "")
     scope = request.POST.get("scope", "") or None
+    # Scope only refines Strength (via the encumbrance context), so a scope on
+    # any other target can never apply. Drop it outside that case.
+    if target != "strength":
+        scope = None
 
     Condition.objects.create(
         character=character,
@@ -1155,6 +1167,7 @@ def edit_condition_field(request, condition_id):
         "current_value": current_value if current_value is not None else "",
         "modifier_type_choices": Condition.MODIFIER_TYPES,
         "scope_choices": Condition.SCOPE_CHOICES,
+        "ability_target_choices": Condition.ABILITY_TARGET_CHOICES,
     }
     return render(request, "characters/partials/condition_edit_field.html", ctx)
 
@@ -1182,6 +1195,7 @@ def update_condition_field(request, condition_id):
     if field_name not in CONDITION_EDITABLE_FIELDS:
         return HttpResponse("Invalid field", status=400)
     raw_value = request.POST.get("value", "")
+    update_fields = [field_name]
 
     if field_name == "source":
         source = raw_value.strip()
@@ -1194,7 +1208,16 @@ def update_condition_field(request, condition_id):
         except (TypeError, ValueError):
             return HttpResponse("Value must be a whole number", status=400)
     elif field_name == "target":
-        condition.target = raw_value.strip() or None
+        target = raw_value.strip()
+        valid = {choice for choice, _ in Condition.ABILITY_TARGET_CHOICES}
+        if target and target not in valid:
+            return HttpResponse("Invalid target", status=400)
+        condition.target = target or None
+        # Scope only refines Strength, so drop an orphaned scope when the target
+        # moves off strength.
+        if condition.target != "strength" and condition.scope is not None:
+            condition.scope = None
+            update_fields.append("scope")
     elif field_name == "modifier_type":
         valid = {choice for choice, _ in Condition.MODIFIER_TYPES}
         if raw_value not in valid:
@@ -1206,7 +1229,7 @@ def update_condition_field(request, condition_id):
             return HttpResponse("Invalid scope", status=400)
         condition.scope = raw_value or None
 
-    condition.save(update_fields=[field_name])
+    condition.save(update_fields=update_fields)
 
     ctx = _sheet_context(character, request.user)
     ctx["is_owner"] = is_owner
