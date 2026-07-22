@@ -1,0 +1,43 @@
+name: announce-release-to-discord
+# Posts release notes to a Discord channel via webhook whenever a release is
+# published. The `published` action fires both for a brand-new non-draft
+# release and when an existing draft is published (draft -> published) —
+# editing an already-published release fires `edited`, which we deliberately
+# ignore. Requires the DISCORD_WEBHOOK_URL repo secret (the Discord webhook
+# URL); swap that secret's value to retarget a different server/channel.
+on:
+  release:
+    types: [published]
+
+jobs:
+  notify:
+    name: Post release notes to Discord
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post release to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+          RELEASE_TIME: ${{ github.event.release.published_at }}
+        run: |
+          # Discord embed limits: description <= 4096, title <= 256.
+          # Reserve headroom for the truncation footer that links to the
+          # full notes on GitHub.
+          DESC_LIMIT=4000
+          jq -n \
+            --arg name  "${RELEASE_NAME:-$RELEASE_TAG}" \
+            --arg url   "$RELEASE_URL" \
+            --arg body  "$RELEASE_BODY" \
+            --arg time  "$RELEASE_TIME" \
+            --argjson limit "$DESC_LIMIT" \
+            '
+            ($body | if length > $limit
+                     then (.[0:$limit] + "…\n\n[View full release notes](" + $url + ")")
+                     else . end) as $desc
+            | { embeds: [ { title: ($name | .[0:256]), url: $url,
+                            description: $desc, color: 15524814, timestamp: $time } ] }
+            ' \
+          | curl -sf -H "Content-Type: application/json" -d @- "$WEBHOOK"
