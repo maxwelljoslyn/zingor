@@ -1142,6 +1142,71 @@ class SplitStackTests(TestCase):
         self.assertFalse(item.is_carried)
         self.assertFalse(item.is_worn)
 
+    def test_name_edit_swaps_only_the_row(self):
+        """A pure-local field edit re-renders just the item's row, not the whole
+        section, and pulls in no out-of-band refreshes."""
+        item = Item.objects.create(owner=self.character, name="Torch", weight="1 lb")
+        response = self.client.post(
+            f"/item/{item.pk}/update-field/",
+            {"field_name": "name", "value": "Lantern"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'id="item-{item.pk}"')
+        self.assertContains(response, "Lantern")
+        # No whole-section re-render and no derived-stat OOB updates.
+        self.assertNotContains(response, 'id="section-inventory"')
+        self.assertNotContains(response, "hx-swap-oob")
+
+    def test_weight_edit_rerenders_section_and_abilities_oob(self):
+        """A weight change re-renders the whole inventory section (encumbrance header
+        included) plus the encumbrance-derived abilities section out-of-band. It must
+        NOT mix a bare <tr> primary with <div> OOB, which the HTML parser would
+        foster-parent into the table (the htmx table-swap gotcha behind #116 QA)."""
+        item = Item.objects.create(owner=self.character, name="Anvil", weight="1 lb")
+        response = self.client.post(
+            f"/item/{item.pk}/update-field/",
+            {"field_name": "weight", "value": "50", "pint_unit": "pound"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="section-inventory"')
+        self.assertContains(response, 'id="section-abilities" hx-swap-oob="outerHTML"')
+
+    def test_is_container_toggle_rerenders_whole_section(self):
+        """Toggling is_container can restructure the tree, so it stays whole-section."""
+        item = Item.objects.create(owner=self.character, name="Sack", weight="1 lb")
+        response = self.client.post(
+            f"/item/{item.pk}/update-field/",
+            {"field_name": "is_container", "value": "on"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="section-inventory"')
+
+    def test_item_row_endpoint_renders_single_row(self):
+        """The row endpoint (used to cancel a row-level edit) returns just the row."""
+        item = Item.objects.create(owner=self.character, name="Torch", weight="1 lb")
+        response = self.client.get(f"/item/{item.pk}/row/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'id="item-{item.pk}"')
+        self.assertContains(response, "Torch")
+        self.assertNotContains(response, 'id="section-inventory"')
+
+    def test_carried_toggle_rerenders_whole_section(self):
+        """Regression (#116 QA): toggling carried changes carried weight, so it must
+        re-render the whole inventory section, never a bare <tr> plus <div> OOB (which
+        the parser foster-parented into the table, duplicating the header)."""
+        item = Item.objects.create(
+            owner=self.character, name="Helm", weight="3 lb", is_carried=True
+        )
+        response = self.client.post(
+            f"/item/{item.pk}/update-field/",
+            {"field_name": "is_carried", "value": ""},
+        )
+        self.assertEqual(response.status_code, 200)
+        # A <div> section response, not a bare row: the body starts with the section div.
+        self.assertTrue(response.content.decode().lstrip().startswith("<div"))
+        self.assertContains(response, 'id="section-inventory"')
+        self.assertContains(response, 'id="section-abilities" hx-swap-oob="outerHTML"')
+
 
 class ConditionViewTests(TestCase):
     def setUp(self):

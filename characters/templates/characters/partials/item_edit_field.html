@@ -1,6 +1,6 @@
 <form class="inline-form"
       hx-post="/item/{{ item.pk }}/update-field/"
-      hx-target="#section-inventory"
+      hx-target="{% if row_level %}#item-{{ item.pk }}{% else %}#section-inventory{% endif %}"
       hx-swap="outerHTML"
       id="item-{{ item.pk }}-{{ field_name }}">
   {% csrf_token %}
@@ -24,7 +24,7 @@
   {% endif %}
   <button type="submit" class="btn btn-small">Save</button>
   <button type="button" class="btn btn-secondary btn-small"
-          hx-get="/character/{{ item.owner.pk }}/section/inventory/"
-          hx-target="#section-inventory"
+          hx-get="{% if row_level %}/item/{{ item.pk }}/row/{% else %}/character/{{ item.owner.pk }}/section/inventory/{% endif %}"
+          hx-target="{% if row_level %}#item-{{ item.pk }}{% else %}#section-inventory{% endif %}"
           hx-swap="outerHTML">Cancel</button>
 </form>

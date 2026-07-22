@@ -1,24 +1,7 @@
 {% load character_tags %}
 <div class="section" id="section-inventory" data-section="inventory">
   <h2>Inventory</h2>
-  <div class="mb-sm text-meta">
-    <strong>Encumbrance:</strong>
-    {{ character.current_encumbrance }}
-    {% if character.max_encumbrance %}
-      / {{ character.max_encumbrance }}
-      {% if character.percent_encumbered %}
-        ({{ character.percent_encumbered|floatformat:0 }}%)
-      {% endif %}
-    {% endif %}
-  </div>
-  <div class="mb-sm text-meta">
-    <strong>Action Points:</strong> {{ character.current_action_points }} / {{ character.BASE_AP }}
-    {% if character.ap_tiers %}
-      <span class="muted">
-        ({% for threshold, ap in character.ap_tiers %}{{ ap }} AP above {{ threshold|floatformat:1 }}{% if not forloop.last %}; {% endif %}{% endfor %})
-      </span>
-    {% endif %}
-  </div>
+  {% include "characters/partials/inventory_encumbrance.html" %}
   {% if items %}
   <p class="muted text-sm">Click on Item or Weight to sort the table by that column.</p>
   {# data-collapse-scope opts this table into per-viewer container collapsing (inventory-collapse.js); the value keys the localStorage entry. #}

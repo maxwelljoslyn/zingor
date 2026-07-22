@@ -104,6 +104,7 @@ urlpatterns = [
         views.split_item_form,
         name="split_item_form",
     ),
+    path("item/<int:item_id>/row/", views.item_row, name="item_row"),
     path(
         "item/<int:item_id>/edit-field/", views.edit_item_field, name="edit_item_field"
     ),

@@ -808,6 +808,45 @@ def section_refresh(request, pk, section):
 
 # --- Item field editing ---
 
+# Item fields with no cross-section effect: their save swaps just the item's <tr>.
+# A bare-row response parses cleanly in table context. Every other field can change
+# carried weight or wealth, so it re-renders the whole inventory section (a <div>)
+# plus <div> OOB sections — never a <tr> primary mixed with <div> OOB siblings, which
+# the HTML parser would foster-parent into the table (htmx table-swap gotcha).
+ITEM_ROW_LEVEL_FIELDS = {"name", "capacity"}
+
+
+def _item_depth(item) -> int:
+    """Nesting depth of an item in the container tree (top-level == 0)."""
+    depth = 0
+    parent = item.container
+    while parent is not None:
+        depth += 1
+        parent = parent.container
+    return depth
+
+
+def _item_row_html(request, item) -> str:
+    """Render one item's table row (no recursion into contents) to an HTML string."""
+    ctx = {
+        "item": item,
+        "is_owner": True,
+        "depth": _item_depth(item),
+        "collapsible": True,
+    }
+    return render(
+        request, "characters/partials/_item_row_cells.html", ctx
+    ).content.decode()
+
+
+@login_required
+@character_owner_required
+@require_GET
+def item_row(request, item_id):
+    """Re-render a single item's row (used to cancel an inline field edit)."""
+    item = get_object_or_404(Item, pk=item_id)
+    return HttpResponse(_item_row_html(request, item))
+
 
 @login_required
 @character_owner_required
@@ -868,6 +907,9 @@ def edit_item_field(request, item_id):
         "pint_unit": pint_unit,
         "pint_unit_display": pint_unit_display,
         "pint_unit_choices": pint_unit_choices,
+        # Row-level fields swap this item's <tr>; the rest re-render the whole section
+        # (see update_item_field), so the form must aim Save/Cancel at the right target.
+        "row_level": field_name in ITEM_ROW_LEVEL_FIELDS,
     }
     return render(request, "characters/partials/item_edit_field.html", ctx)
 
@@ -880,9 +922,6 @@ def update_item_field(request, item_id):
     item = get_object_or_404(Item, pk=item_id)
     field_name = request.POST.get("field_name", "")
     raw_value = request.POST.get("value", "")
-
-    # A money edit changes the character's wealth, shown in the identity section.
-    oob = ["identity"] if item.currency else None
 
     if field_name == "name":
         item.name = raw_value
@@ -945,7 +984,28 @@ def update_item_field(request, item_id):
     else:
         save_fields = [field_name]
     item.save(update_fields=save_fields)
-    return _render_section(request, item.owner, "inventory", oob_sections=oob)
+
+    character = item.owner
+    # Fields with no cross-section effect swap just this item's <tr>. The response
+    # is a bare row, so htmx parses it in table context with nothing to foster-parent.
+    if field_name in ITEM_ROW_LEVEL_FIELDS:
+        # Render from the freshly primed inventory cache so a container's total-weight
+        # walk stays cache-served (see _sheet_context / _stitch_container_tree).
+        _sheet_context(character, request.user)
+        primed = {it.pk: it for it in character.inventory.all()}
+        row_item = primed.get(item.pk, item)
+        return HttpResponse(_item_row_html(request, row_item))
+
+    # Everything else can change carried weight or wealth, so it re-renders the whole
+    # inventory section (encumbrance header included) plus out-of-band the sections
+    # whose derived values it invalidates. Every part is a <div>, so — unlike a <tr>
+    # primary with <div> OOB siblings — nothing gets foster-parented into the table.
+    oob = list(dependent_sections("item", field_name))
+    # A money edit changes the character's wealth, shown in the identity section.
+    # This value-conditional dependency stays inline (not in SECTION_DEPENDENCIES).
+    if item.currency:
+        oob.append("identity")
+    return _render_section(request, character, "inventory", oob_sections=oob or None)
 
 
 # --- Container operations ---

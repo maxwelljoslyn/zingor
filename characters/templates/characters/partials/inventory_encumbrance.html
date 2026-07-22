@@ -1,0 +1,23 @@
+{# Encumbrance + Action Points: inventory-section derived metrics. Extracted so the #}
+{# header reads on its own; it re-renders with the whole section (item edits that #}
+{# change carried weight re-render #section-inventory — see update_item_field). #}
+<div>
+  <div class="mb-sm text-meta">
+    <strong>Encumbrance:</strong>
+    {{ character.current_encumbrance }}
+    {% if character.max_encumbrance %}
+      / {{ character.max_encumbrance }}
+      {% if character.percent_encumbered %}
+        ({{ character.percent_encumbered|floatformat:0 }}%)
+      {% endif %}
+    {% endif %}
+  </div>
+  <div class="mb-sm text-meta">
+    <strong>Action Points:</strong> {{ character.current_action_points }} / {{ character.BASE_AP }}
+    {% if character.ap_tiers %}
+      <span class="muted">
+        ({% for threshold, ap in character.ap_tiers %}{{ ap }} AP above {{ threshold|floatformat:1 }}{% if not forloop.last %}; {% endif %}{% endfor %})
+      </span>
+    {% endif %}
+  </div>
+</div>

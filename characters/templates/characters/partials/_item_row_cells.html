@@ -1,0 +1,143 @@
+{% load character_tags %}
+{# The single <tr> for one item (no recursion into contents — item_row.html adds that). #}
+{# Rendered standalone by views._item_row_html for row-level htmx swaps, and inside #}
+{# item_row.html for the full table. #}
+{# id="item-<pk>" is the row-level htmx swap target; data-item-id / data-parent-id are #}
+{# behavior hooks (drag-drop, collapse), rendered regardless of is_owner. #}
+<tr id="item-{{ item.pk }}" data-item-id="{{ item.pk }}"{% if item.container_id %} data-parent-id="{{ item.container_id }}"{% endif %}
+    {% if is_owner %}draggable="true"
+    ondragstart="zingorDragStart(event)"
+    ondragend="zingorDragEnd(event)"
+    {% if item.is_container %}ondragover="zingorDragOver(event)"
+    ondragenter="zingorDragEnter(event)"
+    ondragleave="zingorDragLeave(event)"
+    ondrop="zingorDrop(event)"{% endif %}{% endif %}>
+  {% if show_owner %}
+  {# Owner is shown on the top-level row only; contents inherit it visually. #}
+  <td>{% if not depth %}<a href="/character/{{ item.owner.pk }}/">{{ item.owner.name|default:"Unnamed" }}</a>{% endif %}</td>
+  {% endif %}
+  <td class="cell-indent" style="--depth: {{ depth }}" data-sort-value="{{ item.name }}">
+    {# Collapse caret: only where the section opts in (collapsible) and there is something to hide. #}
+    {# The glyph/aria state here is the expanded default; inventory-collapse.js re-applies saved state. #}
+    {% if collapsible and item.contents.all %}
+    <button type="button" class="collapse-toggle" data-collapse-toggle
+            aria-expanded="true" aria-label="Collapse or expand contents of {{ item.name }}">▾</button>
+    {% endif %}
+    {% if is_owner %}
+    <span id="item-{{ item.pk }}-name"
+          hx-get="/item/{{ item.pk }}/edit-field/?field=name"
+          hx-target="#item-{{ item.pk }}-name"
+          hx-swap="outerHTML"
+          class="clickable">{{ item.name }}</span>
+    {% else %}
+    {{ item.name }}
+    {% endif %}
+    {# Stack size: owners can always click it (to stack up a single); containers can't stack, so no affordance. #}
+    {% if is_owner and not item.is_container %}
+    <span id="item-{{ item.pk }}-quantity"
+          hx-get="/item/{{ item.pk }}/edit-field/?field=quantity"
+          hx-target="#item-{{ item.pk }}-quantity"
+          hx-swap="outerHTML"
+          class="clickable muted text-sm">×{{ item.quantity }}</span>
+    {% elif item.quantity > 1 %}
+    <span class="muted text-sm">×{{ item.quantity }}</span>
+    {% endif %}
+    {% if item.is_container %}
+    <span class="muted text-sm">
+      [cap: {% if is_owner %}<span id="item-{{ item.pk }}-capacity"
+                  hx-get="/item/{{ item.pk }}/edit-field/?field=capacity"
+                  hx-target="#item-{{ item.pk }}-capacity"
+                  hx-swap="outerHTML"
+                  class="clickable">{% if item.capacity %}{{ item.capacity|short_units }}{% else %}—{% endif %}</span>{% else %}{% if item.capacity %}{{ item.capacity|short_units }}{% else %}—{% endif %}{% endif %}]
+    </span>
+    {% endif %}
+  </td>
+  {# Normalized to oz so client-side sort compares a single unit, not mixed lb/oz strings. #}
+  {# Sorts by total weight (contents included); for non-containers total == own weight. #}
+  <td data-sort-value="{{ item.total_weight_oz }}">
+    {# Coin weight is derived from the rules, so money rows get no weight editor. #}
+    {% if is_owner and not item.currency %}
+    <span id="item-{{ item.pk }}-weight"
+          hx-get="/item/{{ item.pk }}/edit-field/?field=weight"
+          hx-target="#item-{{ item.pk }}-weight"
+          hx-swap="outerHTML"
+          class="clickable">{{ item.adjusted_weight|short_units }}</span>
+    {% else %}
+    {{ item.adjusted_weight|short_units }}
+    {% endif %}
+    {% if item.contents.all %}
+    <span class="muted text-sm">({{ item.total_weight|short_units }} total)</span>
+    {% endif %}
+    {# The weight edit form takes per-unit weight, so remind owners what one unit weighs. #}
+    {# block keeps the note on its own line instead of wrapping the cell mid-sentence. #}
+    {% if item.quantity > 1 %}
+    <span class="muted text-sm block">{{ item.unit_weight|short_units }} each</span>
+    {% endif %}
+  </td>
+  {% if is_owner %}
+  <td>
+    <form hx-post="/item/{{ item.pk }}/update-field/"
+          hx-target="#section-inventory"
+          hx-swap="outerHTML"
+          hx-trigger="change"
+          class="inline">
+      {% csrf_token %}
+      <input type="hidden" name="field_name" value="is_worn">
+      <input type="checkbox" name="value" aria-label="Worn" {% if item.is_worn %}checked{% endif %}>
+    </form>
+  </td>
+  <td>
+    <form hx-post="/item/{{ item.pk }}/update-field/"
+          hx-target="#section-inventory"
+          hx-swap="outerHTML"
+          hx-trigger="change"
+          class="inline">
+      {% csrf_token %}
+      <input type="hidden" name="field_name" value="is_carried">
+      <input type="checkbox" name="value" aria-label="Carried" {% if item.is_carried %}checked{% endif %}>
+    </form>
+  </td>
+  <td>
+    {# Coins can never hold other items, so money rows get no container toggle. #}
+    {% if not item.currency %}
+    <form hx-post="/item/{{ item.pk }}/update-field/"
+          hx-target="#section-inventory"
+          hx-swap="outerHTML"
+          hx-trigger="change"
+          class="inline">
+      {% csrf_token %}
+      <input type="hidden" name="field_name" value="is_container">
+      <input type="checkbox" name="value" aria-label="Container" {% if item.is_container %}checked{% endif %}>
+    </form>
+    {% endif %}
+  </td>
+  <td>
+    <span class="item-actions">
+      {% if item.container %}
+      <form hx-post="/item/{{ item.pk }}/remove-from-container/"
+            hx-target="#section-inventory"
+            hx-swap="outerHTML"
+            class="inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-small btn-secondary">↑ Take out</button>
+      </form>
+      {% endif %}
+      {# Split N units off into a sibling row, ready to drag elsewhere. #}
+      {# Click-to-reveal like the field editors: the count input only appears on demand. #}
+      {% if item.quantity > 1 %}
+      <span id="item-{{ item.pk }}-split">
+        <button type="button" class="btn btn-small btn-secondary"
+                hx-get="/item/{{ item.pk }}/split-form/"
+                hx-target="#item-{{ item.pk }}-split"
+                hx-swap="outerHTML">Split</button>
+      </span>
+      {% endif %}
+      {% url 'characters:delete_item' item.pk as delete_url %}
+      {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-inventory" confirm="Remove "|add:item.name|add:"?" %}
+    </span>
+  </td>
+  {% else %}
+  <td>{% if item.is_worn %}Yes{% else %}—{% endif %}</td>
+  <td>{% if item.is_carried %}Yes{% else %}No{% endif %}</td>
+  {% endif %}
+</tr>
