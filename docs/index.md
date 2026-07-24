@@ -3,6 +3,7 @@
 ```{toctree}
 :maxdepth: 2
 
+wiki-export
 external-synchronization
 ```
 
