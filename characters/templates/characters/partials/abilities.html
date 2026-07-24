@@ -30,6 +30,15 @@
                     hx-swap="outerHTML">(set %)</span>
             {% endif %}
           {% endif %}
+          {% if ability.base_score is not None and ability.modifier_total != 0 %}
+            <span class="score-delta {% if ability.modifier_total > 0 %}modifier-positive{% else %}modifier-negative{% endif %}">
+              <span class="score-delta-marker">
+                <span class="score-delta-total">{{ ability.modifier_total|format_modifier }}</span>
+                <span class="score-delta-arrow">{% if ability.modifier_total > 0 %}&uarr;{% else %}&darr;{% endif %}</span>
+              </span>
+              <span class="score-modified">{{ ability.current_score }}</span>
+            </span>
+          {% endif %}
         </td>
         <td>
           {% if ability.base_score is not None %}

@@ -134,6 +134,7 @@ def _build_ability_data(character, derived, order):
             "field_name": ability,
             "base_score": base_score,
             "current_score": current_score,
+            "modifier_total": character.universal_ability_modifier(ability),
             "derived": derived_stats,
         }
         if ability == "strength":
