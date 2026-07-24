@@ -237,6 +237,19 @@ class Character(models.Model):
         modifier_sum = qs.aggregate(total=models.Sum("value"))["total"] or 0
         return rules.effective_strength(base, self.percentile_strength, modifier_sum)
 
+    def universal_ability_modifier(self, ability):
+        """Net sum of active, unscoped ("universal") ability modifiers.
+
+        Scoped conditions (e.g. encumbrance-only) are excluded: they don't
+        change the character's general ability score, only a specific derived
+        context. For percentile Strength this raw sum can differ from the
+        change in effective score (a +1 at 18 shifts percentile, not score).
+        """
+        qs = self.conditions.filter(
+            modifier_type="ability", target=ability, is_active=True
+        ).filter(models.Q(scope__isnull=True) | models.Q(scope=""))
+        return qs.aggregate(total=models.Sum("value"))["total"] or 0
+
     # --- HP ---
 
     @property

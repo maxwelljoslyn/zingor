@@ -229,6 +229,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
 .modifier-positive { color: var(--success); }
 .modifier-negative { color: var(--accent); }
+/* base -> modified ability score, with the net modifier total stacked over a
+   direction arrow. Color comes from .modifier-positive/negative on the wrapper. */
+.score-delta { display: inline-flex; align-items: center; gap: 0.3rem; margin-left: 0.35rem; }
+.score-delta-marker { display: inline-flex; flex-direction: column; align-items: center; line-height: 1; }
+.score-delta-total { font-size: 0.7em; font-weight: 600; }
+.score-delta-arrow { font-size: 0.9em; line-height: 1; }
+.score-modified { font-weight: 600; }
 .inline-form { display: inline-flex; gap: 0.3rem; align-items: center; }
 /* The add-condition target is an ability-score picker; target only applies to
    ability conditions, so hide it whenever another modifier type is selected.
