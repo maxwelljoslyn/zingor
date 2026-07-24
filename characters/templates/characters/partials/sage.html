@@ -62,7 +62,7 @@
                   hx-post="{% url 'characters:sage_study_points' character.pk entry.pk %}"
                   hx-target="#section-sage"
                   hx-swap="outerHTML"
-                  hx-trigger="blur"
+                  hx-trigger="change"
                   class="w-5"
                 >
                 {% else %}
@@ -139,7 +139,7 @@
                 hx-post="{% url 'characters:sage_ability_points' character.pk entry.pk %}"
                 hx-target="#section-sage"
                 hx-swap="outerHTML"
-                hx-trigger="blur"
+                hx-trigger="change"
                 class="w-5"
               >
               {% else %}
