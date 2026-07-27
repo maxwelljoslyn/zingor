@@ -4,19 +4,15 @@ Every Zingor account has two names: a **username** and a **display name**. They 
 
 ## Usernames
 
-Your username is the name you chose when you registered. It is your permanent account identity:
+Your username is the name you chose when you registered. It is your permanent account identity. You sign in with it, and it appears in the web address of your profile page (for example, `/users/aldric/`).
 
-- You sign in with it.
-- It appears in the web address of your profile page (for example, `/users/aldric/`).
-- It never changes.
-
-Because the username is woven into links and login, Zingor does not let you edit it after registration.
+Each account needs a permanent username so that Zingor can keep track of who has what characters, and construct links for you to login, reset your password, and so on. Therefore, Zingor does not let you edit your username after registration.
 
 ## Display Names
 
-A display name is an optional, friendly label shown in place of your username throughout the app. It is the name other players see next to your characters and in your profile heading.
+A display name is an optional, friendly label shown in place of your username throughout the app. Setting a display name is how Zingor lets you get around the fact that your username can't change. Your display name is what other players see next to your characters and in your profile heading. If you have not set a display name, Zingor shows your username instead.
 
-If you have not set a display name, Zingor simply shows your username wherever a display name would appear. Setting a display name lets you present yourself however you like — with capitalization, spaces, or a name entirely different from your username — without giving up the stable username that links and login depend on.
+You can change your display name to express yourself however you like. You can use any capitalization, spacing, or special characters, making your display name entirely different from your username. You can change your display name as many times as you want, as often as you want.
 
 Your display name appears:
 
@@ -26,7 +22,7 @@ Your display name appears:
 
 ## Setting or Changing Your Display Name
 
-Open your own profile page. The quickest route is the link bearing your name at the top-right of any page, which goes to `/users/<your-username>/`.
+Open your own profile page. The quickest route is the link bearing your name at the top-right of every page, which goes to `/users/<your-username>/`.
 
 On your profile you'll find a **Display name** field. Type the name you want and click **Save**. The change takes effect immediately everywhere your name is shown.
 
@@ -43,6 +39,7 @@ To go back to showing your plain username, clear the Display name field and clic
 When your display name differs from your username, your profile page shows the display name as its heading and notes your username underneath, so people can still tell which account they're looking at:
 
 > **Aldric the Bold**
+>
 > username: aldric
 
-When you have no display name set (or you've reset it), the heading is simply your username and no separate note is shown, since there's nothing extra to distinguish.
+When you have no display name set, the heading is your username, and no separate note is shown (since there's nothing extra to distinguish).
