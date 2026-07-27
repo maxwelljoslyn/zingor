@@ -13,15 +13,17 @@ A "Wiki Export" window opens containing the character's full sheet rendered as M
 Click "Copy to Clipboard" to copy the markup, then paste it into the edit box of your wiki page and save. Click "Close" when you're done.
 
 :::{note}
-The export is a snapshot taken at the moment you click the button. Editing the character in Zingor afterwards does not update any wiki page you've already created; export again to refresh it.
+The export is a snapshot taken at the moment you click the button. Editing the character in Zingor afterwards will not update any external wiki pages that you've already created. To update those pages, re-export your character as shown above.
 :::
 
 ## A Starting Point for External Sync
 
-The exported markup is more than plain text. Wherever Zingor knows how to read a value back in, it wraps that value in **Zingor microformats** (ZMF) — the same `zingor-` class names that power [external synchronization](external-synchronization.md). Ability scores, name, race, spells, sage studies, and the other syncable fields all come out already tagged.
+The exported MediaWiki markup is more than plain text. Many parts of the exported data are wrapped in **Zingor microformats** (ZMF), the `zingor-*` HTML class names that you'll need for the [external synchronization](external-synchronization.md) feature. Ability scores, name, race, spells, sage studies / abilities, and other syncable fields are already marked up with ZMF for you.
 
-That makes an exported page a convenient way to try external sync: export the character, save the markup to a wiki page, point external sync at that page, and it will scrape the character straight back into Zingor. From there you can keep editing the wiki page to drive further syncs. See [External Synchronization](external-synchronization.md) for how to associate a page and activate syncing.
+Therefore, if you plan to keep your character's permanent record on a MediaWiki page, the best way to get started is to export your character, save the result to a wiki page, and point external sync at that page. Zingor will then periodically scrape the page to update your character data in Zingor. Afterwards, as long as you keep the ZMF markup intact, you can experiment with the layout of your wiki page as you see fit.
+
+See [External Synchronization](external-synchronization.md) for instructions on making use of that feature, and the types of data it can parse to update Zingor.
 
 :::{note}
-Not everything in the export is synced back. Money and inventory, for example, are shown for readability but are managed in Zingor itself, so they carry no ZMF tags. See [External Synchronization](external-synchronization.md) for the full list of fields that participate in syncing.
+Not everything in the export can be included in external sync. For example, your character's money and inventory items are included to make the resulting wiki page as complete as possible, but there's no ZMF markup for them: those gameplay elements are managed in Zingor itself. See [Marking Up Your External Webpage](external-synchronization.md#marking-up-your-external-webpage) for the full list of character data that can be synced.
 :::
