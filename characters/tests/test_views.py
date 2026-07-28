@@ -1103,6 +1103,40 @@ class SplitStackTests(TestCase):
         item.refresh_from_db()
         self.assertEqual(str(item.capacity), "64 fluid_ounce")
 
+    def test_sheet_shows_capacity_fill_percentage(self):
+        """A weight capacity gets a fill level beside it on the sheet (#139)."""
+        backpack = Item.objects.create(
+            owner=self.character,
+            name="Backpack",
+            weight="2 lb",
+            is_container=True,
+            capacity="40 lb",
+        )
+        Item.objects.create(
+            owner=self.character, name="Rope", weight="10 lb", container=backpack
+        )
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, "25% full")
+
+    def test_sheet_omits_fill_percentage_without_weight_capacity(self):
+        """No capacity, or one in volume units, means no fill level to show (#139)."""
+        for name, capacity in [("Sack", None), ("Waterskin", "4 pint")]:
+            container = Item.objects.create(
+                owner=self.character,
+                name=name,
+                weight="1 lb",
+                is_container=True,
+                capacity=capacity,
+            )
+            Item.objects.create(
+                owner=self.character,
+                name=f"{name} filler",
+                weight="2 lb",
+                container=container,
+            )
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertNotContains(response, "% full")
+
     def test_unwearing_keeps_item_carried(self):
         """Taking off a worn item leaves it carried (it isn't dropped)."""
         item = Item.objects.create(

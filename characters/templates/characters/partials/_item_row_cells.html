@@ -50,6 +50,13 @@
                   hx-swap="outerHTML"
                   class="clickable">{% if item.capacity %}{{ item.capacity|short_units }}{% else %}—{% endif %}</span>{% else %}{% if item.capacity %}{{ item.capacity|short_units }}{% else %}—{% endif %}{% endif %}]
     </span>
+    {# Fill level, when it can be worked out: a weight capacity with contents to weigh against it. #}
+    {# Kept outside the -capacity span, which the edit form swaps out wholesale. #}
+    {% with pct=item.capacity_used_pct %}
+    {% if pct is not None %}
+    <span class="capacity-fill text-sm{% if pct > 100 %} capacity-fill--over{% endif %}">{{ pct|floatformat:0 }}% full</span>
+    {% endif %}
+    {% endwith %}
     {% endif %}
   </td>
   {# Normalized to oz so client-side sort compares a single unit, not mixed lb/oz strings. #}

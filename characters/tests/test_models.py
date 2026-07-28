@@ -240,6 +240,83 @@ class ItemModelTests(TestCase):
                 owner=self.character, name="Ghost", weight="1 lb", quantity=0
             )
 
+    def test_capacity_used_pct(self):
+        """Fill level is the contents' weight against the stated capacity."""
+        backpack = Item.objects.create(
+            owner=self.character,
+            name="Backpack",
+            weight="2 lb",
+            is_container=True,
+            capacity="40 lb",
+        )
+        Item.objects.create(
+            owner=self.character, name="Rope", weight="10 lb", container=backpack
+        )
+        self.assertEqual(backpack.capacity_used_pct, D(25))
+
+    def test_capacity_used_pct_converts_content_units(self):
+        """Contents weighed in other units still count against the capacity."""
+        sack = Item.objects.create(
+            owner=self.character,
+            name="Sack",
+            weight="1 lb",
+            is_container=True,
+            capacity="5 lb",
+        )
+        Item.objects.create(
+            owner=self.character, name="Salt", weight="8 oz", container=sack
+        )
+        self.assertEqual(sack.capacity_used_pct, D(10))
+
+    def test_capacity_used_pct_excludes_the_container_itself(self):
+        """An empty container reads 0% however much it weighs on its own."""
+        chest = Item.objects.create(
+            owner=self.character,
+            name="Chest",
+            weight="25 lb",
+            is_container=True,
+            capacity="50 lb",
+        )
+        self.assertEqual(chest.capacity_used_pct, D(0))
+
+    def test_capacity_used_pct_can_exceed_100(self):
+        """Overfilling is reported, not clamped."""
+        pouch = Item.objects.create(
+            owner=self.character,
+            name="Pouch",
+            weight="1 oz",
+            is_container=True,
+            capacity="1 lb",
+        )
+        Item.objects.create(
+            owner=self.character, name="Lead shot", weight="3 lb", container=pouch
+        )
+        self.assertEqual(pouch.capacity_used_pct, D(300))
+
+    def test_capacity_used_pct_none_without_capacity(self):
+        """No capacity recorded, nothing to be a percentage of."""
+        sack = Item.objects.create(
+            owner=self.character, name="Sack", weight="1 lb", is_container=True
+        )
+        Item.objects.create(
+            owner=self.character, name="Rope", weight="5 lb", container=sack
+        )
+        self.assertIsNone(sack.capacity_used_pct)
+
+    def test_capacity_used_pct_none_for_volume_capacity(self):
+        """Items carry a weight and no volume, so a waterskin in pints can't be filled."""
+        skin = Item.objects.create(
+            owner=self.character,
+            name="Waterskin",
+            weight="1 lb",
+            is_container=True,
+            capacity="4 pint",
+        )
+        Item.objects.create(
+            owner=self.character, name="Vial", weight="2 oz", container=skin
+        )
+        self.assertIsNone(skin.capacity_used_pct)
+
     def test_container_quantity_must_be_one(self):
         """Containers are individuals: contents point at one row, so no stacks."""
         with self.assertRaises(IntegrityError):

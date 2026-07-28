@@ -556,6 +556,29 @@ class Item(models.Model):
         return self.total_weight.to(u.oz).magnitude
 
     @property
+    def contents_weight(self):
+        """Weight of everything inside this container, the container itself excluded."""
+        total = D(0) * u.oz
+        for content in self.contents.all():
+            total += content.total_weight.to(u.oz)
+        return total
+
+    @property
+    def capacity_used_pct(self) -> D | None:
+        """Percent of this container's capacity its contents take up.
+
+        None when there is nothing to measure against: no capacity recorded, or
+        a capacity given as a volume (a waterskin in pints, say). Items carry a
+        weight and no volume, so only a capacity in weight can be filled up.
+        Values above 100 are returned as-is: an overfull container is worth
+        showing rather than clamping away.
+        """
+        cap = self.capacity
+        if cap is None or cap.magnitude <= 0 or not cap.check("[mass]"):
+            return None
+        return (self.contents_weight.to(cap.units) / cap * 100).magnitude
+
+    @property
     def carried_weight(self):
         """Weight including contents, counting only carried items (recursive).
 

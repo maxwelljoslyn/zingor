@@ -372,6 +372,10 @@ tr.collapse-hidden { display: none; }
   font-size: 0.8rem;
 }
 .collapse-toggle:hover { background: none; color: var(--accent-hover); }
+/* How full a container is, beside its capacity. Muted like the capacity itself
+   until the contents outweigh it, when it turns to the danger ink. */
+.capacity-fill { color: var(--text-muted); }
+.capacity-fill--over { color: var(--danger); }
 .drop-target { outline: 2px dashed var(--accent); border-radius: 4px; background: var(--surface-alt); }
 th.sortable { cursor: pointer; }
 th.sortable:hover { color: var(--accent-hover); }
