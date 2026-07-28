@@ -229,6 +229,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
 .modifier-positive { color: var(--success); }
 .modifier-negative { color: var(--accent); }
+/* Flex so whitespace-only text between the score, the slash and the percentile
+   forms no flex item, keeping percentile Strength tight ("18/10"). The pieces
+   stay separate elements because each is its own htmx-editable field. */
+.score-base { display: inline-flex; align-items: baseline; }
+.score-set-pct { margin-left: 0.35rem; }
 /* base -> modified ability score, with the net modifier total stacked over a
    direction arrow. Color comes from .modifier-positive/negative on the wrapper. */
 /* The wrapper stays inline (not inline-flex) so the modified score is ordinary
