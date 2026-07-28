@@ -36,7 +36,8 @@
                 <span class="score-delta-total">{{ ability.modifier_total|format_modifier }}</span>
                 <span class="score-delta-arrow">{% if ability.modifier_total > 0 %}&uarr;{% else %}&darr;{% endif %}</span>
               </span>
-              <span class="score-modified">{{ ability.current_score }}</span>
+              {# effective_percentile is set only for strength, and is non-None only when the effective score is 18. #}
+              <span class="score-modified">{{ ability.current_score }}{% if ability.effective_percentile is not None %}/{{ ability.effective_percentile|stringformat:"02d" }}{% endif %}</span>
             </span>
           {% endif %}
         </td>
