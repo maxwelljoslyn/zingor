@@ -160,6 +160,69 @@ h1 { color: var(--accent); letter-spacing: 0.01em; }
   box-shadow: var(--shadow);
   padding: 1rem 1.1rem;
   margin-bottom: 1.1rem;
+  /* Breathing room above a section jumped to from the table of contents. */
+  scroll-margin-top: 1rem;
+}
+/* Jumping to the topmost section should land at the top of the page, so the
+   character's name and toolbar come along with it. Asking for a full viewport
+   of margin is unsatisfiable for the first section — nothing is above it to
+   scroll past — so the browser clamps to scroll position 0. That beats a fixed
+   offset guessed from the header's height, and it follows a reorder for free. */
+[data-sortable="sections"] > [data-section]:first-child { scroll-margin-top: 100vh; }
+/* The character sheet: a sticky table of contents in a left rail, sections beside it. */
+.sheet-layout {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+.sheet-toc {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+/* An index in the margin: quieter than a section heading, same hand. */
+.sheet-toc-title {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant: small-caps;
+  letter-spacing: 0.09em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.4rem;
+}
+.sheet-toc-list { list-style: none; }
+.sheet-toc-list a {
+  display: block;
+  padding: 0.25rem 0.5rem;
+  border-left: 2px solid transparent;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  text-decoration: none;
+}
+/* In-page jumps are navigation, not destinations — don't mark them visited. */
+.sheet-toc-list a,
+.sheet-toc-list a:visited { color: var(--text-muted); }
+.sheet-toc-list a:hover { color: var(--accent-hover); }
+/* The section currently under the top of the viewport (set by sheet-toc.js). */
+.sheet-toc-list a[aria-current] {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--surface);
+}
+@media (max-width: 900px) {
+  /* Too narrow for a rail: the contents become a row of jump links above the sheet. */
+  .sheet-layout { grid-template-columns: minmax(0, 1fr); }
+  .sheet-toc { position: static; max-height: none; }
+  .sheet-toc-list { display: flex; flex-wrap: wrap; gap: 0.15rem 0.5rem; }
+  .sheet-toc-list a { border-left: none; padding: 0.25rem 0.35rem; }
+  .sheet-toc-list a[aria-current] { background: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
 }
 /* The signature: rubricated section headings — vermilion small-caps over a faded rule */
 .section h2 {

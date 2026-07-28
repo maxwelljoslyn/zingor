@@ -1,4 +1,5 @@
 {% extends "characters/base.html" %}
+{% load static %}
 {% load character_tags %}
 {% block title %}{{ character.name|default:"Unnamed" }} — Zingor{% endblock %}
 {% block content %}
@@ -24,12 +25,16 @@
     <a href="/" class="btn btn-secondary btn-small">Back to List</a>
   </div>
 </div>
-<div id="sheet-body"
-     data-sortable="sections" data-sortable-item="section" data-sortable-handle="h2">
-  {% include "characters/partials/sheet_body.html" %}
+<div class="sheet-layout">
+  {% include "characters/partials/toc.html" %}
+  <div id="sheet-body"
+       data-sortable="sections" data-sortable-item="section" data-sortable-handle="h2">
+    {% include "characters/partials/sheet_body.html" %}
+  </div>
 </div>
 <div id="wiki-modal"></div>
 
+<script src="{% static 'characters/sheet-toc.js' %}" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"
         integrity="sha384-HZZ/fukV+9G8gwTNjN7zQDG0Sp7MsZy5DDN6VfY3Be7V9dvQpEpR2jF2HlyFUUjU"
         crossorigin="anonymous"></script>
@@ -93,6 +98,11 @@
             },
             body: JSON.stringify(order)
           });
+          // Announce the new order so anything mirroring it (the table of
+          // contents) can follow without this driver knowing about it.
+          document.body.dispatchEvent(new CustomEvent('zingor:reorder', {
+            detail: { scope: scope, order: order }
+          }));
         }
       };
       if (el.dataset.sortableHandle) {

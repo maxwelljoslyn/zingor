@@ -243,6 +243,44 @@ class SectionOrderRenderTests(TestCase):
         self.assertEqual(rendered[-1], "sage")
 
 
+class TableOfContentsTests(TestCase):
+    """The sidebar table of contents mirrors the sections the sheet renders."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+        self.character = Character.objects.create(user=self.user, name="Thorn")
+
+    def _set_order(self, user, order):
+        LayoutOrder.objects.bulk_create(
+            [
+                LayoutOrder(user=user, scope="sections", key=key, position=i)
+                for i, key in enumerate(order)
+            ]
+        )
+
+    def test_every_section_has_an_entry_linking_to_it(self):
+        html = self.client.get(f"/character/{self.character.pk}/").content.decode()
+        for key, title, _ in layout.SECTIONS:
+            self.assertIn(f'data-toc-key="{key}"', html)
+            self.assertIn(f'href="#section-{key}"', html)
+            self.assertIn(title, html)
+
+    def test_default_order(self):
+        html = self.client.get(f"/character/{self.character.pk}/").content.decode()
+        self.assertEqual(
+            _sequence(html, "toc-key", layout.SECTION_KEYS), layout.SECTION_KEYS
+        )
+
+    def test_saved_section_order_applies_on_first_load(self):
+        custom = list(reversed(layout.SECTION_KEYS))
+        self._set_order(self.user, custom)
+        html = self.client.get(f"/character/{self.character.pk}/").content.decode()
+        self.assertEqual(_sequence(html, "toc-key", layout.SECTION_KEYS), custom)
+        # ...and matches the order the sections themselves render in.
+        self.assertEqual(_sequence(html, "section", layout.SECTION_KEYS), custom)
+
+
 class NotesOrderRenderTests(TestCase):
     NOTES = ["background", "appearance", "notes"]
 

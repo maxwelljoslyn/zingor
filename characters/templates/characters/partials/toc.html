@@ -1,0 +1,10 @@
+{# Sticky table of contents for the character sheet; jumps to a section's htmx id. #}
+{# Order mirrors section_order, and is re-synced on drag-reorder by sheet-toc.js. #}
+<nav class="sheet-toc" aria-label="Character sheet sections">
+  <h2 class="sheet-toc-title">Sections</h2>
+  <ul class="sheet-toc-list" data-toc="sections">
+    {% for key, title, template in section_order %}
+    <li data-toc-key="{{ key }}"><a href="#section-{{ key }}">{{ title }}</a></li>
+    {% endfor %}
+  </ul>
+</nav>

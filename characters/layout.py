@@ -14,18 +14,19 @@ from .models import Character, LayoutOrder
 # The scope under which the top-level section order is stored.
 SECTIONS_SCOPE = "sections"
 
-# Canonical sections in default top-to-bottom order: (key, template).
-SECTIONS: list[tuple[str, str]] = [
-    ("identity", "characters/partials/identity.html"),
-    ("abilities", "characters/partials/abilities.html"),
-    ("hp", "characters/partials/hp.html"),
-    ("inventory", "characters/partials/inventory.html"),
-    ("conditions", "characters/partials/conditions.html"),
-    ("spells", "characters/partials/spells.html"),
-    ("notes", "characters/partials/notes.html"),
-    ("sage", "characters/partials/sage.html"),
+# Canonical sections in default top-to-bottom order: (key, title, template). The
+# title is the section's heading, reused as its table-of-contents label.
+SECTIONS: list[tuple[str, str, str]] = [
+    ("identity", "Identity", "characters/partials/identity.html"),
+    ("abilities", "Ability Scores", "characters/partials/abilities.html"),
+    ("hp", "Hit Points", "characters/partials/hp.html"),
+    ("inventory", "Inventory", "characters/partials/inventory.html"),
+    ("conditions", "Conditions", "characters/partials/conditions.html"),
+    ("spells", "Spells", "characters/partials/spells.html"),
+    ("notes", "Notes", "characters/partials/notes.html"),
+    ("sage", "Sage Knowledge", "characters/partials/sage.html"),
 ]
-SECTION_KEYS: list[str] = [key for key, _ in SECTIONS]
+SECTION_KEYS: list[str] = [key for key, _, _ in SECTIONS]
 
 # Reorderable rows within a section, keyed by section key. Each value is both the
 # default order and the closed set of valid keys for that scope.
@@ -79,7 +80,7 @@ def order_for(user, scope: str) -> list[str]:
     return resolve_order(_stored_order(user, scope), valid_keys(scope))
 
 
-def section_order(user) -> list[tuple[str, str]]:
-    """The resolved sections as (key, template) pairs in the user's order."""
-    template_for = dict(SECTIONS)
-    return [(key, template_for[key]) for key in order_for(user, SECTIONS_SCOPE)]
+def section_order(user) -> list[tuple[str, str, str]]:
+    """The resolved sections as (key, title, template) triples in the user's order."""
+    meta_for = {key: (title, template) for key, title, template in SECTIONS}
+    return [(key, *meta_for[key]) for key in order_for(user, SECTIONS_SCOPE)]
