@@ -18,18 +18,21 @@
       <tr data-row="{{ ability.field_name }}">
         <th>{{ ability.name|title }}</th>
         <td>
-          {% unknown_or_value ability.base_score ability.field_name character.pk %}
-          {% if ability.name == "strength" and ability.base_score == 18 %}
-            {% if ability.percentile_strength is not None %}
-              /{% unknown_or_value ability.percentile_strength "percentile_strength" character.pk ability.percentile_strength|stringformat:"02d" %}
-            {% elif is_owner %}
-              <span class="clickable text-xs"
-                    id="field-percentile_strength"
-                    hx-get="/character/{{ character.pk }}/edit-field/?field=percentile_strength"
-                    hx-target="#field-percentile_strength"
-                    hx-swap="outerHTML">(set %)</span>
+          {# .score-base is a flex container so the newlines around the slash — both ours and the ones unknown_or_value emits — collapse away instead of rendering as "18 / 10". #}
+          <span class="score-base">
+            {% unknown_or_value ability.base_score ability.field_name character.pk %}
+            {% if ability.name == "strength" and ability.base_score == 18 %}
+              {% if ability.percentile_strength is not None %}
+                /{% unknown_or_value ability.percentile_strength "percentile_strength" character.pk ability.percentile_strength|stringformat:"02d" %}
+              {% elif is_owner %}
+                <span class="clickable text-xs score-set-pct"
+                      id="field-percentile_strength"
+                      hx-get="/character/{{ character.pk }}/edit-field/?field=percentile_strength"
+                      hx-target="#field-percentile_strength"
+                      hx-swap="outerHTML">(set %)</span>
+              {% endif %}
             {% endif %}
-          {% endif %}
+          </span>
           {% if ability.base_score is not None and ability.modifier_total != 0 %}
             <span class="score-delta {% if ability.modifier_total > 0 %}modifier-positive{% else %}modifier-negative{% endif %}">
               <span class="score-delta-marker">
