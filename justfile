@@ -1,4 +1,4 @@
-default: fix format docs
+default: docs fix format
 
 fix:
     uv run ruff check --fix
