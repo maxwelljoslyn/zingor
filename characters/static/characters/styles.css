@@ -231,8 +231,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .modifier-negative { color: var(--accent); }
 /* base -> modified ability score, with the net modifier total stacked over a
    direction arrow. Color comes from .modifier-positive/negative on the wrapper. */
-.score-delta { display: inline-flex; align-items: center; gap: 0.3rem; margin-left: 0.35rem; }
-.score-delta-marker { display: inline-flex; flex-direction: column; align-items: center; line-height: 1; }
+/* The wrapper stays inline (not inline-flex) so the modified score is ordinary
+   inline text sharing the base score's baseline; an inline-flex wrapper would
+   take its baseline from the two-line marker and sink the score below it. */
+.score-delta { margin-left: 0.35rem; white-space: nowrap; }
+.score-delta-marker { display: inline-flex; flex-direction: column; align-items: center; line-height: 1; margin-right: 0.15rem; }
 .score-delta-total { font-size: 0.7em; font-weight: 600; }
 .score-delta-arrow { font-size: 0.9em; line-height: 1; }
 .score-modified { font-weight: 600; }
