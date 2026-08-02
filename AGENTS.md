@@ -27,9 +27,9 @@ Templates: `templates/characters/` — `base.html`, `character_list.html` (whole
 
 ## Commands
 - If any Python files changed, run `just` as the final step before committing — it runs `uv run ruff check --fix` and `uv run ruff format`. Use a Haiku subagent to run `just`. Skip it when no `.py` files changed.
-- **Run all tests**: `uv run pytest -n auto`
-- **Run single test**: `uv run pytest tests/path/to/test_file.py::test_function_name -n auto`
-- **Run tests with output**: `uv run pytest -v -n auto`
+- **Run all tests**: `uv run pytest -n 6`
+- **Run single test**: `uv run pytest tests/path/to/test_file.py::test_function_name -n 6`
+- **Run tests with output**: `uv run pytest -v -n 6`
 - Don't use `cat` needlessly. Prefer `head` to `cat | head`; prefer `tail` to `cat | tail`
 - Always run tests in a Haiku 4.6 subagent.
 
