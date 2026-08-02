@@ -1,6 +1,18 @@
 {% load character_tags %}
 <div class="section" id="section-spells" data-section="spells">
-  <h2>Spells</h2>
+  <div class="section-head">
+    <h2>Spells</h2>
+    {% if is_owner and spells_by_level %}
+    <form hx-post="/character/{{ character.pk }}/memorize-all-spells/"
+          hx-target="#section-spells"
+          hx-swap="outerHTML"
+          hx-confirm="Mark every spell as memorized?"
+          class="inline no-shrink">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-secondary btn-small">Memorize all</button>
+    </form>
+    {% endif %}
+  </div>
   {% if spells_by_level %}
     {% for level, spell_list in spells_by_level.items %}
     <div class="mb-sm">

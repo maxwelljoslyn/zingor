@@ -1439,6 +1439,16 @@ def toggle_spell_memorized(request, spell_id: int) -> HttpResponse:
 @login_required
 @character_owner_required
 @require_POST
+def memorize_all_spells(request, pk: int) -> HttpResponse:
+    """Mark every one of a character's spells as memorized."""
+    character = get_object_or_404(Character, pk=pk)
+    character.spells.update(is_memorized=True)
+    return _render_section(request, character, "spells")
+
+
+@login_required
+@character_owner_required
+@require_POST
 def toggle_active(request, pk: int) -> HttpResponse:
     """Flip a character's active status (owner only) and re-render the identity section."""
     character = get_object_or_404(Character, pk=pk)

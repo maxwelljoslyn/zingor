@@ -337,6 +337,24 @@ class SpellPermissionsTests(PermissionsTestBase):
         )
         self.assertEqual(response.status_code, 403)
 
+    def test_owner_can_memorize_all_spells(self):
+        self.login_as_owner()
+        response = self.client.post(
+            f"/character/{self.character.pk}/memorize-all-spells/"
+        )
+        self.assertEqual(response.status_code, 200)
+
+    def test_viewer_cannot_memorize_all_spells(self):
+        self.spell.is_memorized = False
+        self.spell.save(update_fields=["is_memorized"])
+        self.login_as_viewer()
+        response = self.client.post(
+            f"/character/{self.character.pk}/memorize-all-spells/"
+        )
+        self.assertEqual(response.status_code, 403)
+        self.spell.refresh_from_db()
+        self.assertFalse(self.spell.is_memorized)
+
 
 class SagePermissionsTests(PermissionsTestBase):
     """Sage mutation endpoints are owner-only."""

@@ -181,6 +181,11 @@ urlpatterns = [
         views.toggle_spell_memorized,
         name="toggle_spell_memorized",
     ),
+    path(
+        "character/<int:pk>/memorize-all-spells/",
+        views.memorize_all_spells,
+        name="memorize_all_spells",
+    ),
     # Section refreshes
     path(
         "character/<int:pk>/section/<str:section>/",

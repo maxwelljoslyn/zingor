@@ -1562,6 +1562,31 @@ class SpellViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Spell.objects.filter(character=self.character).count(), 0)
 
+    def test_memorize_all_spells(self):
+        Spell.objects.create(
+            character=self.character,
+            name="Magic Missile",
+            level=1,
+            is_memorized=False,
+        )
+        Spell.objects.create(
+            character=self.character, name="Sleep", level=1, is_memorized=True
+        )
+        other = Character.objects.create(user=self.user, name="Cleric")
+        untouched = Spell.objects.create(
+            character=other, name="Bless", level=1, is_memorized=False
+        )
+        response = self.client.post(
+            f"/character/{self.character.pk}/memorize-all-spells/"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            Spell.objects.filter(character=self.character, is_memorized=False).count(),
+            0,
+        )
+        untouched.refresh_from_db()
+        self.assertFalse(untouched.is_memorized)
+
 
 class HitDieViewTests(TestCase):
     def setUp(self):
