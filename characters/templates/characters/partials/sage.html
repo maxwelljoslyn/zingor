@@ -4,82 +4,86 @@
   {% include "characters/partials/_notice.html" with notice=restore_message notice_level="success" %}
   {{ sage_fields_json|json_script:"sage-fields-data" }}
   <script>window.SAGE_FIELDS = JSON.parse(document.getElementById('sage-fields-data').textContent);</script>
-  <table class="kv-table">
-    <tr>
-      <th>Chosen Field &amp; Study</th>
-      <td>
-        {% if is_owner %}
-        <span
-          id="sage-chosen-field"
-          hx-get="{% url 'characters:sage_chosen_field_form' character.pk %}"
-          hx-target="#sage-chosen-field"
-          hx-swap="outerHTML"
-          hx-trigger="click"
-          class="clickable"
-        >
-          {% if character.chosen_field %}
-            <a href="{{ character.chosen_field|field_url }}" target="_blank">{{ character.chosen_field }}</a>{% if character.chosen_study %} / <a href="{{ character.chosen_study|study_url }}" target="_blank">{{ character.chosen_study }}</a>{% endif %}
+  <div class="table-scroll">
+    <table class="kv-table">
+      <tr>
+        <th>Chosen Field &amp; Study</th>
+        <td>
+          {% if is_owner %}
+          <span
+            id="sage-chosen-field"
+            hx-get="{% url 'characters:sage_chosen_field_form' character.pk %}"
+            hx-target="#sage-chosen-field"
+            hx-swap="outerHTML"
+            hx-trigger="click"
+            class="clickable"
+          >
+            {% if character.chosen_field %}
+              <a href="{{ character.chosen_field|field_url }}" target="_blank">{{ character.chosen_field }}</a>{% if character.chosen_study %} / <a href="{{ character.chosen_study|study_url }}" target="_blank">{{ character.chosen_study }}</a>{% endif %}
+            {% else %}
+              Not set
+            {% endif %}
+          </span>
           {% else %}
-            Not set
+          <span>
+            {% if character.chosen_field %}
+              <a href="{{ character.chosen_field|field_url }}" target="_blank">{{ character.chosen_field }}</a>{% if character.chosen_study %} / <a href="{{ character.chosen_study|study_url }}" target="_blank">{{ character.chosen_study }}</a>{% endif %}
+            {% else %}
+              Not set
+            {% endif %}
+          </span>
           {% endif %}
-        </span>
-        {% else %}
-        <span>
-          {% if character.chosen_field %}
-            <a href="{{ character.chosen_field|field_url }}" target="_blank">{{ character.chosen_field }}</a>{% if character.chosen_study %} / <a href="{{ character.chosen_study|study_url }}" target="_blank">{{ character.chosen_study }}</a>{% endif %}
-          {% else %}
-            Not set
-          {% endif %}
-        </span>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+        </td>
+      </tr>
+    </table>
+  </div>
   <h3>Studies</h3>
   {% if sage_studies_by_field %}
     {% for group in sage_studies_by_field %}
       <h4><a href="{{ group.field|field_url }}" target="_blank">{{ group.field }}</a></h4>
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Study</th>
-            <th>Points</th>
-            <th>Status</th>
-            {% if is_owner %}<th></th>{% endif %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for entry in group.entries %}
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead>
             <tr>
-              <td><a href="{{ entry.name|study_url }}" target="_blank">{{ entry.name }}</a></td>
-              <td>
-                {% if is_owner %}
-                <input
-                  type="number"
-                  name="points"
-                  value="{{ entry.points }}"
-                  min="0"
-                  hx-post="{% url 'characters:sage_study_points' character.pk entry.pk %}"
-                  hx-target="#section-sage"
-                  hx-swap="outerHTML"
-                  hx-trigger="change"
-                  class="w-5"
-                >
-                {% else %}
-                {{ entry.points }}
-                {% endif %}
-              </td>
-              <td>{{ entry.rank }}</td>
-              {% if is_owner %}
-              <td>
-                {% url 'characters:sage_study_hide' character.pk entry.pk as hide_url %}
-                {% include "characters/partials/_delete_button.html" with url=hide_url target="#section-sage" confirm="Delete "|add:entry.name|add:"? Your points are kept in case you re-add it." method="post" %}
-              </td>
-              {% endif %}
+              <th>Study</th>
+              <th>Points</th>
+              <th>Status</th>
+              {% if is_owner %}<th></th>{% endif %}
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {% for entry in group.entries %}
+              <tr>
+                <td><a href="{{ entry.name|study_url }}" target="_blank">{{ entry.name }}</a></td>
+                <td>
+                  {% if is_owner %}
+                  <input
+                    type="number"
+                    name="points"
+                    value="{{ entry.points }}"
+                    min="0"
+                    hx-post="{% url 'characters:sage_study_points' character.pk entry.pk %}"
+                    hx-target="#section-sage"
+                    hx-swap="outerHTML"
+                    hx-trigger="change"
+                    class="w-5"
+                  >
+                  {% else %}
+                  {{ entry.points }}
+                  {% endif %}
+                </td>
+                <td>{{ entry.rank }}</td>
+                {% if is_owner %}
+                <td>
+                  {% url 'characters:sage_study_hide' character.pk entry.pk as hide_url %}
+                  {% include "characters/partials/_delete_button.html" with url=hide_url target="#section-sage" confirm="Delete "|add:entry.name|add:"? Your points are kept in case you re-add it." method="post" %}
+                </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     {% endfor %}
   {% else %}
     <p>No studies tracked yet.</p>
@@ -102,61 +106,63 @@
   {% endif %}
   <h3>Standalone Sage Abilities</h3>
   {% if sage_abilities %}
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Ability</th>
-          <th>Source</th>
-          <th>Points</th>
-          <th>Status</th>
-          {% if is_owner %}<th></th>{% endif %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for entry in sage_abilities %}
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
           <tr>
-            <td>
-              {% if is_owner %}
-                {% include "characters/partials/sage_ability_field.html" with field_name="ability" %}
-              {% else %}
-                {{ entry.name }}
-              {% endif %}
-            </td>
-            <td>
-              {% if is_owner %}
-                {% include "characters/partials/sage_ability_field.html" with field_name="source" %}
-              {% else %}
-                {{ entry.source }}
-              {% endif %}
-            </td>
-            <td>
-              {% if is_owner %}
-              <input
-                type="number"
-                name="points"
-                value="{{ entry.points }}"
-                min="0"
-                hx-post="{% url 'characters:sage_ability_points' character.pk entry.pk %}"
-                hx-target="#section-sage"
-                hx-swap="outerHTML"
-                hx-trigger="change"
-                class="w-5"
-              >
-              {% else %}
-              {{ entry.points }}
-              {% endif %}
-            </td>
-            <td>{{ entry.rank }}</td>
-            {% if is_owner %}
-            <td>
-              {% url 'characters:sage_ability_hide' character.pk entry.pk as hide_url %}
-              {% include "characters/partials/_delete_button.html" with url=hide_url target="#section-sage" confirm="Delete "|add:entry.name|add:"? Your points are kept in case you re-add it." method="post" %}
-            </td>
-            {% endif %}
+            <th>Ability</th>
+            <th>Source</th>
+            <th>Points</th>
+            <th>Status</th>
+            {% if is_owner %}<th></th>{% endif %}
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {% for entry in sage_abilities %}
+            <tr>
+              <td>
+                {% if is_owner %}
+                  {% include "characters/partials/sage_ability_field.html" with field_name="ability" %}
+                {% else %}
+                  {{ entry.name }}
+                {% endif %}
+              </td>
+              <td>
+                {% if is_owner %}
+                  {% include "characters/partials/sage_ability_field.html" with field_name="source" %}
+                {% else %}
+                  {{ entry.source }}
+                {% endif %}
+              </td>
+              <td>
+                {% if is_owner %}
+                <input
+                  type="number"
+                  name="points"
+                  value="{{ entry.points }}"
+                  min="0"
+                  hx-post="{% url 'characters:sage_ability_points' character.pk entry.pk %}"
+                  hx-target="#section-sage"
+                  hx-swap="outerHTML"
+                  hx-trigger="change"
+                  class="w-5"
+                >
+                {% else %}
+                {{ entry.points }}
+                {% endif %}
+              </td>
+              <td>{{ entry.rank }}</td>
+              {% if is_owner %}
+              <td>
+                {% url 'characters:sage_ability_hide' character.pk entry.pk as hide_url %}
+                {% include "characters/partials/_delete_button.html" with url=hide_url target="#section-sage" confirm="Delete "|add:entry.name|add:"? Your points are kept in case you re-add it." method="post" %}
+              </td>
+              {% endif %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   {% else %}
     <p>No standalone abilities tracked yet.</p>
   {% endif %}

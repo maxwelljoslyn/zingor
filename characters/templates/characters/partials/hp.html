@@ -1,41 +1,45 @@
 {% load character_tags %}
 <div class="section" id="section-hp" data-section="hp">
   <h2>Hit Points</h2>
-  <table class="kv-table">
-    <tr>
-      <th>Current HP</th>
-      <td>{% unknown_or_value character.current_hp "current_hp" character.pk %}</td>
-      <th>Max HP</th>
-      <td>{{ character.maximum_hp|default:"—" }}</td>
-    </tr>
-    <tr>
-      <th>Stun Threshold</th>
-      <td colspan="3">
-        {% if character.current_hp is not None %}
-          {{ character.current_hp|ceildiv:4 }}+
-        {% else %}
-          —
-        {% endif %}
-      </td>
-    </tr>
-  </table>
+  <div class="table-scroll">
+    <table class="kv-table">
+      <tr>
+        <th>Current HP</th>
+        <td>{% unknown_or_value character.current_hp "current_hp" character.pk %}</td>
+        <th>Max HP</th>
+        <td>{{ character.maximum_hp|default:"—" }}</td>
+      </tr>
+      <tr>
+        <th>Stun Threshold</th>
+        <td colspan="3">
+          {% if character.current_hp is not None %}
+            {{ character.current_hp|ceildiv:4 }}+
+          {% else %}
+            —
+          {% endif %}
+        </td>
+      </tr>
+    </table>
+  </div>
   <h3 class="subhead mt-md">Bodymass Hit Die</h3>
   {% if bodymass_die %}
-    <table>
-      <thead><tr><th>Die</th><th>Roll</th>{% if is_owner %}<th></th>{% endif %}</tr></thead>
-      <tbody>
-        <tr>
-          <td>{{ bodymass_die.die_type }}</td>
-          <td>{{ bodymass_die.roll }}</td>
-          {% if is_owner %}
-          <td>
-            {% url 'characters:delete_hit_die' bodymass_die.pk as delete_url %}
-            {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-hp" confirm="Remove bodymass die?" %}
-          </td>
-          {% endif %}
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Die</th><th>Roll</th>{% if is_owner %}<th></th>{% endif %}</tr></thead>
+        <tbody>
+          <tr>
+            <td>{{ bodymass_die.die_type }}</td>
+            <td>{{ bodymass_die.roll }}</td>
+            {% if is_owner %}
+            <td>
+              {% url 'characters:delete_hit_die' bodymass_die.pk as delete_url %}
+              {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-hp" confirm="Remove bodymass die?" %}
+            </td>
+            {% endif %}
+          </tr>
+        </tbody>
+      </table>
+    </div>
   {% elif is_owner %}
     <form hx-post="/character/{{ character.pk }}/add-hit-die/"
           hx-target="#section-hp"
@@ -58,28 +62,30 @@
   {% endif %}
   <h3 class="subhead mt-md">Level Hit Dice</h3>
   {% if level_dice %}
-  <table>
-    <thead><tr><th>Level</th><th>Die</th><th>Roll</th><th>Con Bonus</th><th>Total</th>{% if is_owner %}<th></th>{% endif %}</tr></thead>
-    <tbody>
-      {% for hd in level_dice %}
-      <tr>
-        <td>{{ hd.level }}</td>
-        <td>{{ hd.die_type }}</td>
-        <td>{{ hd.roll }}</td>
-        <td>{{ hd.con_bonus|format_modifier }}</td>
-        <td>{{ hd.roll|add:hd.con_bonus }}</td>
-        {% if is_owner %}
-        <td>
-          {% url 'characters:delete_hit_die' hd.pk as delete_url %}
-          {% with lvl=hd.level|stringformat:"s" %}
-          {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-hp" confirm="Remove level "|add:lvl|add:" hit die?" %}
-          {% endwith %}
-        </td>
-        {% endif %}
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Level</th><th>Die</th><th>Roll</th><th>Con Bonus</th><th>Total</th>{% if is_owner %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for hd in level_dice %}
+        <tr>
+          <td>{{ hd.level }}</td>
+          <td>{{ hd.die_type }}</td>
+          <td>{{ hd.roll }}</td>
+          <td>{{ hd.con_bonus|format_modifier }}</td>
+          <td>{{ hd.roll|add:hd.con_bonus }}</td>
+          {% if is_owner %}
+          <td>
+            {% url 'characters:delete_hit_die' hd.pk as delete_url %}
+            {% with lvl=hd.level|stringformat:"s" %}
+            {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-hp" confirm="Remove level "|add:lvl|add:" hit die?" %}
+            {% endwith %}
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% else %}
   <p class="empty-note">No level hit dice recorded.</p>
   {% endif %}
@@ -104,23 +110,25 @@
   {% endif %}
   <h3 class="subhead mt-md">Additional Hit Points</h3>
   {% if bonus_hit_points %}
-  <table>
-    <thead><tr><th>Amount</th><th>Note</th>{% if is_owner %}<th></th>{% endif %}</tr></thead>
-    <tbody>
-      {% for bonus in bonus_hit_points %}
-      <tr>
-        <td>+{{ bonus.amount }}</td>
-        <td>{{ bonus.note }}</td>
-        {% if is_owner %}
-        <td>
-          {% url 'characters:delete_bonus_hp' bonus.pk as delete_url %}
-          {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-hp" confirm="Remove this bonus HP?" %}
-        </td>
-        {% endif %}
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Amount</th><th>Note</th>{% if is_owner %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for bonus in bonus_hit_points %}
+        <tr>
+          <td>+{{ bonus.amount }}</td>
+          <td>{{ bonus.note }}</td>
+          {% if is_owner %}
+          <td>
+            {% url 'characters:delete_bonus_hp' bonus.pk as delete_url %}
+            {% include "characters/partials/_delete_button.html" with url=delete_url target="#section-hp" confirm="Remove this bonus HP?" %}
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% else %}
   <p class="empty-note">No additional hit points recorded.</p>
   {% endif %}
