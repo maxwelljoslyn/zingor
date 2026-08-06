@@ -8,7 +8,6 @@ db.sqlite3-wal
 huey.db
 huey.db-shm
 huey.db-wal
-.python-version
 staticfiles/
 
 # Coverage
