@@ -8,6 +8,7 @@ Read the source code at [https://github.com/maxwelljoslyn/zingor](https://github
 ```{toctree}
 :maxdepth: 2
 
+inventory
 wiki-export
 external-synchronization
 display-names
