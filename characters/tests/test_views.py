@@ -753,6 +753,22 @@ class ItemCRUDTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Item.objects.filter(owner=self.character).count(), 1)
 
+    def test_add_item_with_weight_unit(self):
+        """The add-item form posts a bare magnitude plus a unit choice (#137)."""
+        response = self.client.post(
+            f"/character/{self.character.pk}/add-item/",
+            {"name": "Emerald", "weight": "3", "pint_unit": "pennyweight"},
+        )
+        self.assertEqual(response.status_code, 200)
+        item = Item.objects.get(owner=self.character, name="Emerald")
+        self.assertEqual(item.weight, D(3) * u.pennyweight)
+
+    def test_add_item_form_offers_unit_dropdown(self):
+        """Adding an item picks the unit from a dropdown, not free text (#137)."""
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, 'name="pint_unit"')
+        self.assertContains(response, 'value="pennyweight"')
+
     def test_add_item_with_quantity(self):
         """Quantity creates a single stacked row, not N duplicate rows (#74)."""
         response = self.client.post(
@@ -1079,6 +1095,32 @@ class SplitStackTests(TestCase):
         )
         item.refresh_from_db()
         self.assertEqual(str(item.weight), "2.5 pound")
+
+    def test_edit_weight_offers_pennyweight(self):
+        """Item weights can be edited in dwt as well as lb and oz (#137)."""
+        item = Item.objects.create(owner=self.character, name="Emerald", weight="3 dwt")
+        response = self.client.get(f"/item/{item.pk}/edit-field/?field=weight")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="pound"')
+        self.assertContains(response, 'value="ounce"')
+        self.assertContains(response, 'value="pennyweight"')
+
+    def test_update_item_weight_in_pennyweight(self):
+        """A dwt weight chosen from the dropdown is stored as pennyweight (#137)."""
+        item = Item.objects.create(owner=self.character, name="Emerald", weight="1 oz")
+        self.client.post(
+            f"/item/{item.pk}/update-field/",
+            {"field_name": "weight", "value": "3", "pint_unit": "pennyweight"},
+        )
+        item.refresh_from_db()
+        self.assertEqual(item.weight, D(3) * u.pennyweight)
+
+    def test_edit_weight_keeps_unlisted_unit(self):
+        """A weight in some other unit keeps its own option, so it isn't converted."""
+        item = Item.objects.create(owner=self.character, name="Dust", weight="5 grain")
+        response = self.client.get(f"/item/{item.pk}/edit-field/?field=weight")
+        self.assertContains(response, 'value="grain"')
+        self.assertContains(response, 'value="pound"')
 
     def test_edit_capacity_offers_unit_dropdown(self):
         """Capacity edit form is split into a number input and a unit <select> (#25)."""

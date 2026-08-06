@@ -239,6 +239,7 @@ def _sheet_context(character, user):
         "conditions": conditions,
         "spells_by_level": spells_by_level,
         "unmemorized_memorize_minutes": unmemorized_memorize_minutes,
+        "item_weight_units": PINT_UNIT_CHOICES["item_weight"],
         "section_order": layout.section_order(user),
         "notes_blocks": _build_notes_blocks(character, layout.order_for(user, "notes")),
     }
@@ -330,6 +331,9 @@ PINT_UNIT_DISPLAY = {
 # entry is used as the default when the field has no value yet.
 PINT_UNIT_CHOICES = {
     "weight": [("pound", "lb"), ("ounce", "oz")],
+    # Item weights (unlike a character's body weight) may also be given in
+    # pennyweight: gems, jewellery and other small treasure are weighed in dwt.
+    "item_weight": [("pound", "lb"), ("ounce", "oz"), ("pennyweight", "dwt")],
     "capacity": [
         ("gallon", "gal"),
         ("quart", "qt"),
@@ -896,7 +900,15 @@ def edit_item_field(request, item_id):
     else:
         return HttpResponse("Invalid field", status=400)
 
-    pint_unit_choices = PINT_UNIT_CHOICES.get(field_name)
+    pint_unit_choices = PINT_UNIT_CHOICES.get(
+        "item_weight" if field_name == "weight" else field_name
+    )
+    # A value stored in some other unit (entered before the unit dropdown existed)
+    # keeps an option of its own, so opening the editor can't silently convert it.
+    if pint_unit_choices and pint_unit not in [c[0] for c in pint_unit_choices]:
+        pint_unit_choices = [
+            (pint_unit, PINT_UNIT_DISPLAY.get(pint_unit, pint_unit))
+        ] + pint_unit_choices
 
     ctx = {
         "item": item,
@@ -1101,7 +1113,12 @@ def split_item(request, item_id):
 def add_item(request, pk):
     character = get_object_or_404(Character, pk=pk)
     name = request.POST.get("name", "")
-    weight_str = request.POST.get("weight", "0 oz")
+    weight_str = request.POST.get("weight", "")
+    # The form posts a bare magnitude plus a unit from the dropdown; a weight that
+    # already carries its own unit (e.g. "5 lb") is still accepted as-is.
+    pint_unit = request.POST.get("pint_unit", "")
+    if weight_str and pint_unit:
+        weight_str = f"{weight_str} {pint_unit}"
     is_worn = request.POST.get("is_worn") == "on"
     try:
         quantity = max(1, min(100, int(request.POST.get("quantity", 1))))
