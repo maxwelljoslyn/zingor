@@ -3,6 +3,7 @@
 ```{toctree}
 :maxdepth: 2
 
+inventory
 wiki-export
 external-synchronization
 display-names
