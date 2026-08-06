@@ -31,23 +31,25 @@ Click on Owner, Item, or Weight to sort the table by that column.
 
 {% if all_items %}
 <div class="section">
-  <table class="group-striped" data-sort-table="groups">
-    <thead>
-      <tr>
-        <th class="sortable" data-col="0" data-type="text">Owner <span class="sort-arrow"></span></th>
-        <th class="sortable" data-col="1" data-type="text">Item <span class="sort-arrow"></span></th>
-        <th class="sortable" data-col="2" data-type="number">Weight <span class="sort-arrow"></span></th>
-        <th>Worn</th>
-        <th>Carried</th>
-      </tr>
-    </thead>
-    {# One tbody per top-level item: the sorter moves each group as a unit, so container contents stay under their container. #}
-    {% for item in all_items %}
-    <tbody>
-      {% include "characters/partials/item_row.html" with depth=0 show_owner=True %}
-    </tbody>
-    {% endfor %}
-  </table>
+  <div class="table-scroll">
+    <table class="group-striped" data-sort-table="groups">
+      <thead>
+        <tr>
+          <th class="sortable" data-col="0" data-type="text">Owner <span class="sort-arrow"></span></th>
+          <th class="sortable" data-col="1" data-type="text">Item <span class="sort-arrow"></span></th>
+          <th class="sortable" data-col="2" data-type="number">Weight <span class="sort-arrow"></span></th>
+          <th>Worn</th>
+          <th>Carried</th>
+        </tr>
+      </thead>
+      {# One tbody per top-level item: the sorter moves each group as a unit, so container contents stay under their container. #}
+      {% for item in all_items %}
+      <tbody>
+        {% include "characters/partials/item_row.html" with depth=0 show_owner=True %}
+      </tbody>
+      {% endfor %}
+    </table>
+  </div>
 </div>
 {% else %}
 <p class="muted">No items yet.</p>

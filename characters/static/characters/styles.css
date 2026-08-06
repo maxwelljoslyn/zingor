@@ -361,6 +361,12 @@ ul.spell-list { list-style: none; padding: 0; }
    the full (wide) container and open up big gaps between label and value. */
 .kv-table { width: 100%; max-width: 820px; }
 
+/* Every table lives in one of these. A table is only as narrow as its columns
+   allow, so on a phone a wide one used to run past its section and drag the
+   whole page's horizontal scroll with it; here it scrolls on its own instead,
+   leaving the section (and the page) at the viewport's width. */
+.table-scroll { overflow-x: auto; }
+
 /* Tabular data with zebra-striped body rows (e.g. sage studies, party inventory). */
 .data-table tbody tr:nth-child(odd) { background: var(--surface-alt); }
 .data-table tbody tr:nth-child(even) { background: var(--surface-alt-2); }
@@ -444,6 +450,11 @@ tr.collapse-hidden { display: none; }
 .fixed-cols .col-weight { width: 22%; }
 .fixed-cols .col-flag { width: 8%; }
 .fixed-cols .col-actions { width: 18%; }
+/* Those column widths are shares of the table, so on a narrow screen a
+   fixed-layout table squeezes every column to a sliver (its buttons spilling
+   out of their cells) instead of overflowing. This floor keeps the columns
+   legible and hands the excess width to .table-scroll. */
+.fixed-cols { min-width: 34rem; }
 /* Caret toggle on a container row: plain glyph, not an accent button. */
 .collapse-toggle {
   background: none;

@@ -37,53 +37,55 @@
     </div>
     {% endif %}
   </div>
-  <table class="kv-table">
-    <tr>
-      <th>Name</th>
-      <td>{% unknown_or_value character.name "name" character.pk %}</td>
-      <th>Race</th>
-      <td>{% unknown_or_value character.race "race" character.pk %}</td>
-    </tr>
-    <tr>
-      <th>Class</th>
-      <td>{% unknown_or_value character.char_class "char_class" character.pk %}</td>
-      <th>Sex</th>
-      <td>{% unknown_or_value character.sex "sex" character.pk %}</td>
-    </tr>
-    <tr>
-      <th>Kind</th>
-      <td colspan="3">{% unknown_or_value character.kind "kind" character.pk character.get_kind_display %}</td>
-    </tr>
-    <tr>
-      <th>Level</th>
-      <td>
-        {% unknown_or_value character.level "level" character.pk %}
-        {% if derived.fighter_equivalent_level is not None %}
-          <span class="muted"> (fighter equivalent: {{ derived.fighter_equivalent_level }})</span>
-        {% endif %}
-      </td>
-      <th>XP</th>
-      <td>
-        {% unknown_or_value character.xp "xp" character.pk %}
-        {% if derived.xp_for_next_level %}
-          <span class="muted"> / {{ derived.xp_for_next_level }}</span>
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <th>Height</th>
-      <td>{% unknown_or_value character.height "height" character.pk character.height_display %}</td>
-      <th>Weight</th>
-      <td>{% unknown_or_value character.weight "weight" character.pk %}</td>
-    </tr>
-    <tr>
-      <th>Money</th>
-      {# Derived from money items in the inventory; add or edit coins there. #}
-      <td colspan="3">
-        {{ character.gp.magnitude }} gp,
-        {{ character.sp.magnitude }} sp,
-        {{ character.cp.magnitude }} cp
-      </td>
-    </tr>
-  </table>
+  <div class="table-scroll">
+    <table class="kv-table">
+      <tr>
+        <th>Name</th>
+        <td>{% unknown_or_value character.name "name" character.pk %}</td>
+        <th>Race</th>
+        <td>{% unknown_or_value character.race "race" character.pk %}</td>
+      </tr>
+      <tr>
+        <th>Class</th>
+        <td>{% unknown_or_value character.char_class "char_class" character.pk %}</td>
+        <th>Sex</th>
+        <td>{% unknown_or_value character.sex "sex" character.pk %}</td>
+      </tr>
+      <tr>
+        <th>Kind</th>
+        <td colspan="3">{% unknown_or_value character.kind "kind" character.pk character.get_kind_display %}</td>
+      </tr>
+      <tr>
+        <th>Level</th>
+        <td>
+          {% unknown_or_value character.level "level" character.pk %}
+          {% if derived.fighter_equivalent_level is not None %}
+            <span class="muted"> (fighter equivalent: {{ derived.fighter_equivalent_level }})</span>
+          {% endif %}
+        </td>
+        <th>XP</th>
+        <td>
+          {% unknown_or_value character.xp "xp" character.pk %}
+          {% if derived.xp_for_next_level %}
+            <span class="muted"> / {{ derived.xp_for_next_level }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <th>Height</th>
+        <td>{% unknown_or_value character.height "height" character.pk character.height_display %}</td>
+        <th>Weight</th>
+        <td>{% unknown_or_value character.weight "weight" character.pk %}</td>
+      </tr>
+      <tr>
+        <th>Money</th>
+        {# Derived from money items in the inventory; add or edit coins there. #}
+        <td colspan="3">
+          {{ character.gp.magnitude }} gp,
+          {{ character.sp.magnitude }} sp,
+          {{ character.cp.magnitude }} cp
+        </td>
+      </tr>
+    </table>
+  </div>
 </div>
