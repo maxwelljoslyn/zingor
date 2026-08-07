@@ -39,13 +39,14 @@
   {% if sage_studies_by_field %}
     {% for group in sage_studies_by_field %}
       <h4><a href="{{ group.field|field_url }}" target="_blank">{{ group.field }}</a></h4>
-      <table class="data-table">
+      {# fixed-cols pins the column widths so every field's table lines its Points/Status columns up with the others, instead of each table sizing itself to its own longest study name. #}
+      <table class="data-table fixed-cols">
         <thead>
           <tr>
-            <th>Study</th>
-            <th>Points</th>
-            <th>Status</th>
-            {% if is_owner %}<th></th>{% endif %}
+            <th class="col-study">Study</th>
+            <th class="col-points">Points</th>
+            <th class="col-status">Status</th>
+            {% if is_owner %}<th class="col-actions"></th>{% endif %}
           </tr>
         </thead>
         <tbody>

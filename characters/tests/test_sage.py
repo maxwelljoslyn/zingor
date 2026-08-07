@@ -363,3 +363,27 @@ class SageChosenFieldFormViewTests(TestCase):
         url = f"/character/{other_char.pk}/sage/chosen-field/form/"
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
+
+
+class SageStudyTableLayoutTests(TestCase):
+    """Each field gets its own studies table, so the widths must be pinned (#45)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="layout_tester", password="pass")
+        self.client = Client()
+        self.client.login(username="layout_tester", password="pass")
+        self.character = Character.objects.create(user=self.user, name="Thorn")
+        # Two studies belonging to different fields: two tables get rendered.
+        SageStudyPoints.objects.create(
+            character=self.character, study="Forgery", points=10
+        )
+        SageStudyPoints.objects.create(
+            character=self.character, study="Fortification", points=4
+        )
+
+    def test_every_study_table_pins_its_column_widths(self):
+        response = self.client.get(f"/character/{self.character.pk}/")
+        html = response.content.decode()
+        self.assertEqual(html.count('<table class="data-table fixed-cols">'), 2)
+        for column in ["col-study", "col-points", "col-status"]:
+            self.assertEqual(html.count(f'class="{column}"'), 2)
