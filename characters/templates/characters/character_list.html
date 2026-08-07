@@ -29,27 +29,14 @@
 <h1 class="mt-lg">Party Inventory</h1>
 Click on Owner, Item, or Weight to sort the table by that column.
 
-{% if all_items %}
-<div class="section">
-  <table class="group-striped" data-sort-table="groups">
-    <thead>
-      <tr>
-        <th class="sortable" data-col="0" data-type="text">Owner <span class="sort-arrow"></span></th>
-        <th class="sortable" data-col="1" data-type="text">Item <span class="sort-arrow"></span></th>
-        <th class="sortable" data-col="2" data-type="number">Weight <span class="sort-arrow"></span></th>
-        <th>Worn</th>
-        <th>Carried</th>
-      </tr>
-    </thead>
-    {# One tbody per top-level item: the sorter moves each group as a unit, so container contents stay under their container. #}
-    {% for item in all_items %}
-    <tbody>
-      {% include "characters/partials/item_row.html" with depth=0 show_owner=True %}
-    </tbody>
-    {% endfor %}
-  </table>
-</div>
-{% else %}
-<p class="muted">No items yet.</p>
-{% endif %}
+{# Search box for the table below. A debounce keeps a burst of typing to one request; #}
+{# Enter fires immediately for anyone who would rather not wait it out. #}
+<input type="search" name="q" value="{{ item_query }}" class="w-full mt-sm mb-md"
+       placeholder="Filter items by name, e.g. rope"
+       aria-label="Filter party inventory by item name"
+       hx-get="{% url 'characters:party_inventory' %}"
+       hx-target="#party-inventory"
+       hx-swap="outerHTML"
+       hx-trigger="input changed delay:300ms, keyup[key=='Enter']">
+{% include "characters/partials/party_inventory.html" %}
 {% endblock %}

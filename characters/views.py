@@ -542,6 +542,57 @@ def user_profile(request, username: str):
 # --- Character list ---
 
 
+def _party_inventory_matches(item: Item, query: str) -> bool:
+    """Whether an item belongs in the filtered whole-party item table.
+
+    An item's name is the only thing matched on today; further kinds of filter
+    (categories, owners) belong here as extra conjuncts (see #27).
+    """
+    return query.lower() in item.name.lower()
+
+
+def _party_inventory_context(query: str) -> dict:
+    """Rows for the whole-party item table, filtered by `query`.
+
+    Unfiltered, the table is a container tree: a row per top-level item with its
+    contents nested beneath it. A search returns a flat list of matching items
+    instead, so a match buried three bags deep still gets a row of its own.
+
+    Either way the tree is stitched from the whole unfiltered scope, so a
+    container's total weight and fill level stay right even when the contents
+    they are computed from are filtered out of view.
+    """
+    # Dead/retired characters' gear should not clutter the party's item list.
+    # Fetch every active owner's items in one query and stitch the container
+    # tree in Python (see _stitch_container_tree) so contents.all() is
+    # cache-served at any nesting depth instead of an N+1 per container.
+    items = list(
+        Item.objects.select_related("owner", "owner__user")
+        .filter(owner__is_active=True)
+        .order_by("owner__name", "name")
+    )
+    top_level = _stitch_container_tree(items)
+    # Matching in Python rather than the database: the whole scope is fetched
+    # already to stitch the tree, so a second filtered query buys nothing.
+    rows = (
+        [item for item in items if _party_inventory_matches(item, query)]
+        if query
+        else top_level
+    )
+    return {"all_items": rows, "item_query": query}
+
+
+@login_required
+def party_inventory(request):
+    """The whole-party item table alone, for the search box's htmx swap."""
+    query = request.GET.get("q", "").strip()
+    return render(
+        request,
+        "characters/partials/party_inventory.html",
+        _party_inventory_context(query),
+    )
+
+
 @login_required
 def character_list(request):
     base = Character.objects.select_related("user", "user__profile").prefetch_related(
@@ -561,15 +612,6 @@ def character_list(request):
     inactive_characters = base.filter(is_active=False).order_by(
         "user__username", "name"
     )
-    # Dead/retired characters' gear should not clutter the party's item list.
-    # Fetch every active owner's items in one query and stitch the container
-    # tree in Python (see _stitch_container_tree) so contents.all() is
-    # cache-served at any nesting depth instead of an N+1 per container.
-    all_items = _stitch_container_tree(
-        Item.objects.select_related("owner", "owner__user")
-        .filter(owner__is_active=True)
-        .order_by("owner__name", "name")
-    )
     return render(
         request,
         "characters/character_list.html",
@@ -578,7 +620,8 @@ def character_list(request):
             "party_fel_total": party_fel_total,
             "other_characters": other_characters,
             "inactive_characters": inactive_characters,
-            "all_items": all_items,
+            # The page loads unfiltered; the search box swaps in party_inventory.
+            **_party_inventory_context(""),
         },
     )
 
