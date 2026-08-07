@@ -577,19 +577,35 @@ class Item(models.Model):
         return total
 
     @property
+    def contents_count(self) -> int:
+        """How many things are inside this container, stacks counted by their size.
+
+        Only the direct contents: anything deeper is filling up the nested
+        container instead. Uses .all() rather than a queryset filter for the
+        same prefetch-cache reason as carried_weight.
+        """
+        return sum(content.quantity for content in self.contents.all())
+
+    @property
     def capacity_used_pct(self) -> D | None:
         """Percent of this container's capacity its contents take up.
 
-        None when there is nothing to measure against: no capacity recorded, or
-        a capacity given as a volume (a waterskin in pints, say). Items carry a
-        weight and no volume, so only a capacity in weight can be filled up.
-        Values above 100 are returned as-is: an overfull container is worth
-        showing rather than clamping away.
+        A capacity in weight is filled by the contents' weight; one counted in
+        `item` (a quiver holding 20 arrows, a belt holding 2 things) is filled
+        by how many things are inside. None when there is nothing to measure
+        against: no capacity recorded, or a capacity given as a volume (a
+        waterskin in pints, say), since items carry a weight and a count but no
+        volume. Values above 100 are returned as-is: an overfull container is
+        worth showing rather than clamping away.
         """
         cap = self.capacity
-        if cap is None or cap.magnitude <= 0 or not cap.check("[mass]"):
+        if cap is None or cap.magnitude <= 0:
             return None
-        return (self.contents_weight.to(cap.units) / cap * 100).magnitude
+        if cap.check("[mass]"):
+            return (self.contents_weight.to(cap.units) / cap * 100).magnitude
+        if cap.check("[objects]"):
+            return (D(self.contents_count) * u.item / cap * 100).magnitude
+        return None
 
     @property
     def carried_weight(self):

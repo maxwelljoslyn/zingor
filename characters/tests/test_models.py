@@ -303,6 +303,96 @@ class ItemModelTests(TestCase):
         )
         self.assertIsNone(sack.capacity_used_pct)
 
+    def test_capacity_used_pct_counts_items_for_item_capacity(self):
+        """A capacity in items is filled by the stack sizes inside it (#70)."""
+        quiver = Item.objects.create(
+            owner=self.character,
+            name="Quiver",
+            weight="1 lb",
+            is_container=True,
+            capacity="20 item",
+        )
+        Item.objects.create(
+            owner=self.character,
+            name="Arrow",
+            weight="1 oz",
+            quantity=10,
+            container=quiver,
+        )
+        self.assertEqual(quiver.capacity_used_pct, D(50))
+
+    def test_item_capacity_counts_each_row(self):
+        """Two separate things on a two-item belt fill it (#70)."""
+        belt = Item.objects.create(
+            owner=self.character,
+            name="Belt",
+            weight="1 lb",
+            is_container=True,
+            capacity="2 item",
+        )
+        for name in ["Dagger", "Pouch"]:
+            Item.objects.create(
+                owner=self.character, name=name, weight="1 lb", container=belt
+            )
+        self.assertEqual(belt.capacity_used_pct, D(100))
+
+    def test_item_capacity_ignores_weight(self):
+        """A counted container doesn't care how heavy its contents are (#70)."""
+        quiver = Item.objects.create(
+            owner=self.character,
+            name="Quiver",
+            weight="1 lb",
+            is_container=True,
+            capacity="4 item",
+        )
+        Item.objects.create(
+            owner=self.character, name="Anvil", weight="100 lb", container=quiver
+        )
+        self.assertEqual(quiver.capacity_used_pct, D(25))
+
+    def test_item_capacity_counts_only_direct_contents(self):
+        """Things inside a nested container fill that one, not the outer (#70)."""
+        belt = Item.objects.create(
+            owner=self.character,
+            name="Belt",
+            weight="1 lb",
+            is_container=True,
+            capacity="2 item",
+        )
+        pouch = Item.objects.create(
+            owner=self.character,
+            name="Pouch",
+            weight="1 oz",
+            is_container=True,
+            container=belt,
+        )
+        Item.objects.create(
+            owner=self.character,
+            name="Gem",
+            weight="1 oz",
+            quantity=8,
+            container=pouch,
+        )
+        self.assertEqual(belt.capacity_used_pct, D(50))
+
+    def test_item_capacity_can_exceed_100(self):
+        """Overstuffing a counted container is reported, not clamped (#70)."""
+        quiver = Item.objects.create(
+            owner=self.character,
+            name="Quiver",
+            weight="1 lb",
+            is_container=True,
+            capacity="20 item",
+        )
+        Item.objects.create(
+            owner=self.character,
+            name="Arrow",
+            weight="1 oz",
+            quantity=30,
+            container=quiver,
+        )
+        self.assertEqual(quiver.capacity_used_pct, D(150))
+
     def test_capacity_used_pct_none_for_volume_capacity(self):
         """Items carry a weight and no volume, so a waterskin in pints can't be filled."""
         skin = Item.objects.create(
