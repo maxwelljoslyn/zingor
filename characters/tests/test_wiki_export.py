@@ -4,7 +4,13 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from characters.microformats import parse_sheet
-from characters.models import Character, Item, SageStudyPoints, Spell
+from characters.models import (
+    Character,
+    Item,
+    SageAbilityPoints,
+    SageStudyPoints,
+    Spell,
+)
 from characters.wiki_export import character_to_wiki
 
 User = get_user_model()
@@ -59,6 +65,30 @@ class WikiExportTest(TestCase):
         wiki = character_to_wiki(self.char)
         assert "No items." in wiki
         assert '{| class="wikitable"' not in wiki
+
+    def test_sage_abilities_section(self):
+        SageAbilityPoints.objects.create(
+            character=self.char,
+            ability="Read Weather",
+            source="Old sailor's mentorship",
+            points=12,
+        )
+        wiki = character_to_wiki(self.char)
+        assert "=== Standalone Abilities ===" in wiki
+        assert "Read Weather" in wiki
+        assert "Old sailor's mentorship" in wiki
+
+    def test_no_sage_abilities(self):
+        wiki = character_to_wiki(self.char)
+        assert "No standalone sage abilities." in wiki
+        assert "=== Standalone Abilities ===" not in wiki
+
+    def test_hidden_sage_ability_omitted(self):
+        SageAbilityPoints.objects.create(
+            character=self.char, ability="Read Weather", points=12, hidden=True
+        )
+        wiki = character_to_wiki(self.char)
+        assert "Read Weather" not in wiki
 
     def test_notes_section(self):
         self.char.background = "Born in a village."
@@ -138,3 +168,28 @@ class WikiExportZMFTest(TestCase):
         assert '|- class="zingor-sage-study"' in wiki
         assert 'class="zingor-sage-study-name" | Divination' in wiki
         assert 'class="zingor-sage-study-points" | 13' in wiki
+
+    def test_sage_ability_table_carries_zmf_classes(self):
+        """Standalone abilities are exported as a table like sage studies, so
+        (as there) the assertion is on the MediaWiki attribute syntax that
+        becomes <tr>/<td> classes once the page renders."""
+        SageAbilityPoints.objects.create(
+            character=self.char,
+            ability="Read Weather",
+            source="Old sailor's mentorship",
+            points=12,
+        )
+        wiki = character_to_wiki(self.char)
+        assert '|- class="zingor-sage-ability"' in wiki
+        assert 'class="zingor-sage-ability-name" | Read Weather' in wiki
+        assert 'class="zingor-sage-ability-points" | 12' in wiki
+        assert 'class="zingor-sage-ability-source" | Old sailor\'s mentorship' in wiki
+
+    def test_sage_ability_without_source_still_carries_its_class(self):
+        """The source cell is always emitted so the column stays aligned; an
+        empty one is simply an absent optional subfield to the parser."""
+        SageAbilityPoints.objects.create(
+            character=self.char, ability="Read Weather", points=12
+        )
+        wiki = character_to_wiki(self.char)
+        assert 'class="zingor-sage-ability-source"' in wiki
