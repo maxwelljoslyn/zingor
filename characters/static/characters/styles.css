@@ -444,6 +444,12 @@ tr.collapse-hidden { display: none; }
 .fixed-cols .col-weight { width: 22%; }
 .fixed-cols .col-flag { width: 8%; }
 .fixed-cols .col-actions { width: 18%; }
+/* Sage studies render one table per field, so their columns only line up with
+   each other when the widths are pinned rather than derived from each table's
+   own longest study name. */
+.fixed-cols .col-study { width: 42%; }
+.fixed-cols .col-points { width: 18%; }
+.fixed-cols .col-status { width: 22%; }
 /* Caret toggle on a container row: plain glyph, not an accent button. */
 .collapse-toggle {
   background: none;
