@@ -1,0 +1,35 @@
+{# The whole-party item table. Rendered inline by character_list.html and on its own #}
+{# by views.party_inventory, which the search box swaps into id="party-inventory". #}
+{# The search input itself lives outside this partial so the swap never disturbs typing. #}
+<div id="party-inventory">
+  {% if all_items %}
+  <div class="section">
+    <table class="group-striped" data-sort-table="groups">
+      <thead>
+        <tr>
+          <th class="sortable" data-col="0" data-type="text">Owner <span class="sort-arrow"></span></th>
+          <th class="sortable" data-col="1" data-type="text">Item <span class="sort-arrow"></span></th>
+          <th class="sortable" data-col="2" data-type="number">Weight <span class="sort-arrow"></span></th>
+          <th>Worn</th>
+          <th>Carried</th>
+        </tr>
+      </thead>
+      {# One tbody per row/group: the sorter moves each group as a unit, so container contents stay under their container. #}
+      {% for item in all_items %}
+      <tbody>
+        {% if item_query %}
+        {# Filtered: a flat list of matches, so an item nested in a container still gets its own row. #}
+        {% include "characters/partials/_item_row_cells.html" with depth=0 show_owner=True %}
+        {% else %}
+        {% include "characters/partials/item_row.html" with depth=0 show_owner=True %}
+        {% endif %}
+      </tbody>
+      {% endfor %}
+    </table>
+  </div>
+  {% elif item_query %}
+  <p class="muted">No items match &ldquo;{{ item_query }}&rdquo;.</p>
+  {% else %}
+  <p class="muted">No items yet.</p>
+  {% endif %}
+</div>

@@ -59,6 +59,7 @@ urlpatterns = [
     # Character list
     path("", views.character_list, name="character_list"),
     path("character/create/", views.character_create, name="character_create"),
+    path("party-inventory/", views.party_inventory, name="party_inventory"),
     # Character sheet
     path("character/<int:pk>/", views.character_sheet, name="character_sheet"),
     path(

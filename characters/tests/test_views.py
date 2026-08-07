@@ -380,6 +380,96 @@ class CharacterListViewTests(TestCase):
         self.assertEqual(len(deep.captured_queries), len(shallow.captured_queries))
 
 
+class PartyInventorySearchTests(TestCase):
+    """The search box over the whole-party item table (see #27)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+        self.character = Character.objects.create(user=self.user, name="Thorn")
+
+    def test_search_box_rendered_on_character_list(self):
+        response = self.client.get("/")
+        self.assertContains(response, 'hx-get="/party-inventory/"')
+        self.assertContains(response, 'hx-target="#party-inventory"')
+        self.assertContains(response, "placeholder=")
+
+    def test_login_required(self):
+        self.client.logout()
+        response = self.client.get("/party-inventory/")
+        self.assertEqual(response.status_code, 302)
+
+    def test_no_query_returns_every_item(self):
+        Item.objects.create(owner=self.character, name="Rope", weight="5 lb")
+        Item.objects.create(owner=self.character, name="Torch", weight="1 lb")
+        response = self.client.get("/party-inventory/")
+        self.assertContains(response, "Rope")
+        self.assertContains(response, "Torch")
+
+    def test_query_filters_by_item_name(self):
+        Item.objects.create(owner=self.character, name="Rope", weight="5 lb")
+        Item.objects.create(owner=self.character, name="Torch", weight="1 lb")
+        response = self.client.get("/party-inventory/", {"q": "rop"})
+        self.assertContains(response, "Rope")
+        self.assertNotContains(response, "Torch")
+
+    def test_query_is_case_insensitive(self):
+        Item.objects.create(owner=self.character, name="Rope", weight="5 lb")
+        response = self.client.get("/party-inventory/", {"q": "ROPE"})
+        self.assertContains(response, "Rope")
+
+    def test_blank_query_is_treated_as_no_query(self):
+        Item.objects.create(owner=self.character, name="Rope", weight="5 lb")
+        response = self.client.get("/party-inventory/", {"q": "   "})
+        self.assertContains(response, "Rope")
+        self.assertEqual(response.context["item_query"], "")
+
+    def test_match_inside_a_container_gets_its_own_row(self):
+        """Filtered results are flat, so a match nested in a bag is still visible."""
+        backpack = Item.objects.create(
+            owner=self.character, name="Backpack", weight="2 lb", is_container=True
+        )
+        Item.objects.create(
+            owner=self.character, name="Rope", weight="5 lb", container=backpack
+        )
+        response = self.client.get("/party-inventory/", {"q": "rope"})
+        self.assertContains(response, "Rope")
+        self.assertNotContains(response, "Backpack")
+        names = [item.name for item in response.context["all_items"]]
+        self.assertEqual(names, ["Rope"])
+
+    def test_matched_container_still_weighs_its_filtered_out_contents(self):
+        """The tree is stitched unfiltered, so total weight ignores the filter."""
+        backpack = Item.objects.create(
+            owner=self.character, name="Backpack", weight="2 lb", is_container=True
+        )
+        Item.objects.create(
+            owner=self.character, name="Rope", weight="5 lb", container=backpack
+        )
+        response = self.client.get("/party-inventory/", {"q": "backpack"})
+        self.assertContains(response, "(7 lb total)")
+
+    def test_inactive_owners_items_stay_excluded(self):
+        dead = Character.objects.create(user=self.user, name="Ghost", is_active=False)
+        Item.objects.create(owner=dead, name="Cursed Sword", weight="3 lb")
+        Item.objects.create(owner=self.character, name="Sword", weight="3 lb")
+        response = self.client.get("/party-inventory/", {"q": "sword"})
+        self.assertContains(response, "Sword")
+        self.assertNotContains(response, "Cursed Sword")
+
+    def test_no_matches_reports_the_query(self):
+        Item.objects.create(owner=self.character, name="Rope", weight="5 lb")
+        response = self.client.get("/party-inventory/", {"q": "halberd"})
+        self.assertContains(response, "No items match")
+        self.assertContains(response, "halberd")
+
+    def test_search_is_read_only_so_rows_carry_no_editors(self):
+        """The party table is everyone's view of everyone's gear, filtered or not."""
+        Item.objects.create(owner=self.character, name="Rope", weight="5 lb")
+        response = self.client.get("/party-inventory/", {"q": "rope"})
+        self.assertNotContains(response, "update-field")
+
+
 class CharacterSheetViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")
