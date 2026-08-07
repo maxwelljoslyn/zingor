@@ -1180,6 +1180,45 @@ class SplitStackTests(TestCase):
         item.refresh_from_db()
         self.assertEqual(str(item.capacity), "64 fluid_ounce")
 
+    def test_edit_capacity_offers_item_count_unit(self):
+        """Capacity can be given as a count of items, not just weight/volume (#70)."""
+        item = Item.objects.create(
+            owner=self.character, name="Quiver", is_container=True
+        )
+        response = self.client.get(f"/item/{item.pk}/edit-field/?field=capacity")
+        self.assertContains(response, 'value="item"')
+
+    def test_update_capacity_with_item_unit(self):
+        """A capacity saved in items round-trips as a Quantity (#70)."""
+        item = Item.objects.create(
+            owner=self.character, name="Quiver", is_container=True
+        )
+        self.client.post(
+            f"/item/{item.pk}/update-field/",
+            {"field_name": "capacity", "value": "20", "pint_unit": "item"},
+        )
+        item.refresh_from_db()
+        self.assertEqual(str(item.capacity), "20 item")
+
+    def test_sheet_shows_fill_percentage_for_item_capacity(self):
+        """A container measured in items gets a fill level too (#70)."""
+        quiver = Item.objects.create(
+            owner=self.character,
+            name="Quiver",
+            weight="1 lb",
+            is_container=True,
+            capacity="20 item",
+        )
+        Item.objects.create(
+            owner=self.character,
+            name="Arrow",
+            weight="1 oz",
+            quantity=5,
+            container=quiver,
+        )
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, "25% full")
+
     def test_sheet_shows_capacity_fill_percentage(self):
         """A weight capacity gets a fill level beside it on the sheet (#139)."""
         backpack = Item.objects.create(

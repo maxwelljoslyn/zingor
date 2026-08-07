@@ -342,6 +342,7 @@ PINT_UNIT_CHOICES = {
         ("cubic_foot", "cu ft"),
         ("pound", "lb"),
         ("ounce", "oz"),
+        ("item", "items"),
     ],
 }
 
