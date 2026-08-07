@@ -1,15 +1,23 @@
 """Tests for the views."""
 
+import io
+import os
+import shutil
+import tempfile
+
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
+from PIL import Image
 
+from characters.forms import MAX_PICTURE_BYTES
 from characters.models import (
     BonusHitPoints,
     Character,
@@ -2204,3 +2212,126 @@ class SageAbilityTests(TestCase):
         self.assertNotEqual(response.status_code, 200)
         row.refresh_from_db()
         self.assertEqual(row.source, "")
+
+
+def png_bytes(side: int = 1, compress_level: int = 6) -> bytes:
+    """An in-memory PNG of `side`x`side` random pixels.
+
+    Random pixels don't compress, so a large side (with compression off) is how
+    these tests get a file over the upload cap without shipping a fixture.
+    """
+    image = Image.frombytes("RGB", (side, side), os.urandom(side * side * 3))
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG", compress_level=compress_level)
+    return buffer.getvalue()
+
+
+class CharacterPictureTests(TestCase):
+    """Uploading, replacing, serving and removing a character's picture."""
+
+    def setUp(self):
+        self.media_root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.media_root, ignore_errors=True)
+        media = override_settings(MEDIA_ROOT=self.media_root)
+        media.enable()
+        self.addCleanup(media.disable)
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+        self.character = Character.objects.create(user=self.user, name="Thorn")
+
+    def upload(self, content: bytes, filename: str = "thorn.png"):
+        return self.client.post(
+            f"/character/{self.character.pk}/picture/upload/",
+            {"picture": SimpleUploadedFile(filename, content, "image/png")},
+        )
+
+    def test_upload_stores_the_picture(self):
+        response = self.upload(png_bytes())
+        self.assertEqual(response.status_code, 200)
+        self.character.refresh_from_db()
+        self.assertTrue(self.character.picture)
+        self.assertTrue(
+            os.path.exists(os.path.join(self.media_root, self.character.picture.name))
+        )
+
+    def test_upload_response_shows_the_picture(self):
+        response = self.upload(png_bytes())
+        self.assertContains(response, f"/character/{self.character.pk}/picture/")
+
+    def test_sheet_offers_upload_to_owner(self):
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, 'name="picture"')
+        self.assertContains(response, "Upload picture")
+
+    def test_upload_rejects_a_non_image(self):
+        response = self.upload(b"this is not an image", filename="sneaky.png")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "valid image")
+        self.character.refresh_from_db()
+        self.assertFalse(self.character.picture)
+
+    def test_upload_rejects_a_file_over_the_size_cap(self):
+        oversized = png_bytes(side=1500, compress_level=0)
+        self.assertGreater(len(oversized), MAX_PICTURE_BYTES)
+        response = self.upload(oversized)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "5 MB or smaller")
+        self.character.refresh_from_db()
+        self.assertFalse(self.character.picture)
+
+    def test_upload_with_no_file_reports_the_error(self):
+        response = self.client.post(f"/character/{self.character.pk}/picture/upload/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "required")
+        self.character.refresh_from_db()
+        self.assertFalse(self.character.picture)
+
+    def test_replacing_a_picture_deletes_the_old_file(self):
+        self.upload(png_bytes())
+        self.character.refresh_from_db()
+        first = os.path.join(self.media_root, self.character.picture.name)
+        self.upload(png_bytes(), filename="thorn-again.png")
+        self.character.refresh_from_db()
+        second = os.path.join(self.media_root, self.character.picture.name)
+        self.assertNotEqual(first, second)
+        self.assertFalse(os.path.exists(first))
+        self.assertTrue(os.path.exists(second))
+
+    def test_delete_clears_the_field_and_the_file(self):
+        self.upload(png_bytes())
+        self.character.refresh_from_db()
+        path = os.path.join(self.media_root, self.character.picture.name)
+        response = self.client.post(f"/character/{self.character.pk}/picture/delete/")
+        self.assertEqual(response.status_code, 200)
+        self.character.refresh_from_db()
+        self.assertFalse(self.character.picture)
+        self.assertFalse(os.path.exists(path))
+
+    def test_delete_without_a_picture_is_harmless(self):
+        response = self.client.post(f"/character/{self.character.pk}/picture/delete/")
+        self.assertEqual(response.status_code, 200)
+
+    def test_picture_view_serves_the_uploaded_bytes(self):
+        content = png_bytes()
+        self.upload(content)
+        response = self.client.get(f"/character/{self.character.pk}/picture/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(b"".join(response.streaming_content), content)
+
+    def test_picture_view_404s_when_there_is_no_picture(self):
+        response = self.client.get(f"/character/{self.character.pk}/picture/")
+        self.assertEqual(response.status_code, 404)
+
+    def test_picture_view_404s_when_the_file_is_missing(self):
+        self.upload(png_bytes())
+        self.character.refresh_from_db()
+        os.remove(os.path.join(self.media_root, self.character.picture.name))
+        response = self.client.get(f"/character/{self.character.pk}/picture/")
+        self.assertEqual(response.status_code, 404)
+
+    def test_picture_view_requires_login(self):
+        self.upload(png_bytes())
+        self.client.logout()
+        response = self.client.get(f"/character/{self.character.pk}/picture/")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response["Location"])

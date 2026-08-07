@@ -2,6 +2,12 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
+from .models import Character
+
+# Ceiling on an uploaded character picture. Django's own upload limits govern
+# only non-file POST data, so a file needs its own cap.
+MAX_PICTURE_BYTES = 5 * 1024 * 1024
+
 
 class RegistrationForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -16,6 +22,28 @@ class RegistrationForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+class CharacterPictureForm(forms.ModelForm):
+    """An uploaded character picture: a real image file, within the size cap.
+
+    ImageField verifies the upload actually decodes as an image, so a renamed
+    non-image (or a mislabelled one) is rejected before it reaches MEDIA_ROOT.
+    """
+
+    # The model field is optional so a character can have no picture; submitting
+    # this form without a file is still an error, not a silent no-op.
+    picture = forms.ImageField(required=True)
+
+    class Meta:
+        model = Character
+        fields = ("picture",)
+
+    def clean_picture(self):
+        picture = self.cleaned_data["picture"]
+        if picture.size > MAX_PICTURE_BYTES:
+            raise forms.ValidationError("Picture must be 5 MB or smaller.")
+        return picture
 
 
 class FeedbackForm(forms.Form):

@@ -17,6 +17,8 @@ from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import PasswordResetConfirmView
 from django.db import transaction
 from django.http import (
+    FileResponse,
+    Http404,
     HttpResponse,
     HttpResponseBadRequest,
     HttpResponseForbidden,
@@ -29,7 +31,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from . import layout, rules
 from .auth_emails import EmailSendError, send_confirmation_email
-from .forms import FeedbackForm, RegistrationForm
+from .forms import CharacterPictureForm, FeedbackForm, RegistrationForm
 
 logger = logging.getLogger(__name__)
 from .models import (
@@ -802,13 +804,17 @@ def update_field(request, pk):
     return _render_section(request, character, section, oob_sections=oob or None)
 
 
-def _render_section(request, character, section, oob_sections=None):
+def _render_section(request, character, section, oob_sections=None, extra_context=None):
     """Render a single section partial, optionally with out-of-band updates.
 
     oob_sections: list of additional section names to include as hx-swap-oob.
+    extra_context: extra template values (e.g. a `notice`) merged into the
+    section context.
     """
     ctx = _sheet_context(character, request.user)
     ctx["is_owner"] = character.user == request.user
+    if extra_context:
+        ctx = {**ctx, **extra_context}
     template_name = f"characters/partials/{section}.html"
     response = render(request, template_name, ctx)
 
@@ -853,6 +859,67 @@ def _oob_section_html(request, ctx, section: str) -> str:
 def section_refresh(request, pk, section):
     character = get_object_or_404(Character, pk=pk)
     return _render_section(request, character, section)
+
+
+# --- Character picture ---
+
+
+@login_required
+@require_GET
+def character_picture(request, pk):
+    """Serve a character's uploaded picture.
+
+    Uploads live under MEDIA_ROOT, which no web server routes (Caddy serves only
+    /static/*), so the bytes go out through Django. That also keeps the same
+    logged-in gate on pictures as on the sheets they belong to.
+    """
+    character = get_object_or_404(Character, pk=pk)
+    if not character.picture:
+        raise Http404("This character has no picture.")
+    try:
+        return FileResponse(character.picture.open("rb"))
+    except FileNotFoundError:
+        # The row can outlive its file (restored database, manual cleanup);
+        # a missing image is a 404, not a server error.
+        raise Http404("This character's picture file is missing.")
+
+
+@login_required
+@character_owner_required
+@require_POST
+def upload_picture(request, pk):
+    """Store an uploaded picture for the character, replacing any existing one."""
+    character = get_object_or_404(Character, pk=pk)
+    previous = character.picture.name
+    form = CharacterPictureForm(request.POST, request.FILES, instance=character)
+    if not form.is_valid():
+        return _render_section(
+            request,
+            character,
+            "identity",
+            extra_context={
+                "notice": " ".join(form.errors["picture"]),
+                "notice_level": "danger",
+            },
+        )
+    form.save()
+    # Saving a new file doesn't remove the old one, and nothing else refers to
+    # it, so it would sit in MEDIA_ROOT forever.
+    if previous and previous != character.picture.name:
+        character.picture.storage.delete(previous)
+    return _render_section(request, character, "identity")
+
+
+@login_required
+@character_owner_required
+@require_POST
+def delete_picture(request, pk):
+    """Drop the character's picture, file and all."""
+    character = get_object_or_404(Character, pk=pk)
+    if character.picture:
+        character.picture.delete(save=False)
+        character.save(update_fields=["picture", "updated_at"])
+    return _render_section(request, character, "identity")
 
 
 # --- Item field editing ---
