@@ -1187,6 +1187,10 @@ def delete_item(request, item_id):
     item = get_object_or_404(Item, pk=item_id)
     character = item.owner
     oob = ["identity"] if item.currency else None
+    # Deleting a container is losing the container, not its contents: spill them
+    # back into the normal inventory first, or the FK cascade would take them too
+    # (same rule as unticking Container in update_item_field).
+    item.contents.update(container=None)
     item.delete()
     return _render_section(request, character, "inventory", oob_sections=oob)
 
