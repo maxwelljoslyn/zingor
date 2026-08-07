@@ -1070,6 +1070,41 @@ class SplitStackTests(TestCase):
         response = self.client.delete(f"/item/{item.pk}/delete/")
         self.assertEqual(response.status_code, 200)
 
+    def test_delete_container_keeps_contents(self):
+        """Deleting a container spills its contents back into the inventory (#153)."""
+        backpack = Item.objects.create(
+            owner=self.character, name="Backpack", weight="2 lb", is_container=True
+        )
+        rope = Item.objects.create(
+            owner=self.character, name="Rope", weight="10 lb", container=backpack
+        )
+        response = self.client.delete(f"/item/{backpack.pk}/delete/")
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Item.objects.filter(pk=backpack.pk).exists())
+        rope.refresh_from_db()
+        self.assertIsNone(rope.container)
+
+    def test_delete_container_keeps_nested_contents(self):
+        """Only the deleted row goes; a nested container keeps its own contents (#153)."""
+        chest = Item.objects.create(
+            owner=self.character, name="Chest", weight="25 lb", is_container=True
+        )
+        pouch = Item.objects.create(
+            owner=self.character,
+            name="Pouch",
+            weight="0.5 lb",
+            is_container=True,
+            container=chest,
+        )
+        gem = Item.objects.create(
+            owner=self.character, name="Gem", weight="0.1 lb", container=pouch
+        )
+        self.client.delete(f"/item/{chest.pk}/delete/")
+        pouch.refresh_from_db()
+        gem.refresh_from_db()
+        self.assertIsNone(pouch.container)
+        self.assertEqual(gem.container_id, pouch.pk)
+
     def test_update_item_weight_decimal(self):
         """Item weights accept decimals after entry (#37)."""
         item = Item.objects.create(owner=self.character, name="Sword", weight="3 lb")
