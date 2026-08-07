@@ -13,4 +13,5 @@ wiki-export
 external-synchronization
 display-names
 character-pictures
+layout-customization
 ```
