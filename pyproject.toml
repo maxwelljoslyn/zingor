@@ -15,6 +15,7 @@ dependencies = [
     "bs4>=0.0.2",
     "huey>=3.2.1",
     "peewee>=4.2.6",
+    "pillow>=12.3.0",
 ]
 
 [dependency-groups]

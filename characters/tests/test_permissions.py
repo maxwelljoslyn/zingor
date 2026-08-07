@@ -4,8 +4,13 @@ Any logged-in user can view any character. Only the character's owner can
 hit mutation endpoints; non-owners get 403.
 """
 
+import shutil
+import tempfile
+
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from django.utils.html import escape
 
 from characters.models import Character, Condition, HitDie, Item, SageStudyPoints, Spell
@@ -354,6 +359,46 @@ class SpellPermissionsTests(PermissionsTestBase):
         self.assertEqual(response.status_code, 403)
         self.spell.refresh_from_db()
         self.assertFalse(self.spell.is_memorized)
+
+
+class CharacterPicturePermissionsTests(PermissionsTestBase):
+    """Anyone logged in can see a picture; only the owner can change one."""
+
+    def setUp(self):
+        super().setUp()
+        self.media_root = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.media_root, ignore_errors=True)
+        media = override_settings(MEDIA_ROOT=self.media_root)
+        media.enable()
+        self.addCleanup(media.disable)
+
+    def give_character_a_picture(self):
+        """Attach a stored file directly; upload validation is tested elsewhere."""
+        self.character.picture.save("thorn.png", ContentFile(b"pretend png"))
+
+    def test_viewer_can_see_the_picture(self):
+        self.give_character_a_picture()
+        self.login_as_viewer()
+        response = self.client.get(f"/character/{self.character.pk}/picture/")
+        self.assertEqual(response.status_code, 200)
+
+    def test_viewer_cannot_upload_a_picture(self):
+        self.login_as_viewer()
+        response = self.client.post(
+            f"/character/{self.character.pk}/picture/upload/",
+            {"picture": SimpleUploadedFile("mine.png", b"pretend png", "image/png")},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.character.refresh_from_db()
+        self.assertFalse(self.character.picture)
+
+    def test_viewer_cannot_delete_a_picture(self):
+        self.give_character_a_picture()
+        self.login_as_viewer()
+        response = self.client.post(f"/character/{self.character.pk}/picture/delete/")
+        self.assertEqual(response.status_code, 403)
+        self.character.refresh_from_db()
+        self.assertTrue(self.character.picture)
 
 
 class SagePermissionsTests(PermissionsTestBase):
