@@ -126,6 +126,11 @@ if not DEBUG:
         },
     }
 
+# Player-uploaded files (character pictures). Nothing serves this directory:
+# Caddy routes only /static/* to disk (ops/Caddyfile.snippet), so uploads go out
+# through the character_picture view, which checks the viewer is logged in.
+MEDIA_ROOT = BASE_DIR / "media"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_URL = "/login/"

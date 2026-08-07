@@ -104,6 +104,10 @@ class Character(models.Model):
     level = models.IntegerField(null=True, blank=True)
     xp = models.IntegerField(null=True, blank=True)
 
+    # Player-uploaded portrait, shown at the top of the identity section. The
+    # file lives under MEDIA_ROOT and is served by the character_picture view.
+    picture = models.ImageField(upload_to="character-pictures/", null=True, blank=True)
+
     # Link to the character's page on the Adventure wiki, surfaced on the sheet.
     wiki_url = models.URLField(null=True, blank=True)
     # When True (and wiki_url is set), the periodic job treats the wiki page as

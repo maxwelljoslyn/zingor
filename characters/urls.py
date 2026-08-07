@@ -186,6 +186,22 @@ urlpatterns = [
         views.memorize_all_spells,
         name="memorize_all_spells",
     ),
+    # Character picture
+    path(
+        "character/<int:pk>/picture/",
+        views.character_picture,
+        name="character_picture",
+    ),
+    path(
+        "character/<int:pk>/picture/upload/",
+        views.upload_picture,
+        name="upload_picture",
+    ),
+    path(
+        "character/<int:pk>/picture/delete/",
+        views.delete_picture,
+        name="delete_picture",
+    ),
     # Section refreshes
     path(
         "character/<int:pk>/section/<str:section>/",
