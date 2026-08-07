@@ -221,6 +221,26 @@ def character_to_wiki(character):
     else:
         lines.append("No sage studies.")
         lines.append("")
+    ability_rows = list(
+        character.sage_abilities.filter(hidden=False).order_by("ability")
+    )
+    if ability_rows:
+        lines.append("=== Standalone Abilities ===")
+        lines.append('{| class="wikitable"')
+        lines.append("! Ability !! Source !! Points !! Rank")
+        for row in ability_rows:
+            rank = rank_for_points(row.points)
+            lines.append('|- class="zingor-sage-ability"')
+            lines.append(
+                f'| class="zingor-sage-ability-name" | {row.ability} '
+                f'|| class="zingor-sage-ability-source" | {row.source} '
+                f'|| class="zingor-sage-ability-points" | {row.points} || {rank}'
+            )
+        lines.append("|}")
+        lines.append("")
+    else:
+        lines.append("No standalone sage abilities.")
+        lines.append("")
 
     # --- Notes ---
     lines.append("== Notes ==")
