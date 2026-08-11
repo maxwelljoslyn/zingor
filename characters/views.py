@@ -841,6 +841,23 @@ def character_picture(request, pk):
         raise Http404("This character's picture file is missing.")
 
 
+def _render_portrait(request, character, extra_context=None):
+    """Render the rail's picture block, the swap target for picture changes.
+
+    The picture lives outside the sheet's sections, so it re-renders on its own
+    rather than through _render_section.
+    """
+    ctx = {
+        "character": character,
+        "is_owner": character.user == request.user,
+        "max_picture_mb": MAX_PICTURE_MB,
+        "max_picture_pixels": MAX_PICTURE_PIXELS,
+    }
+    if extra_context:
+        ctx.update(extra_context)
+    return render(request, "characters/partials/portrait.html", ctx)
+
+
 @login_required
 @character_owner_required
 @require_POST
@@ -850,13 +867,14 @@ def upload_picture(request, pk):
     previous = character.picture.name
     form = CharacterPictureForm(request.POST, request.FILES, instance=character)
     if not form.is_valid():
-        return _render_section(
+        return _render_portrait(
             request,
             character,
-            "identity",
             extra_context={
                 "notice": " ".join(form.errors["picture"]),
                 "notice_level": "danger",
+                # Keep the disclosure open so the error lands next to the input.
+                "picture_error": True,
             },
         )
     form.save()
@@ -864,7 +882,7 @@ def upload_picture(request, pk):
     # it, so it would sit in MEDIA_ROOT forever.
     if previous and previous != character.picture.name:
         character.picture.storage.delete(previous)
-    return _render_section(request, character, "identity")
+    return _render_portrait(request, character)
 
 
 @login_required
@@ -876,7 +894,7 @@ def delete_picture(request, pk):
     if character.picture:
         character.picture.delete(save=False)
         character.save(update_fields=["picture", "updated_at"])
-    return _render_section(request, character, "identity")
+    return _render_portrait(request, character)
 
 
 # --- Item field editing ---

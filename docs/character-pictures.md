@@ -1,16 +1,16 @@
 # Character Pictures
 
-Every character can carry a picture: a portrait, a token, a sketch, whatever you like. It appears in the **Identity** section at the top of the character's sheet.
+Every character can carry a picture: a portrait, a token, a sketch, whatever you like. It appears in the left margin of the character's sheet, above the list of sections, and stays in view as you scroll.
 
 ## Adding a Picture
 
-Open the sheet of a character you own and find the **Identity** section. Beneath the section heading is a file chooser and an **Upload picture** button. Pick a file, click the button, and the picture appears immediately.
+Open the sheet of a character you own and look at the top of the left margin, above **Sections**. Click **Add picture** to unfold a file chooser and an **Upload picture** button. Pick a file, click the button, and the picture appears immediately.
 
-Once a character has a picture, the same control reads **Replace picture**. Uploading a new file swaps it for the old one; there is no need to remove the old picture first.
+Once a character has a picture, the fold reads **Change picture** and the button inside it reads **Replace picture**. Uploading a new file swaps it for the old one; there is no need to remove the old picture first.
 
 ## Removing a Picture
 
-Click **Remove picture**, next to the upload control. Zingor asks you to confirm, then deletes both the picture and the stored file. The character keeps everything else about it; only the picture goes.
+Unfold **Change picture** and click **Remove picture**. Zingor asks you to confirm, then deletes both the picture and the stored file. The character keeps everything else about it; only the picture goes.
 
 ## Size and Format Limits
 
@@ -20,7 +20,7 @@ A picture must be:
 - **{{ max_picture_pixels }}×{{ max_picture_pixels }} pixels or smaller**, on each side.
 - **A real image file.** Zingor opens each upload to check it really is an image, so renaming a file to end in `.png` will not get it past the check.
 
-The limits are printed next to the upload button so you don't have to remember them. If an upload fails, the Identity section explains why and the character's existing picture (if any) is left alone.
+The limits are printed next to the upload button so you don't have to remember them. If an upload fails, the fold stays open and explains why, and the character's existing picture (if any) is left alone.
 
 ## Who Can See and Change a Picture
 

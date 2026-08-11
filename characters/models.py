@@ -104,7 +104,7 @@ class Character(models.Model):
     level = models.IntegerField(null=True, blank=True)
     xp = models.IntegerField(null=True, blank=True)
 
-    # Player-uploaded portrait, shown at the top of the identity section. The
+    # Player-uploaded portrait, shown at the top of the sheet's left rail. The
     # file lives under MEDIA_ROOT and is served by the character_picture view.
     picture = models.ImageField(upload_to="character-pictures/", null=True, blank=True)
 
