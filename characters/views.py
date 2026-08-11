@@ -2134,6 +2134,94 @@ def treasure_split(request):
     )
 
 
+@login_required
+@staff_required
+@require_POST
+def treasure_move(request):
+    """Hand one item to a different recipient, leaving the rest of the division be.
+
+    Totals are recomputed from the adjusted assignment rather than re-divided:
+    re-running the splitter would undo the very move being made. Dividing the
+    hoard again is how you go back to what the algorithm wanted.
+    """
+    holders = {str(char.pk): char for char in _share_holders()}
+    chosen = [pk for pk in request.POST.getlist("recipient") if pk in holders]
+    shares, errors = _shares_drawn(request, chosen, holders)
+    held_by, items, division_errors = _submitted_division(request, chosen)
+    errors += division_errors
+    if not chosen:
+        errors.append("Check at least one character to divide the hoard among.")
+    if not errors:
+        errors += _apply_move(request, held_by, chosen)
+    if errors:
+        return render(
+            request, "characters/partials/treasure_shares.html", {"errors": errors}
+        )
+    # Every chosen recipient gets an entry, so somebody whose last item was just
+    # dragged away still shows up — and stays a target to drag one back onto.
+    split: dict[str, dict[str, int]] = {pk: {} for pk in chosen}
+    for name, pk in held_by.items():
+        split[pk][name] = items[name]
+    split = {pk: _by_value(share) for pk, share in split.items()}
+    context = _split_context(split, shares, items, holders)
+    return render(
+        request,
+        "characters/partials/treasure_shares.html",
+        {**context, "hand_edited": True},
+    )
+
+
+def _submitted_division(
+    request, chosen: list[str]
+) -> tuple[dict[str, str], dict[str, int], list[str]]:
+    """Read the division the page is showing back off the form it posted.
+
+    Nothing about a division is stored, so the rendered page is its only record:
+    each item posts its name, its XP and its holder, and those three parallel
+    lists stitch back into an item -> holder map and the hoard they came from.
+    """
+    names = request.POST.getlist("item-name")
+    values = request.POST.getlist("item-xp")
+    pks = request.POST.getlist("item-holder")
+    stale = ["The division on the page is out of date. Divide the hoard again."]
+    if not names or not len(names) == len(values) == len(pks):
+        return {}, {}, stale
+    held_by: dict[str, str] = {}
+    items: dict[str, int] = {}
+    for name, value, pk in zip(names, values, pks, strict=True):
+        if pk not in chosen:
+            return {}, {}, stale
+        try:
+            items[name] = int(value)
+        except ValueError:
+            return {}, {}, stale
+        held_by[name] = pk
+    return held_by, items, []
+
+
+def _apply_move(request, held_by: dict[str, str], chosen: list[str]) -> list[str]:
+    """Move the dragged item to its new holder, reporting a move that can't land.
+
+    A submission naming neither is a plain recompute, which is allowed: it
+    leaves the division exactly as it was.
+    """
+    name = request.POST.get("move-item", "")
+    destination = request.POST.get("move-to", "")
+    if not name and not destination:
+        return []
+    if name not in held_by:
+        return [f"Cannot move {name!r}: it is not in this division."]
+    if destination not in chosen:
+        return [f"Cannot move {name!r} to somebody who is not drawing a share."]
+    held_by[name] = destination
+    return []
+
+
+def _by_value(share: dict[str, int]) -> dict[str, int]:
+    """One recipient's items, most valuable first, as the splitter itself orders them."""
+    return dict(sorted(share.items(), key=lambda kv: (-kv[1], kv[0])))
+
+
 def _shares_drawn(
     request, chosen: list[str], holders: dict[str, Character]
 ) -> tuple[dict[str, int], list[str]]:

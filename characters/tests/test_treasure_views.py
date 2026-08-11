@@ -32,11 +32,46 @@ class TreasureBase(TestCase):
         data.update(overrides)
         return self.client.post("/treasure/split/", data)
 
+    def move(self, item, to, division=None, **overrides):
+        """Post a division back with one item dragged onto somebody else.
+
+        `division` is the state the page is showing, as item name -> (XP, holder);
+        it defaults to an even one so a move is visibly what unbalances it.
+        """
+        if division is None:
+            division = {
+                "gem": (4000, self.alix),
+                "lamp": (100, self.alix),
+                "crown": (4000, self.bront),
+                "ring": (100, self.bront),
+            }
+        drawn = list(dict.fromkeys(char for _, char in division.values()))
+        data = {
+            "recipient": [str(char.pk) for char in drawn],
+            "item-name": list(division),
+            "item-xp": [str(xp) for xp, _ in division.values()],
+            "item-holder": [str(char.pk) for _, char in division.values()],
+            "move-item": item,
+            "move-to": str(to.pk) if hasattr(to, "pk") else str(to),
+        }
+        for char in drawn:
+            data[f"shares-{char.pk}"] = "1"
+        data.update(overrides)
+        return self.client.post("/treasure/move/", data)
+
     def holders(self, response):
         return {str(char): char for char in response.context["share_holders"]}
 
     def rows(self, response):
         return {str(row["character"]): row for row in response.context["rows"]}
+
+    def held(self, response):
+        """Who holds what, as item name -> holder name."""
+        return {
+            item["name"]: str(row["character"])
+            for row in response.context["rows"]
+            for item in row["items"]
+        }
 
 
 class TreasureAccessTests(TreasureBase):
@@ -170,3 +205,106 @@ class TreasureSplitTests(TreasureBase):
     def test_a_share_count_below_one_is_reported(self):
         errors = self.split(**{f"shares-{self.bront.pk}": "0"}).context["errors"]
         self.assertIn("at least 1", errors[0])
+
+    def test_the_division_round_trips_every_item_through_the_form(self):
+        """A move has only the rendered page to work from, so it must all be there."""
+        response = self.split()
+        for name in ["gem", "crown", "lamp", "ring"]:
+            self.assertContains(response, f'name="item-name" value="{name}"')
+        self.assertContains(response, 'name="item-holder"', count=4)
+        self.assertContains(response, f'name="recipient" value="{self.alix.pk}"')
+        self.assertContains(response, f'name="shares-{self.alix.pk}" value="1"')
+
+
+class TreasureMoveTests(TreasureBase):
+    def setUp(self):
+        super().setUp()
+        self.client.login(username="dm", password="pass1234!")
+
+    def test_moving_an_item_changes_who_holds_it(self):
+        held = self.held(self.move("gem", self.bront))
+        self.assertEqual(held["gem"], "Bront")
+        # Nothing else budges: a move is a move, not a re-division.
+        self.assertEqual(held["lamp"], "Alix")
+        self.assertEqual(held["crown"], "Bront")
+
+    def test_the_totals_rework_themselves_around_the_move(self):
+        rows = self.rows(self.move("gem", self.bront))
+        self.assertEqual(rows["Alix"]["xp"], 100)
+        self.assertEqual(rows["Bront"]["xp"], 8100)
+        self.assertEqual(rows["Alix"]["vs_fair"], -4000)
+        self.assertEqual(rows["Bront"]["vs_fair"], 4000)
+
+    def test_the_spread_reworks_itself_around_the_move(self):
+        self.assertEqual(self.split().context["spread"], 0)
+        self.assertEqual(self.move("gem", self.bront).context["spread"], 8000)
+
+    def test_the_hoard_total_is_unchanged_by_a_move(self):
+        response = self.move("gem", self.bront)
+        self.assertEqual(response.context["total_xp"], 8200)
+        self.assertEqual(response.context["item_count"], 4)
+
+    def test_a_moved_division_says_it_was_adjusted_by_hand(self):
+        response = self.move("gem", self.bront)
+        self.assertTrue(response.context["hand_edited"])
+        self.assertContains(response, "adjusted by hand")
+
+    def test_a_recipient_emptied_by_a_move_still_appears(self):
+        """They keep a row, so an item can be dragged back onto them."""
+        division = {"gem": (4000, self.alix), "crown": (4000, self.bront)}
+        rows = self.rows(self.move("gem", self.bront, division=division))
+        self.assertEqual(sorted(rows), ["Alix", "Bront"])
+        self.assertEqual(rows["Alix"]["items"], [])
+        self.assertEqual(rows["Alix"]["xp"], 0)
+
+    def test_a_move_can_be_stacked_on_a_previous_move(self):
+        """The page posts its current state, so moves accumulate."""
+        after_one = {
+            "gem": (4000, self.bront),
+            "lamp": (100, self.alix),
+            "crown": (4000, self.bront),
+            "ring": (100, self.bront),
+        }
+        held = self.held(self.move("crown", self.alix, division=after_one))
+        self.assertEqual(held["gem"], "Bront")
+        self.assertEqual(held["crown"], "Alix")
+
+    def test_uneven_shares_are_respected_by_a_move(self):
+        response = self.move("gem", self.bront, **{f"shares-{self.alix.pk}": "3"})
+        rows = self.rows(response)
+        self.assertEqual(rows["Alix"]["shares"], 3)
+        self.assertEqual(response.context["shares_drawn"], 4)
+        # Alix holds only the 100 XP lamp against 3 of the 4 shares drawn.
+        self.assertEqual(rows["Alix"]["per_share"], 33)
+
+    def test_an_item_lands_in_value_order_in_its_new_take(self):
+        rows = self.rows(self.move("gem", self.bront))
+        names = [item["name"] for item in rows["Bront"]["items"]]
+        self.assertEqual(names, ["crown", "gem", "ring"])
+
+    def test_moving_to_a_non_recipient_is_rejected(self):
+        outsider = Character.objects.create(user=self.player, name="Cwen", xp=4000)
+        errors = self.move("gem", outsider).context["errors"]
+        self.assertIn("not drawing a share", errors[0])
+
+    def test_moving_an_unknown_item_is_rejected(self):
+        errors = self.move("sceptre", self.bront).context["errors"]
+        self.assertIn("not in this division", errors[0])
+
+    def test_a_division_naming_an_unchosen_holder_is_rejected(self):
+        """Stale markup must not be silently reinterpreted into a real division."""
+        errors = self.move("gem", self.bront, **{"item-holder": ["999"] * 4}).context[
+            "errors"
+        ]
+        self.assertIn("out of date", errors[0])
+
+    def test_a_ragged_division_is_rejected(self):
+        errors = self.move("gem", self.bront, **{"item-xp": ["4000"]}).context["errors"]
+        self.assertIn("out of date", errors[0])
+
+    def test_a_move_is_staff_only(self):
+        self.client.login(username="player", password="pass1234!")
+        self.assertEqual(self.move("gem", self.bront).status_code, 403)
+
+    def test_the_move_route_is_post_only(self):
+        self.assertEqual(self.client.get("/treasure/move/").status_code, 405)

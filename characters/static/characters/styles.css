@@ -635,11 +635,21 @@ th.sortable:hover { color: var(--accent-hover); }
 .treasure-errors { margin: 0; padding-left: 1.2rem; }
 /* XP is compared down the column, so right-align it and hold the digits to one
    width — proportional figures make a 400 and a 4,200 hard to tell apart. */
-.treasure-xp { text-align: right; font-variant-numeric: tabular-nums; width: 7rem; }
-/* Each recipient is one <tbody> (zebra-striped as a group by .group-striped),
-   headed by the name and running totals for the items beneath it. */
-.treasure-recipient th { text-align: left; padding-top: 0.6rem; }
-.treasure-division td:first-child { padding-left: 1.2rem; }
+.treasure-xp { text-align: right; font-variant-numeric: tabular-nums; min-width: 5rem; }
+/* One recipient's take of the hoard: their name and running totals over the
+   items they hold. Bounded, because the whole block is a drop target for an
+   item dragged out of somebody else's take (treasure-drag.js) — .drop-target
+   outlines it while a drag hovers. */
+.treasure-take {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+.treasure-take-head { background: var(--surface-alt-2); }
+.treasure-take-name { font-weight: bold; }
+/* The row being dragged, faded where it came from until the drop lands. */
+.treasure-dragging { opacity: 0.5; }
 
 /* Feedback form fields (Django-rendered ids) */
 #id_title, #id_contact { width: 100%; }

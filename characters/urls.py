@@ -63,6 +63,7 @@ urlpatterns = [
     # Treasure splitting (DM only)
     path("treasure/", views.treasure, name="treasure"),
     path("treasure/split/", views.treasure_split, name="treasure_split"),
+    path("treasure/move/", views.treasure_move, name="treasure_move"),
     # Character sheet
     path("character/<int:pk>/", views.character_sheet, name="character_sheet"),
     path(
