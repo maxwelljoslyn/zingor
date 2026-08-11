@@ -22,7 +22,6 @@ Pass ``-o/--outfile`` to save the split instead of printing it.
 
 from __future__ import annotations
 
-import ast
 import json
 from fractions import Fraction
 from math import gcd, lcm
@@ -30,6 +29,7 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 
+from characters.hoard import HoardError, parse_hoard
 from characters.treasure import split_treasure, split_treasure_by_share
 
 
@@ -213,77 +213,12 @@ def _whole_shares(drawn: dict[str, Fraction]) -> dict[str, int]:
 
 
 def _load_hoard(path: Path) -> dict[str, int]:
-    """Read a hoard file in whichever of the three supported formats it is in."""
+    """Read a hoard file, reporting anything unreadable in it against its path."""
     try:
         text = path.read_text()
     except OSError as exc:
         raise CommandError(f"could not read {path}: {exc}") from exc
-    if not text.strip():
-        raise CommandError(f"{path} is empty.")
-    for parse in (json.loads, ast.literal_eval):
-        try:
-            data = parse(text)
-        except (ValueError, SyntaxError):
-            continue
-        return _as_hoard(data, path)
-    return _parse_lines(text, path)
-
-
-def _as_hoard(data: object, path: Path) -> dict[str, int]:
-    """Validate a parsed JSON/literal payload as a name -> XP mapping."""
-    if not isinstance(data, dict):
-        raise CommandError(f"{path} holds a {type(data).__name__}, not a dict.")
-    hoard: dict[str, int] = {}
-    for name, value in data.items():
-        if not isinstance(name, str):
-            raise CommandError(f"{path}: item name {name!r} is not a string.")
-        hoard[name] = _as_xp(value, path, name)
-    return hoard
-
-
-def _parse_lines(text: str, path: Path) -> dict[str, int]:
-    """Parse the loose 'name: value' format, numbering any repeated names."""
-    hoard: dict[str, int] = {}
-    for number, line in enumerate(text.splitlines(), start=1):
-        line = line.strip().rstrip(",")
-        # Only whole-line comments, so an item may be named "potion #2".
-        if not line or line.startswith("#"):
-            continue
-        # Drop a trailing unit so "handbell 50 xp" splits on the right space.
-        if line.lower().endswith("xp"):
-            line = line[:-2].rstrip()
-        name, _, value = line.rpartition(":" if ":" in line else " ")
-        name = name.strip().strip("\"'")
-        if not name:
-            raise CommandError(f"{path} line {number}: no name before the value.")
-        hoard[_unique(name, hoard)] = _as_xp(value.strip(), path, name)
-    if not hoard:
-        raise CommandError(f"{path} has no items in it.")
-    return hoard
-
-
-def _unique(name: str, hoard: dict[str, int]) -> str:
-    """Number a repeated name so a hoard can hold three separate gems."""
-    if name not in hoard:
-        return name
-    copy = 2
-    while f"{name} ({copy})" in hoard:
-        copy += 1
-    return f"{name} ({copy})"
-
-
-def _as_xp(value: object, path: Path, name: str) -> int:
-    """Coerce one XP value, tolerating '4,200' and a trailing 'xp'."""
-    if isinstance(value, bool) or not isinstance(value, (int, str)):
-        raise CommandError(f"{path}: {name!r} has a non-numeric value {value!r}.")
-    if isinstance(value, str):
-        cleaned = value.strip().lower().removesuffix("xp").strip().replace(",", "")
-        try:
-            value = int(cleaned)
-        except ValueError:
-            raise CommandError(
-                f"{path}: {name!r} has a non-numeric value {value!r}."
-            ) from None
-    if value < 0:
-        raise CommandError(f"{path}: {name!r} has a negative value {value!r}.")
-    return value
+    try:
+        return parse_hoard(text)
+    except HoardError as exc:
+        raise CommandError(f"{path}: {exc}") from exc
