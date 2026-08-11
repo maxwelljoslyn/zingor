@@ -31,13 +31,8 @@ from django.views.decorators.http import require_GET, require_POST
 
 from . import layout, rules
 from .auth_emails import EmailSendError, send_confirmation_email
-from .forms import (
-    MAX_PICTURE_MB,
-    MAX_PICTURE_PIXELS,
-    CharacterPictureForm,
-    FeedbackForm,
-    RegistrationForm,
-)
+from .forms import CharacterPictureForm, FeedbackForm, RegistrationForm
+from .limits import MAX_PICTURE_MB, MAX_PICTURE_PIXELS
 
 logger = logging.getLogger(__name__)
 from .models import (

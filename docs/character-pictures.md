@@ -16,8 +16,8 @@ Click **Remove picture**, next to the upload control. Zingor asks you to confirm
 
 A picture must be:
 
-- **1 MB or smaller.** Photos taken on a phone are routinely several times this, so you may need to shrink or re-export the file first.
-- **2048×2048 pixels or smaller**, on each side.
+- **{{ max_picture_mb }} MB or smaller.** Photos taken on a phone are routinely several times this, so you may need to shrink or re-export the file first.
+- **{{ max_picture_pixels }}×{{ max_picture_pixels }} pixels or smaller**, on each side.
 - **A real image file.** Zingor opens each upload to check it really is an image, so renaming a file to end in `.png` will not get it past the check.
 
 The limits are printed next to the upload button so you don't have to remember them. If an upload fails, the Identity section explains why and the character's existing picture (if any) is left alone.
