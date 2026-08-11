@@ -41,9 +41,19 @@ That spread is the honest measure of how well the division went, and it is rarel
 
 Below the summary each recipient gets a block: their name, how many shares they drew, their XP total, their XP per share, and how far that total sits above or below a perfectly fair share. Their items are listed underneath, most valuable first.
 
+## Adjusting the Division by Hand
+
+The algorithm divides by value alone. It does not know that Cwen has wanted a silver mirror since the party met her, or that the party voted to give Bront the crown for going back into the fire. So the division is a starting point you can rearrange: **drag any item onto somebody else's block to hand it to them.**
+
+Every total reworks itself around the move — the recipients' XP, their XP per share, their over/under against a fair share, and the spread at the top all recompute from where the items actually sit now. Nothing else moves: handing over the crown does not set the algorithm loose to rebalance everything around it. Moves accumulate, so you can keep dragging until the division looks the way the party wants it.
+
+Once you have moved anything, the page says so, because **dividing the hoard again starts over from the algorithm and discards your moves.** That is the way back if you rearrange yourself into a corner. The same is true of the share boxes: change one after dividing and you need to divide again for it to take effect, since the division on screen was made against the old numbers.
+
+Dragging needs a pointer. There is no keyboard equivalent yet.
+
 ## What the Splitter Does Not Do
 
-Nothing on this page is saved. A division is a calculation to read off the screen and apply by hand — the items are not added to anybody's inventory, and reloading the page gives you an empty form. To change a division, edit the shares or the hoard and divide again; the splitter is fast enough to re-run as many times as the party wants to argue about it.
+Nothing on this page is saved. A division is a calculation to read off the screen and apply by hand — the items are not added to anybody's inventory, and reloading the page gives you an empty form. The division you are looking at, moves and all, lives only in the page itself, so leaving the page loses it; the splitter is fast enough to re-run as many times as the party wants to argue about it.
 
 Shares are also whole numbers here. A henchman on a traditional half share is written the way the party would work it out anyway: everyone else on 2, the henchman on 1.
 
