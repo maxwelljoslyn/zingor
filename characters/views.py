@@ -31,7 +31,13 @@ from django.views.decorators.http import require_GET, require_POST
 
 from . import layout, rules
 from .auth_emails import EmailSendError, send_confirmation_email
-from .forms import CharacterPictureForm, FeedbackForm, RegistrationForm
+from .forms import (
+    MAX_PICTURE_MB,
+    MAX_PICTURE_PIXELS,
+    CharacterPictureForm,
+    FeedbackForm,
+    RegistrationForm,
+)
 
 logger = logging.getLogger(__name__)
 from .models import (
@@ -244,6 +250,10 @@ def _sheet_context(character, user):
         "item_weight_units": PINT_UNIT_CHOICES["item_weight"],
         "section_order": layout.section_order(user),
         "notes_blocks": _build_notes_blocks(character, layout.order_for(user, "notes")),
+        # Shown next to the picture upload control, so the limits are known
+        # before a file is chosen rather than after it has been sent.
+        "max_picture_mb": MAX_PICTURE_MB,
+        "max_picture_pixels": MAX_PICTURE_PIXELS,
     }
     ctx.update(_build_sage_context(character))
     return ctx

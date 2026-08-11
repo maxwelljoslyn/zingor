@@ -2267,6 +2267,10 @@ class CharacterPictureTests(TestCase):
         response = self.client.get(f"/character/{self.character.pk}/")
         self.assertContains(response, 'name="picture"')
         self.assertContains(response, "Upload picture")
+        self.assertContains(response, f"max {MAX_PICTURE_MB} MB")
+        self.assertContains(
+            response, f"{MAX_PICTURE_PIXELS}&times;{MAX_PICTURE_PIXELS}"
+        )
 
     def test_upload_rejects_a_non_image(self):
         response = self.upload(b"this is not an image", filename="sneaky.png")
