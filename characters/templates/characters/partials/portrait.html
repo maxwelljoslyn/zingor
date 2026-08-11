@@ -1,0 +1,39 @@
+{# The character's picture, shown in the sheet's left rail above the table of contents. #}
+{# It is its own htmx target: uploading or removing swaps this block, not a sheet section. #}
+{# The owner's controls stay folded away in a disclosure so the rail is just the picture at rest. #}
+{% if character.picture or is_owner %}
+<div class="portrait" id="character-portrait">
+  {% if character.picture %}
+  {# updated_at cache-busts the fixed picture URL, so a replacement isn't hidden by the browser's cached copy. #}
+  <img class="portrait-image"
+       src="{% url 'characters:character_picture' character.pk %}?v={{ character.updated_at|date:'U' }}"
+       alt="Picture of {{ character.name|default:'this character' }}">
+  {% endif %}
+  {% if is_owner %}
+  {# Reopened on a rejected upload so the error and the file input stay together. #}
+  <details class="portrait-edit"{% if picture_error %} open{% endif %}>
+    <summary class="portrait-edit-summary">{% if character.picture %}Change picture{% else %}Add picture{% endif %}</summary>
+    {% include "characters/partials/_notice.html" %}
+    <form hx-post="{% url 'characters:upload_picture' character.pk %}"
+          hx-target="#character-portrait"
+          hx-swap="outerHTML"
+          hx-encoding="multipart/form-data">
+      {% csrf_token %}
+      <input type="file" name="picture" accept="image/*" class="portrait-file" required>
+      <p class="portrait-limits">max {{ max_picture_mb }} MB, {{ max_picture_pixels }}&times;{{ max_picture_pixels }}</p>
+      <button type="submit" class="btn btn-small">{% if character.picture %}Replace picture{% else %}Upload picture{% endif %}</button>
+    </form>
+    {% if character.picture %}
+    <form hx-post="{% url 'characters:delete_picture' character.pk %}"
+          hx-target="#character-portrait"
+          hx-swap="outerHTML"
+          class="portrait-remove">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-small btn-danger"
+              hx-confirm="Remove {{ character.name|default:'this character' }}'s picture?">Remove picture</button>
+    </form>
+    {% endif %}
+  </details>
+  {% endif %}
+</div>
+{% endif %}

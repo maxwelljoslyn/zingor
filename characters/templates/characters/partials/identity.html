@@ -38,38 +38,6 @@
     {% endif %}
   </div>
   {% include "characters/partials/_notice.html" %}
-  <div class="portrait">
-    {% if character.picture %}
-    {# updated_at cache-busts the fixed picture URL, so a replacement isn't hidden by the browser's cached copy. #}
-    <img class="portrait-image"
-         src="{% url 'characters:character_picture' character.pk %}?v={{ character.updated_at|date:'U' }}"
-         alt="Picture of {{ character.name|default:'this character' }}">
-    {% endif %}
-    {% if is_owner %}
-    <div class="portrait-controls">
-      <form hx-post="{% url 'characters:upload_picture' character.pk %}"
-            hx-target="#section-identity"
-            hx-swap="outerHTML"
-            hx-encoding="multipart/form-data"
-            class="inline">
-        {% csrf_token %}
-        <input type="file" name="picture" accept="image/*" required>
-        <button type="submit" class="btn btn-small">{% if character.picture %}Replace picture{% else %}Upload picture{% endif %}</button>
-        <span class="muted">max {{ max_picture_mb }} MB, {{ max_picture_pixels }}&times;{{ max_picture_pixels }}</span>
-      </form>
-      {% if character.picture %}
-      <form hx-post="{% url 'characters:delete_picture' character.pk %}"
-            hx-target="#section-identity"
-            hx-swap="outerHTML"
-            class="inline">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-small btn-danger"
-                hx-confirm="Remove {{ character.name|default:'this character' }}'s picture?">Remove picture</button>
-      </form>
-      {% endif %}
-    </div>
-    {% endif %}
-  </div>
   <table class="kv-table">
     <tr>
       <th>Name</th>

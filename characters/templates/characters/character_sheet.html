@@ -26,7 +26,10 @@
   </div>
 </div>
 <div class="sheet-layout">
-  {% include "characters/partials/toc.html" %}
+  <div class="sheet-rail">
+    {% include "characters/partials/portrait.html" %}
+    {% include "characters/partials/toc.html" %}
+  </div>
   <div id="sheet-body"
        data-sortable="sections" data-sortable-item="section" data-sortable-handle="h2">
     {% include "characters/partials/sheet_body.html" %}
