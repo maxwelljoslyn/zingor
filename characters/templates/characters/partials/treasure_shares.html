@@ -15,36 +15,56 @@
       lump worth more than a fair share puts a floor on how close the totals get:
       here the richest and poorest are {{ spread|floatformat:"0g" }} XP per share apart.
     </p>
-    <table class="data-table group-striped treasure-division">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th class="treasure-xp">XP</th>
-        </tr>
-      </thead>
+    <p class="muted">
+      Drag an item onto somebody else to hand it to them; the totals rework themselves
+      around the move.
+      {% if hand_edited %}
+        <strong>This division has been adjusted by hand.</strong>
+        Dividing the hoard again will start over and discard the moves.
+      {% endif %}
+    </p>
+    {# The division is never stored, so this form is the only record of it: every #}
+    {# item posts its name, its value and who holds it, and a move sends the lot #}
+    {# back with one holder changed. Kept outside the hoard form above, since #}
+    {# forms cannot nest. #}
+    <form data-treasure-form
+          hx-post="{% url 'characters:treasure_move' %}"
+          hx-target="#section-treasure-shares"
+          hx-swap="outerHTML"
+          hx-trigger="treasure-move">
+      {% csrf_token %}
+      {# Filled in by treasure-drag.js on drop, then the form is submitted. #}
+      <input type="hidden" name="move-item" data-treasure-move-item>
+      <input type="hidden" name="move-to" data-treasure-move-to>
       {% for row in rows %}
-      <tbody>
-        <tr class="treasure-recipient">
-          <th colspan="2">
-            {{ row.character.name|default:"Unnamed" }}
+        <input type="hidden" name="recipient" value="{{ row.character.pk }}">
+        <input type="hidden" name="shares-{{ row.character.pk }}" value="{{ row.shares }}">
+        <div class="treasure-take" data-treasure-holder="{{ row.character.pk }}">
+          <div class="sheet-row sheet-row--between treasure-take-head">
+            <span class="treasure-take-name">{{ row.character.name|default:"Unnamed" }}</span>
             <span class="muted">
-              — {{ row.shares }} share{{ row.shares|pluralize }},
+              {{ row.shares }} share{{ row.shares|pluralize }},
               {{ row.xp|floatformat:"0g" }} XP
               ({{ row.per_share|floatformat:"0g" }} per share,
               {% if row.vs_fair >= 0 %}+{% endif %}{{ row.vs_fair|floatformat:"0g" }} vs fair)
             </span>
-          </th>
-        </tr>
-        {% for item in row.items %}
-        <tr>
-          <td>{{ item.name }}</td>
-          <td class="treasure-xp">{{ item.xp|floatformat:"0g" }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="2" class="muted">(nothing)</td></tr>
-        {% endfor %}
-      </tbody>
+          </div>
+          <div class="striped">
+            {% for item in row.items %}
+            <div class="sheet-row sheet-row--between sheet-row--grab" draggable="true"
+                 data-treasure-item="{{ item.name }}">
+              <span>{{ item.name }}</span>
+              <span class="treasure-xp">{{ item.xp|floatformat:"0g" }}</span>
+              <input type="hidden" name="item-name" value="{{ item.name }}">
+              <input type="hidden" name="item-xp" value="{{ item.xp }}">
+              <input type="hidden" name="item-holder" value="{{ row.character.pk }}">
+            </div>
+            {% empty %}
+            <div class="sheet-row muted">(nothing)</div>
+            {% endfor %}
+          </div>
+        </div>
       {% endfor %}
-    </table>
+    </form>
   {% endif %}
 </div>

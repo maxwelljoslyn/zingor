@@ -1,4 +1,5 @@
 {% extends "characters/base.html" %}
+{% load static %}
 {% load character_tags %}
 {% block title %}Split treasure — Zingor{% endblock %}
 {% block content %}
@@ -74,4 +75,5 @@
 </form>
 
 {% include "characters/partials/treasure_shares.html" %}
+<script src="{% static 'characters/treasure-drag.js' %}" defer></script>
 {% endblock %}
