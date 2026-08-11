@@ -17,7 +17,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from PIL import Image
 
-from characters.forms import MAX_PICTURE_BYTES, MAX_PICTURE_MB, MAX_PICTURE_PIXELS
+from characters.limits import MAX_PICTURE_BYTES, MAX_PICTURE_MB, MAX_PICTURE_PIXELS
 from characters.models import (
     BonusHitPoints,
     Character,

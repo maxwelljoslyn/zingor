@@ -2,19 +2,8 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
+from .limits import MAX_PICTURE_BYTES, MAX_PICTURE_MB, MAX_PICTURE_PIXELS
 from .models import Character
-
-# Ceiling on an uploaded character picture. Django's own upload limits govern
-# only non-file POST data, so a file needs its own cap.
-MAX_PICTURE_MB = 1
-MAX_PICTURE_BYTES = MAX_PICTURE_MB * 1024 * 1024
-
-# Ceiling on each side in pixels. Bytes alone don't bound the cost of decoding
-# an image: a heavily compressed file well under MAX_PICTURE_BYTES can hold tens
-# of thousands of pixels per side and expand to gigabytes in memory when Pillow
-# opens it. Dimensions are read from the header, so this rejects such a file
-# before anything decodes it.
-MAX_PICTURE_PIXELS = 2048
 
 
 class RegistrationForm(UserCreationForm):
