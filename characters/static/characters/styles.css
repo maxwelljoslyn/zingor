@@ -504,6 +504,17 @@ th.sortable:hover { color: var(--accent-hover); }
   pointer-events: none;
   font-family: var(--font-body);
 }
+/* A search box and its results, held at the top of the viewport by search-pin.js.
+   The reserved viewport is what lets the pin hold: results are the last thing on
+   the page, so without it a search that matches little shortens the page past the
+   pinned scroll position and the browser clamps, sliding the box away. One
+   viewport is exactly enough for "region at the top" to stay reachable; a full
+   result set dwarfs it and the rule costs nothing. */
+.search-pin {
+  min-height: 100vh;
+  /* Breathing room above the heading once the region is pinned, as .section has. */
+  scroll-margin-top: 1rem;
+}
 .form-error { color: var(--accent); margin-bottom: 0.5rem; }
 .field-label { display: block; margin-bottom: 0.25rem; color: var(--text-muted); font-size: 0.85rem; }
 .field-error { color: var(--accent); font-size: 0.85rem; }
