@@ -55,6 +55,7 @@
         {% csrf_token %}
         <input type="file" name="picture" accept="image/*" required>
         <button type="submit" class="btn btn-small">{% if character.picture %}Replace picture{% else %}Upload picture{% endif %}</button>
+        <span class="muted">max {{ max_picture_mb }} MB, {{ max_picture_pixels }}&times;{{ max_picture_pixels }}</span>
       </form>
       {% if character.picture %}
       <form hx-post="{% url 'characters:delete_picture' character.pk %}"
