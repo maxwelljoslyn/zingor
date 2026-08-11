@@ -37,13 +37,13 @@
         class="inline-form mt-md">
     {% csrf_token %}
     <input type="text" name="name" placeholder="Item name" required>
-    <input type="number" step="any" name="weight" placeholder="Weight" class="w-6" title="Weight">
-    <select name="pint_unit" title="Weight unit">
+    <input type="number" step="any" min="0" name="weight" placeholder="Weight" class="w-6" title="Weight" required>
+    <select name="pint_unit" title="Weight unit" required>
       {% for unit_val, unit_label in item_weight_units %}
         <option value="{{ unit_val }}">{{ unit_label }}</option>
       {% endfor %}
     </select>
-    <input type="number" name="quantity" value="1" min="1" max="100" class="w-4" title="Quantity">
+    <input type="number" name="quantity" value="1" min="1" max="100" class="w-4" title="Quantity" required>
     <label><input type="checkbox" name="is_worn"> Worn</label>
     <button type="submit" class="btn btn-small">Add Item</button>
   </form>
