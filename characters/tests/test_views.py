@@ -17,7 +17,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from PIL import Image
 
-from characters.forms import MAX_PICTURE_BYTES, MAX_PICTURE_MB
+from characters.forms import MAX_PICTURE_BYTES, MAX_PICTURE_MB, MAX_PICTURE_PIXELS
 from characters.models import (
     BonusHitPoints,
     Character,
@@ -1996,13 +1996,18 @@ class SageAbilityTests(TestCase):
         self.assertEqual(row.source, "")
 
 
-def png_bytes(side: int = 1, compress_level: int = 6) -> bytes:
-    """An in-memory PNG of `side`x`side` random pixels.
+def png_bytes(
+    side: int = 1, compress_level: int = 6, height: int | None = None
+) -> bytes:
+    """An in-memory PNG of `side`x`height` random pixels (square by default).
 
     Random pixels don't compress, so a large side (with compression off) is how
     these tests get a file over the upload cap without shipping a fixture.
+    A short `height` does the opposite: an image too wide for the dimension cap
+    while staying comfortably under the byte cap.
     """
-    image = Image.frombytes("RGB", (side, side), os.urandom(side * side * 3))
+    height = side if height is None else height
+    image = Image.frombytes("RGB", (side, height), os.urandom(side * height * 3))
     buffer = io.BytesIO()
     image.save(buffer, format="PNG", compress_level=compress_level)
     return buffer.getvalue()
@@ -2058,6 +2063,17 @@ class CharacterPictureTests(TestCase):
         response = self.upload(oversized)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f"{MAX_PICTURE_MB} MB or smaller")
+        self.character.refresh_from_db()
+        self.assertFalse(self.character.picture)
+
+    def test_upload_rejects_an_image_over_the_dimension_cap(self):
+        # Wide but short, so it trips the dimension cap while staying well
+        # under the byte cap: the two limits are checked independently.
+        too_wide = png_bytes(side=MAX_PICTURE_PIXELS + 1, height=8, compress_level=0)
+        self.assertLess(len(too_wide), MAX_PICTURE_BYTES)
+        response = self.upload(too_wide)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"{MAX_PICTURE_PIXELS}x{MAX_PICTURE_PIXELS}")
         self.character.refresh_from_db()
         self.assertFalse(self.character.picture)
 
