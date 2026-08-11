@@ -6,7 +6,8 @@ from .models import Character
 
 # Ceiling on an uploaded character picture. Django's own upload limits govern
 # only non-file POST data, so a file needs its own cap.
-MAX_PICTURE_BYTES = 5 * 1024 * 1024
+MAX_PICTURE_MB = 1
+MAX_PICTURE_BYTES = MAX_PICTURE_MB * 1024 * 1024
 
 
 class RegistrationForm(UserCreationForm):
@@ -42,7 +43,9 @@ class CharacterPictureForm(forms.ModelForm):
     def clean_picture(self):
         picture = self.cleaned_data["picture"]
         if picture.size > MAX_PICTURE_BYTES:
-            raise forms.ValidationError("Picture must be 5 MB or smaller.")
+            raise forms.ValidationError(
+                f"Picture must be {MAX_PICTURE_MB} MB or smaller."
+            )
         return picture
 
 

@@ -17,7 +17,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from PIL import Image
 
-from characters.forms import MAX_PICTURE_BYTES
+from characters.forms import MAX_PICTURE_BYTES, MAX_PICTURE_MB
 from characters.models import (
     BonusHitPoints,
     Character,
@@ -2053,11 +2053,11 @@ class CharacterPictureTests(TestCase):
         self.assertFalse(self.character.picture)
 
     def test_upload_rejects_a_file_over_the_size_cap(self):
-        oversized = png_bytes(side=1500, compress_level=0)
+        oversized = png_bytes(side=700, compress_level=0)
         self.assertGreater(len(oversized), MAX_PICTURE_BYTES)
         response = self.upload(oversized)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "5 MB or smaller")
+        self.assertContains(response, f"{MAX_PICTURE_MB} MB or smaller")
         self.character.refresh_from_db()
         self.assertFalse(self.character.picture)
 
