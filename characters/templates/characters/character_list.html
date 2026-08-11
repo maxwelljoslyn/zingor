@@ -1,4 +1,5 @@
 {% extends "characters/base.html" %}
+{% load static %}
 {% load character_tags %}
 {% block title %}Zingor{% endblock %}
 {% block content %}
@@ -26,17 +27,23 @@
   {% include "characters/partials/character_list_table.html" with characters=inactive_characters %}
 </details>
 {% endif %}
-<h1 class="mt-lg">Party Inventory</h1>
-Click on Owner, Item, or Weight to sort the table by that column.
-
-{# Search box for the table below. A debounce keeps a burst of typing to one request; #}
-{# Enter fires immediately for anyone who would rather not wait it out. #}
-<input type="search" name="q" value="{{ item_query }}" class="w-full mt-sm mb-md"
-       placeholder="Filter items by name, e.g. rope"
-       aria-label="Filter party inventory by item name"
-       hx-get="{% url 'characters:party_inventory' %}"
-       hx-target="#party-inventory"
-       hx-swap="outerHTML"
-       hx-trigger="input changed delay:300ms, keyup[key=='Enter']">
-{% include "characters/partials/party_inventory.html" %}
+{# Heading, search box and results move as one region: search-pin.js holds it at #}
+{# the top of the viewport, so hits never land below the fold and the box never #}
+{# drifts as the result count changes the page's height. See .search-pin. #}
+<div class="search-pin mt-lg" data-search-pin>
+  <h1>Party Inventory</h1>
+  <p class="muted">Click on Owner, Item, or Weight to sort the table by that column.</p>
+  {# Search box for the table below. A debounce keeps a burst of typing to one request; #}
+  {# Enter fires immediately for anyone who would rather not wait it out. #}
+  <input type="search" name="q" value="{{ item_query }}" class="w-full mt-sm mb-md"
+         placeholder="Filter items by name, e.g. rope"
+         aria-label="Filter party inventory by item name"
+         data-search-pin-input
+         hx-get="{% url 'characters:party_inventory' %}"
+         hx-target="#party-inventory"
+         hx-swap="outerHTML"
+         hx-trigger="input changed delay:300ms, keyup[key=='Enter']">
+  {% include "characters/partials/party_inventory.html" %}
+</div>
+<script src="{% static 'characters/search-pin.js' %}" defer></script>
 {% endblock %}

@@ -394,6 +394,18 @@ class PartyInventorySearchTests(TestCase):
         self.assertContains(response, 'hx-target="#party-inventory"')
         self.assertContains(response, "placeholder=")
 
+    def test_search_region_carries_the_pin_hooks(self):
+        """The box and results are one pinnable region (search-pin.js)."""
+        response = self.client.get("/")
+        self.assertContains(response, "data-search-pin>")
+        self.assertContains(response, "data-search-pin-input")
+        self.assertContains(response, "search-pin.js")
+
+    def test_swapped_results_stay_out_of_the_pinned_region(self):
+        """The region wrapper must survive the swap, so only the table comes back."""
+        response = self.client.get("/party-inventory/", {"q": "rope"})
+        self.assertNotContains(response, "data-search-pin")
+
     def test_login_required(self):
         self.client.logout()
         response = self.client.get("/party-inventory/")
