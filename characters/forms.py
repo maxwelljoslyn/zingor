@@ -9,6 +9,13 @@ from .models import Character
 MAX_PICTURE_MB = 1
 MAX_PICTURE_BYTES = MAX_PICTURE_MB * 1024 * 1024
 
+# Ceiling on each side in pixels. Bytes alone don't bound the cost of decoding
+# an image: a heavily compressed file well under MAX_PICTURE_BYTES can hold tens
+# of thousands of pixels per side and expand to gigabytes in memory when Pillow
+# opens it. Dimensions are read from the header, so this rejects such a file
+# before anything decodes it.
+MAX_PICTURE_PIXELS = 2048
+
 
 class RegistrationForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -45,6 +52,13 @@ class CharacterPictureForm(forms.ModelForm):
         if picture.size > MAX_PICTURE_BYTES:
             raise forms.ValidationError(
                 f"Picture must be {MAX_PICTURE_MB} MB or smaller."
+            )
+        # ImageField.to_python hangs the opened (not yet decoded) PIL image off
+        # the upload, so the dimensions cost nothing to read here.
+        image = getattr(picture, "image", None)
+        if image is not None and max(image.size) > MAX_PICTURE_PIXELS:
+            raise forms.ValidationError(
+                f"Picture must be {MAX_PICTURE_PIXELS}x{MAX_PICTURE_PIXELS} pixels or smaller."
             )
         return picture
 
