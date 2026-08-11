@@ -42,12 +42,12 @@
     {% if character.picture %}
     {# updated_at cache-busts the fixed picture URL, so a replacement isn't hidden by the browser's cached copy. #}
     <img class="portrait-image"
-         src="/character/{{ character.pk }}/picture/?v={{ character.updated_at|date:'U' }}"
+         src="{% url 'characters:character_picture' character.pk %}?v={{ character.updated_at|date:'U' }}"
          alt="Picture of {{ character.name|default:'this character' }}">
     {% endif %}
     {% if is_owner %}
     <div class="portrait-controls">
-      <form hx-post="/character/{{ character.pk }}/picture/upload/"
+      <form hx-post="{% url 'characters:upload_picture' character.pk %}"
             hx-target="#section-identity"
             hx-swap="outerHTML"
             hx-encoding="multipart/form-data"
@@ -57,7 +57,7 @@
         <button type="submit" class="btn btn-small">{% if character.picture %}Replace picture{% else %}Upload picture{% endif %}</button>
       </form>
       {% if character.picture %}
-      <form hx-post="/character/{{ character.pk }}/picture/delete/"
+      <form hx-post="{% url 'characters:delete_picture' character.pk %}"
             hx-target="#section-identity"
             hx-swap="outerHTML"
             class="inline">
