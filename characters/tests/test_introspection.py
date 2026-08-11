@@ -6,6 +6,7 @@ regressions that unit tests can't easily reach — for example a template
 wiring an auto-committing input to a focus-dependent event.
 """
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -25,6 +26,15 @@ THIS_FILE = Path(__file__).name
 # blur reintroduces issue #121 — number-spinner edits never fire blur unless the
 # field was focused first, so the change is silently dropped. Prefer `change`.
 BLUR_PATTERN = r"""hx-trigger\s*=\s*["'][^"']*\bblur\b|onblur\b|addEventListener\(\s*["']blur["']"""
+TEMPLATE_ROOT = REPO_ROOT / "characters" / "templates"
+STYLESHEET = REPO_ROOT / "characters" / "static" / "characters" / "styles.css"
+# A table is only as narrow as its widest columns allow, so an unwrapped one
+# runs past its section on a phone and drags the whole page's horizontal scroll
+# with it (issue #34). Every table therefore opens inside a .table-scroll div,
+# which scrolls on its own instead.
+TABLE_OPEN = re.compile(r"<table\b")
+SCROLL_WRAPPER = re.compile(r'<div class="table-scroll">\s*\Z')
+SCROLL_RULE = re.compile(r"\.table-scroll\s*\{[^}]*overflow-x:\s*auto")
 
 
 def _ripgrep_cmd() -> list[str] | None:
@@ -68,4 +78,30 @@ def test_no_blur_triggers() -> None:
     assert result.returncode == 1, (
         "Found blur trigger(s); use the `change` event instead (issue #121):\n"
         + result.stdout
+    )
+
+
+def test_every_table_is_wrapped_for_horizontal_scroll() -> None:
+    """Every <table> in a template opens inside a .table-scroll div (issue #34)."""
+    unwrapped = []
+    for path in sorted(TEMPLATE_ROOT.rglob("*.html")):
+        text = path.read_text()
+        for match in TABLE_OPEN.finditer(text):
+            before = text[: match.start()]
+            if SCROLL_WRAPPER.search(before) is None:
+                unwrapped.append(
+                    str(path.relative_to(REPO_ROOT)) + ":" + str(before.count("\n") + 1)
+                )
+    assert not unwrapped, (
+        "These tables aren't wrapped in a .table-scroll div, so on a narrow "
+        + "screen they overflow the page instead of scrolling (issue #34):\n"
+        + "\n".join(unwrapped)
+    )
+
+
+def test_scroll_wrapper_is_styled() -> None:
+    """The wrapper is inert without its rule, so the templates and CSS pair up."""
+    assert SCROLL_RULE.search(STYLESHEET.read_text()), (
+        "styles.css defines no `.table-scroll { overflow-x: auto }` rule, so the "
+        + "wrappers around every table do nothing (issue #34)."
     )
