@@ -617,6 +617,30 @@ th.sortable:hover { color: var(--accent-hover); }
   padding: 0.5rem;
 }
 
+/* ---- Treasure splitter ---- */
+
+/* The hoard is typed one item per line, so it reads as a list, not as prose:
+   a monospace box keeps the XP values in a column while they are being entered. */
+.treasure-hoard {
+  font-family: monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+/* The roster's checkbox and shares columns hold one control each; leaving them
+   auto-width lets a long character name squeeze them as the table lays out. */
+.treasure-holders th:first-child, .treasure-holders td:first-child { width: 3.5rem; }
+.treasure-holders th:last-child, .treasure-holders td:last-child { width: 6rem; }
+.treasure-holders label { cursor: pointer; }
+.treasure-shares-input { width: 4.5rem; }
+.treasure-errors { margin: 0; padding-left: 1.2rem; }
+/* XP is compared down the column, so right-align it and hold the digits to one
+   width — proportional figures make a 400 and a 4,200 hard to tell apart. */
+.treasure-xp { text-align: right; font-variant-numeric: tabular-nums; width: 7rem; }
+/* Each recipient is one <tbody> (zebra-striped as a group by .group-striped),
+   headed by the name and running totals for the items beneath it. */
+.treasure-recipient th { text-align: left; padding-top: 0.6rem; }
+.treasure-division td:first-child { padding-left: 1.2rem; }
+
 /* Feedback form fields (Django-rendered ids) */
 #id_title, #id_contact { width: 100%; }
 #id_description { width: 100%; resize: vertical; }

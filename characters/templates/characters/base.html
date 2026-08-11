@@ -141,6 +141,7 @@
       </button>
       <a class="btn" href="https://zingor.readthedocs.io">Docs</a>
       {% if user.is_authenticated %}
+        {% if user.is_staff %}<a class="btn" href="{% url 'characters:treasure' %}">Treasure</a>{% endif %}
         <a class="btn" href="{% url 'characters:feedback' %}">Feedback</a>
         <a href="{% url 'characters:user_profile' user.username %}">{{ user|display_name }}</a>
         <form method="post" action="{% url 'characters:logout' %}" class="inline">

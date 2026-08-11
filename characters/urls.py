@@ -60,6 +60,9 @@ urlpatterns = [
     path("", views.character_list, name="character_list"),
     path("character/create/", views.character_create, name="character_create"),
     path("party-inventory/", views.party_inventory, name="party_inventory"),
+    # Treasure splitting (DM only)
+    path("treasure/", views.treasure, name="treasure"),
+    path("treasure/split/", views.treasure_split, name="treasure_split"),
     # Character sheet
     path("character/<int:pk>/", views.character_sheet, name="character_sheet"),
     path(
