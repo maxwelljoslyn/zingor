@@ -1,0 +1,77 @@
+{% extends "characters/base.html" %}
+{% load character_tags %}
+{% block title %}Split treasure — Zingor{% endblock %}
+{% block content %}
+<h1>Split Treasure</h1>
+<p class="muted">
+  Paste a hoard, check off who draws from it, and divide. Nothing here is saved —
+  the division is a calculation to read off and apply by hand.
+</p>
+
+{# One form covers both halves of the page; the button posts all of it at once. #}
+<form hx-post="{% url 'characters:treasure_split' %}"
+      hx-target="#section-treasure-shares"
+      hx-swap="outerHTML">
+  {% csrf_token %}
+
+  <div class="subsection">
+    <h2>The hoard</h2>
+    <p class="muted">
+      One <code>name: value</code> per line, value in XP. Commas and a trailing
+      <code>xp</code> are ignored, lines starting with <code>#</code> are comments,
+      and a name listed twice is two separate items. JSON works too.
+    </p>
+    <textarea name="hoard" rows="12" class="w-full treasure-hoard" autofocus
+              aria-label="Treasure items, one name and XP value per line"
+              placeholder="gem of true seeing: 4,200&#10;platinum crown: 3100&#10;healing potion: 400 xp"></textarea>
+  </div>
+
+  <div class="subsection">
+    <h2>Who draws</h2>
+    <p class="muted">
+      Shares default to each character's current fighter equivalent level. Edit them
+      to divide on the FEL the party agreed on — the one from before the fight, say.
+    </p>
+    <table class="data-table treasure-holders">
+      <thead>
+        <tr>
+          <th>Draws</th>
+          <th>Character</th>
+          <th>Player</th>
+          <th title="Fighter equivalent level">F.E.L.</th>
+          <th>Shares</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for char in share_holders %}
+        <tr>
+          {# Primaries and henchmen are the party proper, so they start checked; #}
+          {# followers, hirelings and pets draw a share only when the party says so. #}
+          <td>
+            <input type="checkbox" name="recipient" value="{{ char.pk }}"
+                   id="recipient-{{ char.pk }}"{% if char.in_party %} checked{% endif %}>
+          </td>
+          <td>
+            <label for="recipient-{{ char.pk }}">{{ char.name|default:"Unnamed" }}</label>
+            {% if not char.in_party %}<span class="muted"> ({{ char.get_kind_display|lower }})</span>{% endif %}
+          </td>
+          <td>{{ char.user|display_name }}</td>
+          <td>{{ char.fel|default_if_none:"—" }}</td>
+          <td>
+            <input type="number" name="shares-{{ char.pk }}" value="{{ char.drawn }}"
+                   min="1" step="1" class="treasure-shares-input"
+                   aria-label="Shares drawn by {{ char.name|default:'Unnamed' }}">
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="muted">No active characters to divide among.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <button type="submit" class="btn mt-md">Divide the hoard</button>
+</form>
+
+{% include "characters/partials/treasure_shares.html" %}
+{% endblock %}

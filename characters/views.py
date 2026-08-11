@@ -5,6 +5,7 @@ import json
 import logging
 from collections import OrderedDict, defaultdict
 from decimal import InvalidOperation
+from fractions import Fraction
 from urllib.parse import urldefrag
 from urllib.request import Request, urlopen
 
@@ -32,7 +33,9 @@ from django.views.decorators.http import require_GET, require_POST
 from . import layout, rules
 from .auth_emails import EmailSendError, send_confirmation_email
 from .forms import CharacterPictureForm, FeedbackForm, RegistrationForm
+from .hoard import HoardError, parse_hoard
 from .limits import MAX_PICTURE_MB, MAX_PICTURE_PIXELS
+from .treasure import split_treasure_by_share
 
 logger = logging.getLogger(__name__)
 from .models import (
@@ -88,6 +91,24 @@ def character_owner_required(view_func):
             return HttpResponseForbidden("Cannot determine character ownership.")
         if request.user != owner:
             return HttpResponseForbidden("You do not own this character.")
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
+
+
+def staff_required(view_func):
+    """Reject requests from anyone but a staff user.
+
+    Zingor has no separate notion of a DM, so `is_staff` is what marks the
+    person running the campaign — the tools gated on this one (dividing a
+    hoard, so far) act on the whole party rather than on one player's own
+    character, which is why character ownership can't be the test.
+    """
+
+    @functools.wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_staff:
+            return HttpResponseForbidden("This page is for the campaign's DM.")
         return view_func(request, *args, **kwargs)
 
     return wrapper
@@ -2040,6 +2061,138 @@ def wiki_export(request, pk):
     return render(
         request, "characters/partials/wiki_modal.html", {"wiki_text": wiki_text}
     )
+
+
+# --- Treasure splitting ---
+
+
+def _share_holders() -> list[Character]:
+    """Every active character that could draw from a hoard, best candidates first.
+
+    Primaries and henchmen are the party proper and come first pre-checked;
+    followers, hirelings and pets follow unchecked, because they draw a share
+    only when the party says so. Each character carries the `fel` and `drawn`
+    the form needs: fighter-equivalent level puts every class on one XP scale,
+    which is how this party divides treasure — one share per FEL (see #88).
+    """
+    characters = list(
+        Character.objects.active()
+        .select_related("user", "user__profile")
+        .order_by("user__username", "name")
+    )
+    party_kinds = ["primary", "hench"]
+    characters.sort(key=lambda char: char.kind not in party_kinds)
+    for char in characters:
+        char.fel = rules.fighter_equivalent_level(char.xp)
+        char.in_party = char.kind in party_kinds
+        # A character with no XP yet has no FEL to default to, so it starts on
+        # the smallest share anyone can draw rather than on a blank box.
+        char.drawn = char.fel if char.fel is not None else 1
+    return characters
+
+
+@login_required
+@staff_required
+@require_GET
+def treasure(request):
+    """The hoard splitter: paste a hoard, pick who draws from it, divide it up."""
+    return render(
+        request,
+        "characters/treasure.html",
+        {"share_holders": _share_holders()},
+    )
+
+
+@login_required
+@staff_required
+@require_POST
+def treasure_split(request):
+    """Divide one submitted hoard, rendering the shares partial.
+
+    Nothing is saved: a division is a calculation the DM reads off the screen
+    and applies by hand, so re-submitting the form is how you change it.
+    """
+    holders = {str(char.pk): char for char in _share_holders()}
+    chosen = [pk for pk in request.POST.getlist("recipient") if pk in holders]
+    shares, errors = _shares_drawn(request, chosen, holders)
+    try:
+        items = parse_hoard(request.POST.get("hoard", ""))
+    except HoardError as exc:
+        items = {}
+        errors.append(f"Hoard: {exc}")
+    if not chosen:
+        errors.append("Check at least one character to divide the hoard among.")
+    if errors:
+        return render(
+            request, "characters/partials/treasure_shares.html", {"errors": errors}
+        )
+    split = split_treasure_by_share(shares, items)
+    return render(
+        request,
+        "characters/partials/treasure_shares.html",
+        _split_context(split, shares, items, holders),
+    )
+
+
+def _shares_drawn(
+    request, chosen: list[str], holders: dict[str, Character]
+) -> tuple[dict[str, int], list[str]]:
+    """Read each chosen character's editable share count, keyed by their pk.
+
+    Keyed by pk rather than by name because two characters may well share a
+    name, and the splitter would silently divide among the wrong number of
+    recipients if one overwrote the other.
+    """
+    shares: dict[str, int] = {}
+    errors: list[str] = []
+    for pk in chosen:
+        raw = request.POST.get(f"shares-{pk}", "").strip()
+        try:
+            drawn = int(raw)
+        except ValueError:
+            errors.append(f"{holders[pk]}: {raw!r} is not a whole number of shares.")
+            continue
+        if drawn < 1:
+            errors.append(f"{holders[pk]}: shares must be at least 1, not {drawn}.")
+            continue
+        shares[pk] = drawn
+    return shares, errors
+
+
+def _split_context(
+    split: dict[str, dict[str, int]],
+    shares: dict[str, int],
+    items: dict[str, int],
+    holders: dict[str, Character],
+) -> dict:
+    """Lay one division out for the template: a row per recipient, plus totals."""
+    total = sum(items.values())
+    drawn = sum(shares.values())
+    # Only XP *per share* is comparable when recipients draw different numbers
+    # of shares, so that — not each recipient's XP — is what the spread measures.
+    per_share = {
+        pk: Fraction(sum(share.values()), shares[pk]) for pk, share in split.items()
+    }
+    rows = [
+        {
+            "character": holders[pk],
+            "shares": shares[pk],
+            "xp": sum(share.values()),
+            "per_share": round(per_share[pk]),
+            # How far off a share this size would be if treasure were divisible.
+            "vs_fair": sum(share.values()) - round(Fraction(total * shares[pk], drawn)),
+            "items": [{"name": name, "xp": xp} for name, xp in share.items()],
+        }
+        for pk, share in split.items()
+    ]
+    return {
+        "rows": rows,
+        "total_xp": total,
+        "item_count": len(items),
+        "shares_drawn": drawn,
+        "fair_share": round(Fraction(total, drawn)),
+        "spread": round(max(per_share.values()) - min(per_share.values())),
+    }
 
 
 # --- Feedback ---
