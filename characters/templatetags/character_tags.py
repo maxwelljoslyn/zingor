@@ -20,12 +20,15 @@ def display_name(user) -> str:
 
 @register.filter
 def format_modifier(value):
-    """Format a modifier value with +/- sign. E.g. 3 -> '+3', -2 -> '-2'."""
+    """Format a modifier value with +/- sign. E.g. 3 -> '+3', -2 -> '-2'.
+
+    Thousands are grouped, which never shows on an ability or condition
+    modifier but does on the XP figures the treasure splitter runs through
+    here: '+4,200' beside a '4,200 XP' total rather than '+4200'.
+    """
     if value is None:
         return "—"
-    if value >= 0:
-        return f"+{value}"
-    return str(value)
+    return format(value, "+,")
 
 
 @register.filter
