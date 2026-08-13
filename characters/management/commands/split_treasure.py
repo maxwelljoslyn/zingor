@@ -11,7 +11,7 @@ The input file may be JSON, a Python dict literal, or the loosest form — one
     healing potion: 400 xp
 
 Repeated names are numbered rather than collapsed, so listing "gem" three
-times gives you three gems.
+times gives you three gems: "gem (1 of 3)", "gem (2 of 3)", "gem (3 of 3)".
 
 Recipients who draw uneven shares are written ``name:shares``::
 
