@@ -1,5 +1,7 @@
 # Zingor
 
+Welcome to the first page of the Zingor documentation.
+
 ```{toctree}
 :maxdepth: 2
 
@@ -9,5 +11,3 @@ display-names
 character-pictures
 splitting-treasure
 ```
-
-Welcome to the first page of the Zingor documentation.
