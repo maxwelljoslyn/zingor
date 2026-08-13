@@ -46,8 +46,8 @@ def test_repeated_names_become_separate_items(tmp_path: Path):
     path = hoard_from(tmp_path, "hoard.txt", LINES)
     shares = shares_from_json(run(path, "-n", "2", "--json"))
     items = {name: xp for share in shares for name, xp in share["items"].items()}
-    assert items["healing potion"] == 400
-    assert items["healing potion (2)"] == 400
+    assert items["healing potion (1 of 2)"] == 400
+    assert items["healing potion (2 of 2)"] == 400
 
 
 def test_comments_and_blank_lines_are_skipped(tmp_path: Path):
