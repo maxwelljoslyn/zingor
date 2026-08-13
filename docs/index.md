@@ -7,7 +7,7 @@ wiki-export
 external-synchronization
 display-names
 character-pictures
-treasure-splitting
+splitting-treasure
 ```
 
 Welcome to the first page of the Zingor documentation.

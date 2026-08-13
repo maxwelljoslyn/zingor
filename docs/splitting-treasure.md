@@ -23,9 +23,9 @@ The format is deliberately forgiving, so you can transcribe a hoard as fast as y
 - The colon is optional — `platinum crown 3100` works too.
 - Commas in numbers are ignored, and so is a trailing `xp`.
 - A line starting with `#` is a comment, and blank lines are skipped.
-- **A name listed twice is two separate items.** The two healing potions above are two 400 XP potions, not one. The second is shown as `healing potion (2)` in the results.
+- **A name listed twice is two separate items.** The two healing potions above are two 400 XP potions, not one. They are shown as `healing potion (1 of 2)` and `healing potion (2 of 2)` in the results, so a potion sitting in somebody's take says on its own row how many there were.
 
-JSON and Python dicts (`{"gem": 4200}`) are also accepted, so output from elsewhere can be pasted straight in.
+JSON and Python dicts (`{"gem": 4200}`) are also accepted, so output from elsewhere can be pasted straight in. A name repeated there is two items as well — `{"potion": 400, "potion": 500}` is both potions, not just the second one, even though neither Python nor JSON can hold a key twice.
 
 **Who draws.** Below the hoard is every active character in the campaign. Primary characters and henchmen — the party proper — start checked; followers, hirelings and pets are listed underneath, unchecked, because they draw a share only when the party says so. Check and uncheck to match who was actually there.
 
@@ -35,11 +35,11 @@ Click **Divide the hoard** and the division appears below.
 
 ## Reading the Result
 
-The summary line gives the hoard's total XP, how many shares it was cut into, and what one fair share would be worth if treasure were divisible. It ends with the **spread**: the XP-per-share gap between the best-off and worst-off recipient.
+A table of figures heads the division: the hoard's total XP, how many items it held, how many shares it was cut into, what one fair share would be worth if treasure were divisible, and the **spread** — the gap between the best-off and worst-off recipient, in XP per share. Per share, because shares are not always equal: a character drawing four of them takes home more raw XP than a henchman drawing one and may still be the worse off of the two, so the per-share figures are the only ones that compare.
 
 That spread is the honest measure of how well the division went, and it is rarely zero. A single item worth more than a fair share puts a hard floor under it — if the hoard is one 10,000 XP crown and four characters, somebody gets the crown and three people get nothing, and no algorithm can do better. When the spread looks large, look for the lump causing it; that is usually the item the party will want to sell and divide as coin instead.
 
-Below the summary each recipient gets a block: their name, how many shares they drew, their XP total, their XP per share, and how far that total sits above or below a perfectly fair share. Their items are listed underneath, most valuable first.
+Below the figures each recipient gets a block: their name, how many shares they drew, their XP total, their XP per share, and how far that total sits above or below a perfectly fair share. Their items are listed underneath, most valuable first.
 
 ## Adjusting the Division by Hand
 
