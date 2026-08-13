@@ -633,6 +633,21 @@ th.sortable:hover { color: var(--accent-hover); }
 .treasure-holders label { cursor: pointer; }
 .treasure-shares-input { width: 4.5rem; }
 .treasure-errors { margin: 0; padding-left: 1.2rem; }
+/* The division's figures: one short row of totals, so cap it rather than let
+   five narrow columns stretch across the page. */
+.treasure-summary { width: auto; max-width: 100%; margin-bottom: 0.8rem; }
+.treasure-summary th:not(:first-child), .treasure-summary td:not(:first-child) {
+  text-align: right;
+}
+/* The spread's meaning, under its column head: a sentence rather than a
+   tooltip, since a tooltip is no use on a touchscreen or from the keyboard. */
+.treasure-figure-note {
+  display: block;
+  max-width: 14rem;
+  font-weight: normal;
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
 /* XP is compared down the column, so right-align it and hold the digits to one
    width — proportional figures make a 400 and a 4,200 hard to tell apart. */
 .treasure-xp { text-align: right; font-variant-numeric: tabular-nums; min-width: 5rem; }
@@ -646,8 +661,25 @@ th.sortable:hover { color: var(--accent-hover); }
   margin-bottom: 0.5rem;
   overflow: hidden;
 }
-.treasure-take-head { background: var(--surface-alt-2); }
+/* One take's figures on fixed tracks, so shares, XP, XP per share and the
+   over/under line up in columns from one recipient to the next — they are read
+   against each other, which a row of prose per take makes impossible. */
+.treasure-take-head {
+  display: grid;
+  grid-template-columns: minmax(6rem, 1fr) 6rem 7rem 8rem 8rem;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.3rem 0.4rem;
+  background: var(--surface-alt-2);
+}
 .treasure-take-name { font-weight: bold; }
+.treasure-figure { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) {
+  /* Too narrow for five tracks: the name takes a line of its own and the four
+     figures pair off underneath, still aligned take to take. */
+  .treasure-take-head { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .treasure-take-name { grid-column: 1 / -1; }
+}
 /* The row being dragged, faded where it came from until the drop lands. */
 .treasure-dragging { opacity: 0.5; }
 

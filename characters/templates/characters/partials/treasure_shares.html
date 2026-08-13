@@ -1,3 +1,4 @@
+{% load character_tags %}
 {# One division of a hoard. Empty on first load; the form swaps its result in here. #}
 <div id="section-treasure-shares" class="mt-lg">
   {% if errors %}
@@ -8,20 +9,46 @@
     </div>
   {% elif rows %}
     <h2>The division</h2>
-    <p class="muted">
-      {{ total_xp|floatformat:"0g" }} XP across {{ item_count }} item{{ item_count|pluralize }},
-      cut into {{ shares_drawn }} share{{ shares_drawn|pluralize }} of about
-      {{ fair_share|floatformat:"0g" }} XP each. No item is ever split, so a single
-      lump worth more than a fair share puts a floor on how close the totals get:
-      here the richest and poorest are {{ spread|floatformat:"0g" }} XP per share apart.
-    </p>
+    {# The figures the division is judged on, kept out of the prose so they can #}
+    {# be read down a column rather than picked out of a sentence. #}
+    <table class="data-table treasure-summary">
+      <thead>
+        <tr>
+          <th>Hoard</th>
+          <th>Items</th>
+          <th>Shares</th>
+          <th title="What one share would be worth if treasure were divisible">Fair share</th>
+          {# The one figure that needs saying outright rather than in a tooltip: #}
+          {# it is how the division is judged, and why it is rarely zero takes #}
+          {# more room than a column head, hence the link out to the docs. #}
+          <th>
+            Spread
+            <a class="muted treasure-figure-note"
+               href="https://zingor.readthedocs.io/en/latest/splitting-treasure.html#reading-the-result">
+              Difference between the largest and smallest XP award per share
+            </a>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ total_xp|floatformat:"0g" }} XP</td>
+          <td>{{ item_count }}</td>
+          <td>{{ shares_drawn }}</td>
+          <td>{{ fair_share|floatformat:"0g" }} XP</td>
+          <td>{{ spread|floatformat:"0g" }} XP</td>
+        </tr>
+      </tbody>
+    </table>
+    {% if hand_edited %}
+      <p class="flash flash--danger">
+        <strong>This division has been adjusted by hand.</strong>
+        Dividing the hoard again will start over and discard the moves.
+      </p>
+    {% endif %}
     <p class="muted">
       Drag an item onto somebody else to hand it to them; the totals rework themselves
       around the move.
-      {% if hand_edited %}
-        <strong>This division has been adjusted by hand.</strong>
-        Dividing the hoard again will start over and discard the moves.
-      {% endif %}
     </p>
     {# The division is never stored, so this form is the only record of it: every #}
     {# item posts its name, its value and who holds it, and a move sends the lot #}
@@ -40,13 +67,16 @@
         <input type="hidden" name="recipient" value="{{ row.character.pk }}">
         <input type="hidden" name="shares-{{ row.character.pk }}" value="{{ row.shares }}">
         <div class="treasure-take" data-treasure-holder="{{ row.character.pk }}">
-          <div class="sheet-row sheet-row--between treasure-take-head">
+          {# Fixed columns rather than a sentence of figures: every take lays its #}
+          {# numbers out on the same tracks, so XP per share and the over/under #}
+          {# read down a column from one recipient to the next. #}
+          <div class="treasure-take-head">
             <span class="treasure-take-name">{{ row.character.name|default:"Unnamed" }}</span>
-            <span class="muted">
-              {{ row.shares }} share{{ row.shares|pluralize }},
-              {{ row.xp|floatformat:"0g" }} XP
-              ({{ row.per_share|floatformat:"0g" }} per share,
-              {% if row.vs_fair >= 0 %}+{% endif %}{{ row.vs_fair|floatformat:"0g" }} vs fair)
+            <span class="treasure-figure muted">{{ row.shares }} share{{ row.shares|pluralize }}</span>
+            <span class="treasure-figure">{{ row.xp|floatformat:"0g" }} XP</span>
+            <span class="treasure-figure muted">{{ row.per_share|floatformat:"0g" }} per share</span>
+            <span class="treasure-figure {% if row.vs_fair >= 0 %}modifier-positive{% else %}modifier-negative{% endif %}">
+              {{ row.vs_fair|format_modifier }} vs fair
             </span>
           </div>
           <div class="striped">

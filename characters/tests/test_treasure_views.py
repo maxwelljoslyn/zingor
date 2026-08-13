@@ -182,7 +182,7 @@ class TreasureSplitTests(TreasureBase):
         response = self.split()
         self.assertContains(response, "Alix")
         self.assertContains(response, "gem")
-        self.assertContains(response, "8,200 XP across 4 items")
+        self.assertContains(response, "8,200 XP")
 
     def test_an_unreadable_hoard_is_reported_not_divided(self):
         response = self.split(hoard="gem: lots\n")
@@ -248,6 +248,8 @@ class TreasureMoveTests(TreasureBase):
         response = self.move("gem", self.bront)
         self.assertTrue(response.context["hand_edited"])
         self.assertContains(response, "adjusted by hand")
+        # In a notice box rather than in the prose, since re-dividing discards it.
+        self.assertContains(response, "flash flash--danger")
 
     def test_a_recipient_emptied_by_a_move_still_appears(self):
         """They keep a row, so an item can be dragged back onto them."""
