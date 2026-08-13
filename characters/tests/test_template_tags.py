@@ -27,6 +27,11 @@ class FormatModifierTests(SimpleTestCase):
     def test_negative_keeps_minus(self):
         self.assertEqual(format_modifier(-2), "-2")
 
+    def test_thousands_are_grouped(self):
+        """XP-scale figures go through here too, beside grouped totals."""
+        self.assertEqual(format_modifier(4200), "+4,200")
+        self.assertEqual(format_modifier(-4200), "-4,200")
+
 
 class FormatPctTests(SimpleTestCase):
     def test_none_is_em_dash(self):
