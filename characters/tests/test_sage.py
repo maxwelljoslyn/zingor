@@ -4,13 +4,18 @@ from django.test import TestCase
 
 from characters.sage import (
     CLASS_FIELDS,
+    CONCENTRATIONS,
     alexisify,
+    concentration_label,
+    format_study,
     linkify_field,
     linkify_study,
     rank_for_points,
     rank_studies,
     sage_fields,
+    sage_studies,
     sort_sage_entries,
+    split_study,
 )
 
 
@@ -140,6 +145,68 @@ class ClassFieldsTests(TestCase):
                     sage_fields,
                     f"Class {cls!r}: field {field_name!r} missing from sage_fields",
                 )
+
+
+class ConcentrationCatalogueTests(TestCase):
+    def test_every_concentration_study_is_in_the_catalogue(self):
+        for study in CONCENTRATIONS:
+            self.assertIn(study, sage_studies, f"{study} missing from sage_studies")
+
+    def test_label_names_what_an_area_is(self):
+        self.assertEqual(concentration_label("History"), "region and era")
+
+    def test_study_without_areas_has_no_label(self):
+        self.assertIsNone(concentration_label("Forgery"))
+
+    def test_athletics_takes_no_areas(self):
+        # Its disciplines are sage abilities of their own, so they belong in
+        # the standalone abilities table rather than under the study (#171).
+        self.assertIsNone(concentration_label("Athletics"))
+
+
+class FormatStudyTests(TestCase):
+    def test_area_is_parenthesised_after_the_study(self):
+        self.assertEqual(
+            format_study("History", "Ancient European"), "History (Ancient European)"
+        )
+
+    def test_no_area_leaves_the_study_alone(self):
+        self.assertEqual(format_study("Forgery", ""), "Forgery")
+
+    def test_area_defaults_to_none(self):
+        self.assertEqual(format_study("Forgery"), "Forgery")
+
+
+class SplitStudyTests(TestCase):
+    def test_area_is_split_off(self):
+        self.assertEqual(
+            split_study("History (Ancient European)"), ("History", "Ancient European")
+        )
+
+    def test_missing_space_before_the_paren_still_splits(self):
+        self.assertEqual(
+            split_study("History(Ancient European)"), ("History", "Ancient European")
+        )
+
+    def test_surrounding_whitespace_is_trimmed(self):
+        self.assertEqual(
+            split_study("  Outer Planes ( Nirvana ) "), ("Outer Planes", "Nirvana")
+        )
+
+    def test_plain_study_comes_back_whole(self):
+        self.assertEqual(split_study("Forgery"), ("Forgery", ""))
+
+    def test_study_taking_no_area_keeps_its_parenthetical(self):
+        # Splitting here would silently invent an area the study can't hold, so
+        # the name is left as it stands for the caller to reject or record.
+        self.assertEqual(split_study("Forgery (Seals)"), ("Forgery (Seals)", ""))
+
+    def test_empty_parens_are_not_an_area(self):
+        self.assertEqual(split_study("History ()"), ("History ()", ""))
+
+    def test_format_and_split_round_trip(self):
+        for study, area in [("History", "Ancient African"), ("Forgery", "")]:
+            self.assertEqual(split_study(format_study(study, area)), (study, area))
 
 
 from django.contrib.auth.models import User

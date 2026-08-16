@@ -464,6 +464,58 @@ CLASS_FIELDS = {
 
 
 # ---------------------------------------------------------------------------
+# Areas of concentration
+# ---------------------------------------------------------------------------
+
+# Studies whose points are held per area of concentration rather than in one
+# pool: nobody is a historian at large, only a historian of some region and
+# era, and the points that make a character one say nothing about their grasp
+# of anywhere else. Each value names what an area is, for the prompt shown
+# when one is typed in.
+#
+# Not every study that subdivides belongs here. Athletics splits into
+# disciplines that the wiki gives sage abilities of their own, so those are
+# tracked as standalone abilities instead of as areas of the study.
+CONCENTRATIONS = {
+    "Geography": "locus",
+    "History": "region and era",
+    "Outer Planes": "plane",
+}
+
+# Matches a trailing parenthesised area, tolerating a missing space before the
+# opening paren — hand-written sheets have "History(Ancient European)".
+_CONCENTRATION_RE = re.compile(r"^(.*?)\s*\((.*)\)$")
+
+
+def concentration_label(study: str) -> str | None:
+    """Name what an area of concentration is for a study, or None if it takes none."""
+    return CONCENTRATIONS.get(study)
+
+
+def format_study(study: str, concentration: str = "") -> str:
+    """Render a study and its area of concentration as one display name."""
+    return f"{study} ({concentration})" if concentration else study
+
+
+def split_study(text: str) -> tuple[str, str]:
+    """Split a display name into (study, area of concentration).
+
+    The inverse of format_study: "History (Ancient European)" comes back as
+    ("History", "Ancient European"). Anything else — a plain study name, or a
+    parenthesised one whose base study takes no area — comes back unchanged
+    with an empty area, so this is safe to run over any study name.
+    """
+    text = text.strip()
+    match = _CONCENTRATION_RE.match(text)
+    if not match:
+        return text, ""
+    study, concentration = match.group(1), match.group(2).strip()
+    if study not in CONCENTRATIONS or not concentration:
+        return text, ""
+    return study, concentration
+
+
+# ---------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------
 
