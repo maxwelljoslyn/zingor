@@ -5,7 +5,7 @@ from pathlib import Path
 from django.test import SimpleTestCase
 
 from characters.microformats import ParsedSheet, parse_sheet, render_sheet
-from characters.models import SageAbilityPoints, Spell
+from characters.models import SageAbilityPoints, SageStudyPoints, Spell
 
 LEXENT_HTML = (Path(__file__).parent / "data" / "lexent.html").read_text()
 
@@ -137,11 +137,12 @@ class ParseRecordTests(SimpleTestCase):
         self.assertEqual(sheet.sage_studies[0].study, "Forgery")
         self.assertEqual(sheet.sage_studies[0].points, 27)
 
-    def test_sage_study_area_of_concentration_split_off_the_name(self):
+    def test_sage_study_area_of_concentration_parsed(self):
         html = list(
             [
                 '<tr class="zingor-sage-study">',
-                '<td class="zingor-sage-study-name">History (Ancient European)</td>',
+                '<td class="zingor-sage-study-name">History</td>',
+                '<td class="zingor-sage-study-concentration">Ancient European</td>',
                 '<td class="zingor-sage-study-points">31</td>',
                 "</tr>",
             ]
@@ -152,34 +153,7 @@ class ParseRecordTests(SimpleTestCase):
         self.assertEqual(sheet.sage_studies[0].points, 31)
         self.assertEqual(sheet.warnings, [])
 
-    def test_sage_study_name_written_without_a_space_still_splits(self):
-        # How it is written by hand on a real sheet.
-        html = list(
-            [
-                '<tr class="zingor-sage-study">',
-                '<td class="zingor-sage-study-name">History(Ancient European)</td>',
-                '<td class="zingor-sage-study-points">31</td>',
-                "</tr>",
-            ]
-        )
-        sheet = parse_sheet("".join(html))
-        self.assertEqual(sheet.sage_studies[0].study, "History")
-        self.assertEqual(sheet.sage_studies[0].concentration, "Ancient European")
-
-    def test_parenthetical_on_a_study_without_areas_is_left_alone(self):
-        html = list(
-            [
-                '<tr class="zingor-sage-study">',
-                '<td class="zingor-sage-study-name">Forgery (Seals)</td>',
-                '<td class="zingor-sage-study-points">27</td>',
-                "</tr>",
-            ]
-        )
-        sheet = parse_sheet("".join(html))
-        self.assertEqual(sheet.sage_studies[0].study, "Forgery (Seals)")
-        self.assertEqual(sheet.sage_studies[0].concentration, "")
-
-    def test_sage_study_without_an_area_parses_as_before(self):
+    def test_sage_study_area_is_optional(self):
         html = list(
             [
                 '<tr class="zingor-sage-study">',
@@ -190,6 +164,23 @@ class ParseRecordTests(SimpleTestCase):
         )
         sheet = parse_sheet("".join(html))
         self.assertEqual(sheet.sage_studies[0].study, "History")
+        self.assertEqual(sheet.warnings, [])
+        default = SageStudyPoints._meta.get_field("concentration").default
+        self.assertEqual(sheet.sage_studies[0].concentration, default)
+
+    def test_a_parenthesised_study_name_is_taken_whole(self):
+        """The area is never inferred from the name: a page means what its
+        cells say, whatever the catalogue happens to list today."""
+        html = list(
+            [
+                '<tr class="zingor-sage-study">',
+                '<td class="zingor-sage-study-name">History (Ancient European)</td>',
+                '<td class="zingor-sage-study-points">31</td>',
+                "</tr>",
+            ]
+        )
+        sheet = parse_sheet("".join(html))
+        self.assertEqual(sheet.sage_studies[0].study, "History (Ancient European)")
         self.assertEqual(sheet.sage_studies[0].concentration, "")
 
     def test_sage_study_chosen_mark_parsed(self):

@@ -55,6 +55,20 @@ CHOSEN_FIELD_MARKUP = "".join(
 LEXENT_HTML_WITH_CHOSEN_FIELDS = LEXENT_HTML.replace(
     "</body>", CHOSEN_FIELD_MARKUP + "</body>"
 )
+HISTORY_AREAS_MARKUP = "".join(
+    [
+        '<tr class="zingor-sage-study">',
+        '<td class="zingor-sage-study-name">History</td>',
+        '<td class="zingor-sage-study-concentration">Ancient European</td>',
+        '<td class="zingor-sage-study-points">31</td>',
+        "</tr>",
+        '<tr class="zingor-sage-study">',
+        '<td class="zingor-sage-study-name">History</td>',
+        '<td class="zingor-sage-study-concentration">Ancient African</td>',
+        '<td class="zingor-sage-study-points">6</td>',
+        "</tr>",
+    ]
+)
 WIKI_URL = "https://adventure.alexissmolensk.com/index.php/Lexent"
 
 
@@ -182,21 +196,9 @@ class SyncCharacterFromWikiTests(TestCase):
         self.assertEqual(self.character.sage_studies.filter(study="Beasts").count(), 1)
 
     def test_areas_of_one_study_sync_as_separate_rows(self):
-        """The complaint behind #171: a sheet naming two areas of History in
-        the one study column has to come in as two point totals, not one."""
-        areas = "".join(
-            [
-                '<tr class="zingor-sage-study">',
-                '<td class="zingor-sage-study-name">History(Ancient European)</td>',
-                '<td class="zingor-sage-study-points">31</td>',
-                "</tr>",
-                '<tr class="zingor-sage-study">',
-                '<td class="zingor-sage-study-name">History (Ancient African)</td>',
-                '<td class="zingor-sage-study-points">6</td>',
-                "</tr>",
-            ]
-        )
-        html = LEXENT_HTML.replace("</body>", areas + "</body>")
+        """The complaint behind #171: a sheet giving two areas of History has
+        to come in as two point totals, not one."""
+        html = LEXENT_HTML.replace("</body>", HISTORY_AREAS_MARKUP + "</body>")
         with mock.patch.object(wiki_sync, "fetch_page", return_value=html):
             wiki_sync.sync_character_from_wiki(self.character)
         rows = self.character.sage_studies.filter(study="History")
@@ -215,19 +217,7 @@ class SyncCharacterFromWikiTests(TestCase):
             points=99,
             hidden=True,
         )
-        areas = "".join(
-            [
-                '<tr class="zingor-sage-study">',
-                '<td class="zingor-sage-study-name">History (Ancient European)</td>',
-                '<td class="zingor-sage-study-points">31</td>',
-                "</tr>",
-                '<tr class="zingor-sage-study">',
-                '<td class="zingor-sage-study-name">History (Ancient African)</td>',
-                '<td class="zingor-sage-study-points">6</td>',
-                "</tr>",
-            ]
-        )
-        html = LEXENT_HTML.replace("</body>", areas + "</body>")
+        html = LEXENT_HTML.replace("</body>", HISTORY_AREAS_MARKUP + "</body>")
         with mock.patch.object(wiki_sync, "fetch_page", return_value=html):
             wiki_sync.sync_character_from_wiki(self.character)
         rows = self.character.sage_studies.filter(study="History")

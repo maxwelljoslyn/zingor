@@ -1903,11 +1903,6 @@ def sage_study_add(request, pk):
         return HttpResponse("Unknown study", status=400)
     if concentration and not concentration_label(study):
         return HttpResponse(f"{study} is not studied by area", status=400)
-    if "(" in concentration or ")" in concentration:
-        # Study and area are joined into "Study (Area)" for display and for the
-        # wiki page, and split back apart on the way in; parentheses inside an
-        # area would make that split ambiguous.
-        return HttpResponse("An area cannot contain parentheses", status=400)
 
     row, _created = SageStudyPoints.objects.get_or_create(
         character=character,

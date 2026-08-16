@@ -17,7 +17,6 @@ from characters.sage import (
     sage_fields,
     sage_studies,
     sort_sage_entries,
-    split_study,
 )
 
 
@@ -177,38 +176,6 @@ class FormatStudyTests(TestCase):
 
     def test_area_defaults_to_none(self):
         self.assertEqual(format_study("Forgery"), "Forgery")
-
-
-class SplitStudyTests(TestCase):
-    def test_area_is_split_off(self):
-        self.assertEqual(
-            split_study("History (Ancient European)"), ("History", "Ancient European")
-        )
-
-    def test_missing_space_before_the_paren_still_splits(self):
-        self.assertEqual(
-            split_study("History(Ancient European)"), ("History", "Ancient European")
-        )
-
-    def test_surrounding_whitespace_is_trimmed(self):
-        self.assertEqual(
-            split_study("  Outer Planes ( Nirvana ) "), ("Outer Planes", "Nirvana")
-        )
-
-    def test_plain_study_comes_back_whole(self):
-        self.assertEqual(split_study("Forgery"), ("Forgery", ""))
-
-    def test_study_taking_no_area_keeps_its_parenthetical(self):
-        # Splitting here would silently invent an area the study can't hold, so
-        # the name is left as it stands for the caller to reject or record.
-        self.assertEqual(split_study("Forgery (Seals)"), ("Forgery (Seals)", ""))
-
-    def test_empty_parens_are_not_an_area(self):
-        self.assertEqual(split_study("History ()"), ("History ()", ""))
-
-    def test_format_and_split_round_trip(self):
-        for study, area in [("History", "Ancient African"), ("Forgery", "")]:
-            self.assertEqual(split_study(format_study(study, area)), (study, area))
 
 
 from django.contrib.auth.models import User
@@ -659,12 +626,12 @@ class SageStudyAddConcentrationTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertFalse(self.character.sage_studies.exists())
 
-    def test_parentheses_in_an_area_return_400(self):
-        # "Study (Area)" is how the pair is written out and read back, so an
-        # area holding its own parens would make that ambiguous.
-        response = self._add("History", "Ancient (European)")
-        self.assertEqual(response.status_code, 400)
-        self.assertFalse(self.character.sage_studies.exists())
+    def test_an_area_may_contain_parentheses(self):
+        # Nothing reads the joined display name apart, so an area is free text.
+        self._add("Outer Planes", "Nirvana (upper)")
+        row = SageStudyPoints.objects.get(character=self.character)
+        self.assertEqual(row.concentration, "Nirvana (upper)")
+        self.assertEqual(row.display_name, "Outer Planes (Nirvana (upper))")
 
     def test_restoring_a_hidden_area_names_it_in_full(self):
         self._add("History", "Ancient European")

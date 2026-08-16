@@ -482,10 +482,6 @@ CONCENTRATIONS = {
     "Outer Planes": "plane",
 }
 
-# Matches a trailing parenthesised area, tolerating a missing space before the
-# opening paren — hand-written sheets have "History(Ancient European)".
-_CONCENTRATION_RE = re.compile(r"^(.*?)\s*\((.*)\)$")
-
 
 def concentration_label(study: str) -> str | None:
     """Name what an area of concentration is for a study, or None if it takes none."""
@@ -493,26 +489,12 @@ def concentration_label(study: str) -> str | None:
 
 
 def format_study(study: str, concentration: str = "") -> str:
-    """Render a study and its area of concentration as one display name."""
-    return f"{study} ({concentration})" if concentration else study
+    """Render a study and its area of concentration as one display name.
 
-
-def split_study(text: str) -> tuple[str, str]:
-    """Split a display name into (study, area of concentration).
-
-    The inverse of format_study: "History (Ancient European)" comes back as
-    ("History", "Ancient European"). Anything else — a plain study name, or a
-    parenthesised one whose base study takes no area — comes back unchanged
-    with an empty area, so this is safe to run over any study name.
+    For display only. A stored area always travels in a column of its own, so
+    nothing ever has to read this apart again.
     """
-    text = text.strip()
-    match = _CONCENTRATION_RE.match(text)
-    if not match:
-        return text, ""
-    study, concentration = match.group(1), match.group(2).strip()
-    if study not in CONCENTRATIONS or not concentration:
-        return text, ""
-    return study, concentration
+    return f"{study} ({concentration})" if concentration else study
 
 
 # ---------------------------------------------------------------------------

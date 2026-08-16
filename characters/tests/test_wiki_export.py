@@ -215,7 +215,7 @@ class WikiExportZMFTest(TestCase):
         wiki = character_to_wiki(self.char)
         assert wiki.count('class="zingor-sage-study-name" | Beasts') == 1
 
-    def test_area_of_concentration_rides_along_in_the_name_cell(self):
+    def test_area_of_concentration_gets_its_own_cell(self):
         SageStudyPoints.objects.create(
             character=self.char,
             study="History",
@@ -223,7 +223,18 @@ class WikiExportZMFTest(TestCase):
             points=31,
         )
         wiki = character_to_wiki(self.char)
-        assert 'class="zingor-sage-study-name" | History (Ancient European)' in wiki
+        assert 'class="zingor-sage-study-name" | History |' in wiki
+        assert 'class="zingor-sage-study-concentration" | Ancient European' in wiki
+        assert "! Study !! Area !! Points !! Rank !! Chosen" in wiki
+
+    def test_area_cell_is_emitted_empty_for_a_study_taken_whole(self):
+        SageStudyPoints.objects.create(character=self.char, study="Faith", points=4)
+        row = next(
+            line
+            for line in character_to_wiki(self.char).splitlines()
+            if 'class="zingor-sage-study-name"' in line
+        )
+        assert 'class="zingor-sage-study-concentration" |  |' in row
 
     def test_each_area_gets_its_own_row_under_the_one_field(self):
         """Two areas of History are two point totals, but one study, so they
@@ -239,12 +250,7 @@ class WikiExportZMFTest(TestCase):
         assert wiki.count("=== The Church ===") == 1
         assert wiki.count('|- class="zingor-sage-study"') == 2
         # Alphabetical within the study, as the rest of the table is.
-        assert wiki.index("(Ancient African)") < wiki.index("(Ancient European)")
-
-    def test_a_study_taken_whole_exports_under_its_bare_name(self):
-        SageStudyPoints.objects.create(character=self.char, study="History", points=9)
-        wiki = character_to_wiki(self.char)
-        assert 'class="zingor-sage-study-name" | History |' in wiki
+        assert wiki.index("Ancient African") < wiki.index("Ancient European")
 
     def test_sage_ability_table_carries_zmf_classes(self):
         """Standalone abilities are exported as a table like sage studies, so

@@ -134,24 +134,30 @@ When [exporting to a wiki page](wiki-export.md), the `=== Field ===` headings ov
 A study can be listed under more than one field heading on your page (e.g. Beasts belongs to both Reverence and Legends & Folklore). As mentioned under [Single Records](#single-records), if Zingor encounters the same markup twice while importing, **the first occurrence wins**. This applies to studies too.
 :::
 
-A few studies — History, Geography, and Outer Planes — are studied one **area of concentration** at a time: points spent on the history of Ancient Europe say nothing about your grasp of Ancient Africa. Name the area in parentheses after the study, in the same `-name` cell, and Zingor keeps a separate point total for each:
+A few studies — History, Geography, and Outer Planes — are studied one **area of concentration** at a time: points spent on the history of Ancient Europe say nothing about your grasp of Ancient Africa. Add a `-concentration` cell (optional, like `-chosen`) naming the area, and Zingor keeps a separate point total for each:
 
 ```html
 <tr class="zingor-sage-study">
-  <td class="zingor-sage-study-name">History (Ancient European)</td>
+  <td class="zingor-sage-study-name">History</td>
+  <td class="zingor-sage-study-concentration">Ancient European</td>
   <td class="zingor-sage-study-points">31</td>
 </tr>
 <tr class="zingor-sage-study">
-  <td class="zingor-sage-study-name">History (Ancient African)</td>
+  <td class="zingor-sage-study-name">History</td>
+  <td class="zingor-sage-study-concentration">Ancient African</td>
   <td class="zingor-sage-study-points">6</td>
 </tr>
 ```
 
-The space before the parenthesis is optional, so `History(Ancient European)` reads the same. Each area is its own record: two areas of one study are no more "the same markup twice" than two different studies are, and only a repeat of the *same* area is deduplicated. A study with no area named — plain `History` — is the study taken as a whole, and keeps a row of its own alongside any areas.
+The study name stays plain `History` in both rows — the area lives in its own cell and nowhere else. Each area is its own record: two areas of one study are no more "the same markup twice" than two different studies are, and only a repeat of the *same* area is deduplicated. A row with no `-concentration` cell (or an empty one) is the study taken as a whole, and keeps a point total of its own alongside any areas.
+
+:::{warning}
+Writing the area into the study name instead — `<td class="zingor-sage-study-name">History (Ancient European)</td>` — does **not** work. That is read as a study whose name is, in its entirety, "History (Ancient European)", which matches no study in Zingor's catalogue.
+
+This is deliberate: a cell means what it says, so a page you write today keeps parsing the same way after Zingor learns about more studies. If your page already names areas in parentheses, move each one into a `-concentration` cell.
+:::
 
 :::{note}
-Only those three studies read a parenthesised name this way. Anywhere else, `Forgery (Seals)` is taken as a study name in its entirety rather than as an area of Forgery, so nothing you write for other studies changes meaning.
-
 Studies that subdivide into things the wiki gives sage abilities of their own — Athletics and its disciplines, say — aren't areas of concentration at all. Record those as **sage abilities**, below.
 :::
 
