@@ -58,6 +58,23 @@ LEXENT_HTML_WITH_CHOSEN_FIELDS = LEXENT_HTML.replace(
 WIKI_URL = "https://adventure.alexissmolensk.com/index.php/Lexent"
 
 
+def _with_study(name: str, points: int = 3) -> str:
+    """Lexent's page with one extra sage study, named as the caller wants.
+
+    The fixture's own sage table is plain wiki markup with no zingor-* classes,
+    so the parser never sees it; a study has to be injected to be parsed.
+    """
+    row = "".join(
+        [
+            '<tr class="zingor-sage-study">',
+            f'<td class="zingor-sage-study-name">{name}</td>',
+            f'<td class="zingor-sage-study-points">{points}</td>',
+            "</tr>",
+        ]
+    )
+    return LEXENT_HTML.replace("</body>", row + "</body>")
+
+
 class SyncCharacterFromWikiTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="joey", password="pw")
@@ -180,6 +197,81 @@ class SyncCharacterFromWikiTests(TestCase):
         with mock.patch.object(wiki_sync, "fetch_page", return_value=html):
             wiki_sync.sync_character_from_wiki(self.character)
         self.assertEqual(self.character.sage_studies.filter(study="Beasts").count(), 1)
+
+    def test_wiki_spelling_is_stored_under_the_catalogue_name(self):
+        """A page written before the name corrections says "Heraldry, Signs,
+        and Sigils"; the row must land on the catalogue's spelling so it groups
+        under The Church rather than "Other"."""
+        with mock.patch.object(
+            wiki_sync,
+            "fetch_page",
+            return_value=_with_study("Heraldry, Signs, and Sigils"),
+        ):
+            wiki_sync.sync_character_from_wiki(self.character)
+        stored = set(self.character.sage_studies.values_list("study", flat=True))
+        self.assertIn("Heraldry, Signs & Sigils", stored)
+        self.assertNotIn("Heraldry, Signs, and Sigils", stored)
+
+    def test_rewritten_name_is_reported_as_a_warning(self):
+        with mock.patch.object(
+            wiki_sync,
+            "fetch_page",
+            return_value=_with_study("Heraldry, Signs, and Sigils"),
+        ):
+            warnings = wiki_sync.sync_character_from_wiki(self.character)
+        self.assertTrue(
+            any("Heraldry, Signs, and Sigils" in w for w in warnings),
+            f"no warning naming the page's spelling: {warnings}",
+        )
+
+    def test_unknown_study_keeps_the_pages_spelling(self):
+        """Studies are freetext; one that matches no catalogue entry is stored
+        as written rather than dropped."""
+        with mock.patch.object(
+            wiki_sync, "fetch_page", return_value=_with_study("Nonexistent Study")
+        ):
+            wiki_sync.sync_character_from_wiki(self.character)
+        self.assertTrue(
+            self.character.sage_studies.filter(study="Nonexistent Study").exists()
+        )
+
+    def test_hidden_row_in_the_old_spelling_still_blocks_the_wiki(self):
+        """The suppression matches on name, so a hidden row saved before the
+        corrections must not let the page's new spelling resurrect it."""
+        SageStudyPoints.objects.create(
+            character=self.character,
+            study="Heraldry, Signs, and Sigils",
+            points=99,
+            hidden=True,
+        )
+        with mock.patch.object(
+            wiki_sync,
+            "fetch_page",
+            return_value=_with_study("Heraldry, Signs & Sigils"),
+        ):
+            wiki_sync.sync_character_from_wiki(self.character)
+        rows = self.character.sage_studies.filter(
+            study__in=["Heraldry, Signs & Sigils", "Heraldry, Signs, and Sigils"]
+        )
+        self.assertEqual(rows.count(), 1)
+        self.assertTrue(rows.first().hidden)
+        self.assertEqual(rows.first().points, 99)
+
+    def test_chosen_field_is_stored_under_the_catalogue_name(self):
+        markup = "".join(
+            [
+                '<li class="zingor-chosen-field">',
+                '<span class="zingor-chosen-field-name">Legends and Folklore</span>',
+                "</li>",
+            ]
+        )
+        html = LEXENT_HTML.replace("</body>", markup + "</body>")
+        with mock.patch.object(wiki_sync, "fetch_page", return_value=html):
+            wiki_sync.sync_character_from_wiki(self.character)
+        self.assertEqual(
+            list(self.character.chosen_fields.values_list("field", flat=True)),
+            ["Legends & Folklore"],
+        )
 
     def test_absent_sage_ability_section_does_not_wipe_existing_abilities(self):
         """A page with no sage-ability markup leaves the DB's abilities alone."""

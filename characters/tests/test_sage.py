@@ -4,9 +4,12 @@ from django.test import TestCase
 
 from characters.sage import (
     CLASS_FIELDS,
+    canonical_field,
+    canonical_study,
     rank_for_points,
     rank_studies,
     sage_fields,
+    sage_studies,
     sort_sage_entries,
 )
 
@@ -58,6 +61,35 @@ class RankStudiesTests(TestCase):
             set(result), {"sage", "expert", "authority", "amateur", "unranked"}
         )
         self.assertTrue(all(bucket == {} for bucket in result.values()))
+
+
+class CanonicalNameTests(TestCase):
+    def test_catalogue_name_is_returned_unchanged(self):
+        self.assertEqual(canonical_study("Bugs & Spiders"), "Bugs & Spiders")
+        self.assertEqual(canonical_field("Earth & Sky"), "Earth & Sky")
+
+    def test_and_spelling_resolves_to_the_ampersand(self):
+        self.assertEqual(canonical_study("Bugs and Spiders"), "Bugs & Spiders")
+        self.assertEqual(canonical_field("Legends and Folklore"), "Legends & Folklore")
+
+    def test_oxford_comma_and_case_are_ignored(self):
+        self.assertEqual(
+            canonical_study("Heraldry, Signs, and Sigils"), "Heraldry, Signs & Sigils"
+        )
+        self.assertEqual(canonical_study("jack-of-all-trades"), "Jack-of-all-Trades")
+
+    def test_american_spelling_resolves(self):
+        self.assertEqual(canonical_study("Leather Armor"), "Leather Armour")
+
+    def test_unknown_name_passes_through(self):
+        self.assertEqual(canonical_study("Nonexistent Study"), "Nonexistent Study")
+        self.assertEqual(canonical_field("Nonexistent Field"), "Nonexistent Field")
+
+    def test_every_catalogue_name_is_its_own_canonical_form(self):
+        for study in sage_studies:
+            self.assertEqual(canonical_study(study), study)
+        for field in sage_fields:
+            self.assertEqual(canonical_field(field), field)
 
 
 class SortSageEntriesByPointsTests(TestCase):

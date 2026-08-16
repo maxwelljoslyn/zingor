@@ -5,6 +5,8 @@ study and field. sage_studies is authoritative for field membership;
 sage_fields is the reverse index, derived from it at import.
 """
 
+import re
+
 # ---------------------------------------------------------------------------
 # Rank thresholds (descending). rank_for_points returns the first name
 # where points >= threshold.
@@ -266,6 +268,47 @@ CLASS_FIELDS = {
     "ranger": ["Animal Training", "Mastery at Arms", "Training", "Wilderland"],
     "thief": ["Fraud", "Skulduggery", "Streetwisdom", "Theft"],
 }
+
+
+# ---------------------------------------------------------------------------
+# Canonical spelling
+# ---------------------------------------------------------------------------
+
+# Spellings Zingor and the Adventure wiki have historically disagreed on, in
+# whichever direction. Folded away before matching so either form resolves.
+_SPELLING_VARIANTS = {"armour": "armor"}
+
+
+def _normalize(name: str) -> str:
+    """Reduce a name to the form used to match catalogue entries.
+
+    Case, punctuation, and "and" versus "&" are all noise: an Adventure wiki
+    page is hand-written, so the same study appears as "Bugs & Spiders",
+    "Bugs and Spiders", or "bugs and spiders" depending on who typed it.
+    """
+    name = name.lower().replace("&", "and")
+    for variant, canonical in _SPELLING_VARIANTS.items():
+        name = name.replace(variant, canonical)
+    return re.sub(r"[^a-z0-9]", "", name)
+
+
+_STUDIES_BY_NORMALIZED = {_normalize(name): name for name in sage_studies}
+_FIELDS_BY_NORMALIZED = {_normalize(name): name for name in sage_fields}
+
+
+def canonical_study(name: str) -> str:
+    """Return the catalogue's spelling of a study, or the name unchanged.
+
+    A name with no catalogue entry is passed through rather than rejected:
+    studies arrive as freetext from the wiki, and an unrecognised one is
+    displayed under the sheet's "Other" heading instead of being dropped.
+    """
+    return _STUDIES_BY_NORMALIZED.get(_normalize(name), name)
+
+
+def canonical_field(name: str) -> str:
+    """Return the catalogue's spelling of a field, or the name unchanged."""
+    return _FIELDS_BY_NORMALIZED.get(_normalize(name), name)
 
 
 # ---------------------------------------------------------------------------

@@ -23,9 +23,25 @@ from .models import (
     SageStudyPoints,
     Spell,
 )
+from .sage import canonical_field, canonical_study
 
 USER_AGENT = "Zingor wiki-sync (https://github.com/; character sheet importer)"
 FETCH_TIMEOUT = 20
+
+
+def _canonicalize(name, resolve, label: str, warnings: list[str]) -> str:
+    """Snap a parsed sage name to the catalogue, noting any name it rewrote.
+
+    Adventure wiki pages are hand-written and spell studies and fields
+    inconsistently, so storing the page's spelling verbatim would scatter one
+    study across several names and re-import the old spelling on every sync.
+    The rewrite is recorded as a warning so ``sync_wiki`` reports which pages
+    still want tidying; it is not an error, and the sync proceeds either way.
+    """
+    canonical = resolve(name)
+    if canonical != name:
+        warnings.append(f"{label} {name!r}: stored under catalogue name {canonical!r}")
+    return canonical
 
 
 def fetch_page(url: str) -> str:
@@ -41,7 +57,8 @@ def fetch_page(url: str) -> str:
 def sync_character_from_wiki(character: Character) -> list[str]:
     """Parse the character's wiki page and update the row in place.
 
-    Returns the parser's warnings for logging. Scalars are copied only when the
+    Returns warnings for logging: the parser's, plus one for every sage name
+    rewritten to its catalogue spelling. Scalars are copied only when the
     parsed value is present, so a temporarily-absent field on the wiki never
     nukes existing data. Spells, chosen fields, sage studies, and sage
     abilities are
@@ -71,6 +88,9 @@ def sync_character_from_wiki(character: Character) -> list[str]:
         character.chosen_fields.all().delete()
         seen_fields = set()
         for chosen in parsed.chosen_fields:
+            chosen.field = _canonicalize(
+                chosen.field, canonical_field, "sage field", parsed.warnings
+            )
             if chosen.field in seen_fields:
                 continue
             seen_fields.add(chosen.field)
@@ -80,15 +100,23 @@ def sync_character_from_wiki(character: Character) -> list[str]:
 
     if SageStudyPoints in parsed.sections_present:
         # Preserve soft-deleted (hidden) studies across a sync: keep their rows
-        # and retained points, and don't let the wiki resurrect them.
-        hidden_studies = set(
-            character.sage_studies.filter(hidden=True).values_list("study", flat=True)
-        )
+        # and retained points, and don't let the wiki resurrect them. Hidden
+        # rows predating the name corrections still carry the old spelling, so
+        # they are matched canonically or the wiki resurrects them anyway.
+        hidden_studies = {
+            canonical_study(study)
+            for study in character.sage_studies.filter(hidden=True).values_list(
+                "study", flat=True
+            )
+        }
         character.sage_studies.filter(hidden=False).delete()
         # A hand-edited page can list one study under two field headings; the
         # first listing wins rather than tripping the per-character unique key.
         seen_studies = set(hidden_studies)
         for study in parsed.sage_studies:
+            study.study = _canonicalize(
+                study.study, canonical_study, "sage study", parsed.warnings
+            )
             if study.study in seen_studies:
                 continue
             seen_studies.add(study.study)
