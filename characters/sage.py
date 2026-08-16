@@ -5,8 +5,6 @@ study and field. sage_studies is authoritative for field membership;
 sage_fields is the reverse index, derived from it at import.
 """
 
-import re
-
 # ---------------------------------------------------------------------------
 # Rank thresholds (descending). rank_for_points returns the first name
 # where points >= threshold.
@@ -273,30 +271,6 @@ CLASS_FIELDS = {
 # ---------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------
-
-
-def alexisify(text: str) -> str:
-    """Return the wiki's canonical spelling for a study/field name."""
-    if not text:
-        raise ValueError("String cannot be empty")
-    alternative = (
-        sage_fields.get(text, {}).get("alexis_name")
-        or sage_studies.get(text, {}).get("alexis_name")
-        or None
-    )
-    if alternative:
-        text = alternative
-    text = re.sub(re.compile(r"([,\s])and(\s)"), r"\1&\2", text)
-    text = re.sub(re.compile(r"\s+\(.*\)"), "", text)
-    return text
-
-
-def linkify_field(x: str) -> str:
-    return f"<a href='https://wiki.alexissmolensk.com/index.php/{alexisify(x)}_(sage_field)'>{x}</a>"
-
-
-def linkify_study(x: str) -> str:
-    return f"<a href='https://wiki.alexissmolensk.com/index.php/{alexisify(x)}_(sage_study)'>{x}</a>"
 
 
 def sort_sage_entries(

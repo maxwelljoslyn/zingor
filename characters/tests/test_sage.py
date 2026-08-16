@@ -4,9 +4,6 @@ from django.test import TestCase
 
 from characters.sage import (
     CLASS_FIELDS,
-    alexisify,
-    linkify_field,
-    linkify_study,
     rank_for_points,
     rank_studies,
     sage_fields,
@@ -61,32 +58,6 @@ class RankStudiesTests(TestCase):
             set(result), {"sage", "expert", "authority", "amateur", "unranked"}
         )
         self.assertTrue(all(bucket == {} for bucket in result.values()))
-
-
-class AlexisifyTests(TestCase):
-    def test_empty_string_raises(self):
-        with self.assertRaises(ValueError):
-            alexisify("")
-
-    def test_plain_name_passes_through(self):
-        self.assertEqual(alexisify("Forgery"), "Forgery")
-
-    def test_and_becomes_ampersand(self):
-        self.assertEqual(alexisify("Music and Design"), "Music & Design")
-
-    def test_parenthetical_is_stripped(self):
-        self.assertEqual(alexisify("Horseback Riding (mounted)"), "Horseback Riding")
-
-
-class SageLinkifyTests(TestCase):
-    def test_linkify_field_wraps_display_text_and_field_url(self):
-        html = linkify_field("Forgery")
-        self.assertIn(">Forgery</a>", html)
-        self.assertIn("Forgery_(sage_field)", html)
-
-    def test_linkify_study_uses_study_suffix(self):
-        html = linkify_study("Forgery")
-        self.assertIn("Forgery_(sage_study)", html)
 
 
 class SortSageEntriesByPointsTests(TestCase):

@@ -31,6 +31,21 @@ def test_linkify_field_url_format():
     )
 
 
+def test_class_variant_suffix_is_dropped_from_field_url():
+    """Civitas (Mage) and Civitas (Illusionist) are Zingor's names for a single
+    wiki page, so the parenthetical must not reach the URL."""
+    assert linkify_field("Civitas (Mage)") == f"{WIKI_BASE}/Civitas_(sage_field)"
+    assert linkify_field("Civitas (Illusionist)") == f"{WIKI_BASE}/Civitas_(sage_field)"
+    assert (
+        linkify_field("Animal Training (Assassin)")
+        == f"{WIKI_BASE}/Animal_Training_(sage_field)"
+    )
+
+
+def test_ampersand_names_keep_their_ampersand():
+    assert linkify_study("Bugs & Spiders") == f"{WIKI_BASE}/Bugs_&_Spiders_(sage_study)"
+
+
 @pytest.mark.skipif(not _wiki_reachable(), reason="Wiki site unreachable")
 class TestWikiLinksLive:
     def test_spell_fireball(self):
