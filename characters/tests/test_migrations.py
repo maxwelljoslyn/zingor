@@ -8,13 +8,22 @@ from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import SimpleTestCase, TestCase, TransactionTestCase
 
-from characters.models import Character, Item
+from characters.models import (
+    Character,
+    Item,
+    SageAbilityPoints,
+    SageChosenField,
+    SageStudyPoints,
+)
 from characters.units import D
 
 consolidation = importlib.import_module(
     "characters.migrations.0015_consolidate_duplicate_items"
 )
 coins_to_items = importlib.import_module("characters.migrations.0017_coins_to_items")
+canonical_names = importlib.import_module(
+    "characters.migrations.0030_canonical_sage_names"
+)
 
 
 def run_consolidation() -> None:
@@ -233,3 +242,160 @@ class MultipleChosenSageFieldsTests(TransactionTestCase):
         self.assertFalse(
             SageStudyPoints.objects.filter(character_id=character.pk).exists()
         )
+
+
+class CanonicalSageNamesTests(TestCase):
+    """0030 rewrites stored sage names to the catalogue's spelling.
+
+    It reads only columns the live models still have, so it can run against the
+    real app registry rather than a historical state.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.character = Character.objects.create(user=self.user, name="Lexent")
+        self.other = Character.objects.create(user=self.user, name="Someone Else")
+
+    def _run(self) -> None:
+        canonical_names.forwards(apps, None)
+
+    def _studies(self, character=None):
+        return set(
+            SageStudyPoints.objects.filter(
+                character=character or self.character
+            ).values_list("study", flat=True)
+        )
+
+    def test_old_spelling_is_rewritten(self):
+        SageStudyPoints.objects.create(
+            character=self.character, study="Heraldry, Signs, and Sigils", points=4
+        )
+        self._run()
+        self.assertEqual(self._studies(), {"Heraldry, Signs & Sigils"})
+        self.assertEqual(SageStudyPoints.objects.get().points, 4)
+
+    def test_american_spelling_is_rewritten(self):
+        SageStudyPoints.objects.create(character=self.character, study="Leather Armor")
+        self._run()
+        self.assertEqual(self._studies(), {"Leather Armour"})
+
+    def test_canonical_name_is_left_alone(self):
+        SageStudyPoints.objects.create(
+            character=self.character, study="Bugs & Spiders", points=9
+        )
+        self._run()
+        self.assertEqual(self._studies(), {"Bugs & Spiders"})
+        self.assertEqual(SageStudyPoints.objects.get().points, 9)
+
+    def test_uncatalogued_study_is_left_alone(self):
+        SageStudyPoints.objects.create(
+            character=self.character, study="Nonexistent Study", points=2
+        )
+        self._run()
+        self.assertEqual(self._studies(), {"Nonexistent Study"})
+
+    def test_colliding_rows_merge_keeping_the_higher_points(self):
+        """A hidden row from before the correction alongside the one the wiki
+        resurrected: renaming outright would trip the per-character unique key."""
+        SageStudyPoints.objects.create(
+            character=self.character,
+            study="Heraldry, Signs, and Sigils",
+            points=99,
+            hidden=True,
+        )
+        SageStudyPoints.objects.create(
+            character=self.character, study="Heraldry, Signs & Sigils", points=4
+        )
+        self._run()
+        rows = SageStudyPoints.objects.filter(character=self.character)
+        self.assertEqual(rows.count(), 1)
+        row = rows.get()
+        self.assertEqual(row.study, "Heraldry, Signs & Sigils")
+        self.assertEqual(row.points, 99)
+
+    def test_merged_study_stays_visible_if_either_row_was(self):
+        SageStudyPoints.objects.create(
+            character=self.character, study="Bugs and Spiders", points=1, hidden=True
+        )
+        SageStudyPoints.objects.create(
+            character=self.character, study="Bugs & Spiders", points=1, hidden=False
+        )
+        self._run()
+        self.assertFalse(SageStudyPoints.objects.get(character=self.character).hidden)
+
+    def test_merged_study_keeps_a_chosen_mark_from_either_row(self):
+        SageStudyPoints.objects.create(
+            character=self.character, study="Bugs and Spiders", chosen=True
+        )
+        SageStudyPoints.objects.create(
+            character=self.character, study="Bugs & Spiders", chosen=False
+        )
+        self._run()
+        self.assertTrue(SageStudyPoints.objects.get(character=self.character).chosen)
+
+    def test_two_stale_spellings_of_one_study_collapse(self):
+        SageStudyPoints.objects.create(
+            character=self.character, study="Bugs and Spiders", points=3
+        )
+        SageStudyPoints.objects.create(
+            character=self.character, study="bugs and spiders", points=8
+        )
+        self._run()
+        self.assertEqual(self._studies(), {"Bugs & Spiders"})
+        self.assertEqual(SageStudyPoints.objects.get().points, 8)
+
+    def test_each_character_is_migrated_independently(self):
+        SageStudyPoints.objects.create(
+            character=self.character, study="Bugs and Spiders", points=3
+        )
+        SageStudyPoints.objects.create(
+            character=self.other, study="Bugs and Spiders", points=5
+        )
+        self._run()
+        self.assertEqual(self._studies(), {"Bugs & Spiders"})
+        self.assertEqual(self._studies(self.other), {"Bugs & Spiders"})
+        self.assertEqual(SageStudyPoints.objects.count(), 2)
+
+    def test_chosen_fields_are_rewritten(self):
+        SageChosenField.objects.create(
+            character=self.character, field="Legends and Folklore"
+        )
+        self._run()
+        self.assertEqual(
+            list(SageChosenField.objects.values_list("field", flat=True)),
+            ["Legends & Folklore"],
+        )
+
+    def test_colliding_chosen_fields_collapse_to_one(self):
+        SageChosenField.objects.create(
+            character=self.character, field="Legends and Folklore"
+        )
+        SageChosenField.objects.create(
+            character=self.character, field="Legends & Folklore"
+        )
+        self._run()
+        self.assertEqual(
+            list(SageChosenField.objects.values_list("field", flat=True)),
+            ["Legends & Folklore"],
+        )
+
+    def test_standalone_abilities_are_untouched(self):
+        """Abilities are freetext by design and share no namespace with the
+        catalogue, so a name that happens to look like a study is left alone."""
+        SageAbilityPoints.objects.create(
+            character=self.character, ability="Bugs and Spiders", points=5
+        )
+        self._run()
+        self.assertEqual(
+            list(SageAbilityPoints.objects.values_list("ability", flat=True)),
+            ["Bugs and Spiders"],
+        )
+
+    def test_running_twice_changes_nothing_further(self):
+        SageStudyPoints.objects.create(
+            character=self.character, study="Bugs and Spiders", points=3
+        )
+        self._run()
+        self._run()
+        self.assertEqual(self._studies(), {"Bugs & Spiders"})
+        self.assertEqual(SageStudyPoints.objects.get().points, 3)
