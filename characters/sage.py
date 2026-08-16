@@ -1,7 +1,8 @@
 """Sage knowledge catalogue and rank logic.
 
-Content adapted from dnd/dnd/sage.py. sage_fields is authoritative for
-validation; sage_studies provides reverse lookups.
+Content adapted from dnd/dnd/sage.py, using the wiki's spelling of every
+study and field. sage_studies is authoritative for field membership;
+sage_fields is the reverse index, derived from it at import.
 """
 
 import re
@@ -38,39 +39,36 @@ sage_studies = {
     "Accompaniment": {"fields": ["Dance"]},
     "Acrobatics": {"fields": ["Circus"]},
     "Acting": {"fields": ["Drama"]},
-    "Alchemy": {"fields": ["Earth and Sky", "Science"]},
-    "Amphibians and Reptiles": {"fields": ["Animal Life"]},
+    "Alchemy": {"fields": ["Earth & Sky", "Science"]},
+    "Amphibians & Reptiles": {"fields": ["Animal Life"]},
     "Animal Performance": {"fields": ["Circus"]},
-    "Animal Physiology": {
-        "alexis_fields": ["Earth and Sky"],
-        "fields": ["Animal Life"],
-    },
-    "Animal Products": {"fields": ["Leatherwork"]},
+    "Animal Physiology": {"fields": ["Earth & Sky"]},
+    "Animal Products": {"fields": ["Leather Work"]},
     "Architectural Aesthetics": {"fields": ["Architecture"]},
-    "Artifacts": {"fields": ["Legends and Folklore"]},
-    "Astronomy and Astrology": {"fields": ["Theology and Customs"]},
+    "Artifacts": {"fields": ["Legends & Folklore"]},
+    "Astronomy & Astrology": {"fields": ["Theology & Customs"]},
     "Athletics": {"fields": ["Training"]},
     "Auctionhouse": {"fields": ["Art World"]},
     "Backstabbing": {"fields": ["Skulduggery"]},
     "Baking": {"fields": ["Gastronomy"]},
     "Beachcomber": {"fields": ["Wilderland"]},
-    "Beasts": {"fields": ["Legends and Folklore", "Reverence"]},
+    "Beasts": {"fields": ["Legends & Folklore", "Reverence"]},
     "Birds": {"fields": ["Animal Life"]},
     "Blightlander": {"fields": ["Wilderland"]},
     "Black Market": {"fields": ["Art World"]},
     "Blood": {"fields": ["Way of the Heart"]},
     "Breath": {"fields": ["Way of the Heart"]},
-    "Brewing and Distilling": {"fields": ["Gastronomy"]},
-    "Bugs and Spiders": {"fields": ["Animal Life"]},
+    "Brewing & Distilling": {"fields": ["Gastronomy"]},
+    "Bugs & Spiders": {"fields": ["Animal Life"]},
     "Burglary": {"fields": ["Theft"]},
-    "Bushes and Shrubs": {"fields": ["Plant Life"]},
+    "Bushes & Shrubs": {"fields": ["Plant Life"]},
     "Calligraphy": {"fields": ["Way of the Spirit"]},
     "Camelback Riding": {"fields": ["Animal Training", "Animal Training (Assassin)"]},
     "Chicanery": {"fields": ["Fraud"]},
     "Claw": {"fields": ["Way of the Stick"]},
     "Clay Masonry": {"fields": ["Ceramics"]},
     "Clay Materials": {"fields": ["Ceramics"]},
-    "Cloth and Materials": {"fields": ["Textiles"]},
+    "Cloth & Materials": {"fields": ["Textiles"]},
     "Clothing": {"fields": ["Textiles"]},
     "Clowning": {"fields": ["Circus"]},
     "Coercion": {"fields": ["Streetwisdom"]},
@@ -82,23 +80,23 @@ sage_studies = {
     "Danse Noble": {"fields": ["Dance"]},
     "Daredevil": {"fields": ["Circus"]},
     "Delicate Metalwork": {"fields": ["Metalwork"]},
-    "Demi-Gods": {"fields": ["Legends and Folklore"]},
+    "Demi-gods": {"fields": ["Legends & Folklore"]},
     "Direction": {"fields": ["Drama"]},
     "Divination": {"fields": ["Power", "Reverence"]},
     "Dog Training": {"fields": ["Animal Training", "Animal Training (Assassin)"]},
-    "Double-Dealing": {"alexis_name": "Double-dealing", "fields": ["Fraud"]},
+    "Double-dealing": {"fields": ["Fraud"]},
     "Dragon": {"fields": ["Way of the Heart"]},
     "Drawing": {"fields": ["Fine Art"]},
     "Dweomercraft": {"fields": ["Power", "Reverence"]},
     "Effigy": {"fields": ["Puppetry"]},
-    "Embroidery and Print": {"fields": ["Textiles"]},
+    "Embroidery & Print": {"fields": ["Textiles"]},
     "Empowerment": {"fields": ["Skulduggery", "Training"]},
     "Engineering": {"fields": ["Reality", "Science"]},
     "Engines": {"fields": ["Woodworking"]},
     "Faith": {"fields": ["Power"]},
     "Falconry": {"fields": ["Animal Training", "Animal Training (Assassin)"]},
     "Fist": {"fields": ["Way of the Stick"]},
-    "Flowers and Sprigs": {"fields": ["Plant Life"]},
+    "Flowers & Sprigs": {"fields": ["Plant Life"]},
     "Flying Mounts": {"fields": ["Animal Training", "Animal Training (Assassin)"]},
     "Folk Dance": {"fields": ["Dance"]},
     "Folk Music": {"fields": ["Music"]},
@@ -107,41 +105,35 @@ sage_studies = {
     "Forgery": {"fields": ["Fraud"]},
     "Fortification": {"fields": ["Architecture"]},
     "Fungi": {"fields": ["Plant Life"]},
-    "Geography": {"fields": ["Earth and Sky", "Humanities"]},
-    "Geology": {"fields": ["Earth and Sky", "Science"]},
+    "Geography": {"fields": ["Earth & Sky", "Humanities"]},
+    "Geology": {"fields": ["Earth & Sky", "Science"]},
     "Glaze": {"fields": ["Ceramics"]},
-    "Gods": {"fields": ["Theology and Customs"]},
+    "Gods": {"fields": ["Theology & Customs"]},
     "Golems": {"fields": ["Animal Life", "Black Magic"]},
-    "Grasses and Grains": {"fields": ["Plant Life"]},
+    "Grasses & Grains": {"fields": ["Plant Life"]},
     "Guilds": {"fields": ["Civitas (Mage)", "Civitas (Illusionist)"]},
     "Guile": {"fields": ["Grace", "Streetwisdom"]},
     "Hand": {"fields": ["Way of the Stick"]},
     "Heightened Senses": {"fields": ["Skulduggery"]},
-    "Heraldry, Signs, and Sigils": {
-        "alexis_name": "Heraldry, Signs & Sigils",
-        "fields": ["The Church"],
-    },
-    "Heroism": {"fields": ["Legends and Folklore", "Leadership"]},
-    "Hides and Skins": {"fields": ["Leatherwork"]},
+    "Heraldry, Signs & Sigils": {"fields": ["The Church"]},
+    "Heroism": {"fields": ["Legends & Folklore", "Leadership"]},
+    "Hides & Skins": {"fields": ["Leather Work"]},
     "History": {"fields": ["The Church"]},
     "Horseback Riding": {"fields": ["Animal Training", "Animal Training (Assassin)"]},
     "Insight": {"fields": ["Way of the Spirit"]},
     "Instruction": {"fields": ["Salon", "Training"]},
-    "Jack-of-All-Trades": {
-        "alexis_name": "Jack-of-all-Trades",
-        "fields": ["Grace", "Streetwisdom"],
-    },
+    "Jack-of-all-Trades": {"fields": ["Grace", "Streetwisdom"]},
     "Joinery": {"fields": ["Woodworking"]},
     "Judgment": {"fields": ["Leadership"]},
     "Jungle Bushcraft": {"fields": ["Wilderland"]},
     "Language": {"fields": ["Humanities"]},
-    "Law and Policy": {"fields": ["Humanities", "Theology and Customs"]},
-    "Leather Armor": {"fields": ["Leatherwork"]},
-    "Leather Clothing": {"fields": ["Leatherwork"]},
-    "Leathercraft": {"fields": ["Leatherwork"]},
+    "Law & Policy": {"fields": ["Humanities", "Theology & Customs"]},
+    "Leather Armour": {"fields": ["Leather Work"]},
+    "Leather Clothing": {"fields": ["Leather Work"]},
+    "Leathercraft": {"fields": ["Leather Work"]},
     "Liberalism": {"fields": ["Civitas (Illusionist)"]},
     "Lockpicking": {"fields": ["Theft"]},
-    "Logic and Ethics": {"fields": ["Humanities"]},
+    "Logic & Ethics": {"fields": ["Humanities"]},
     "Logistics": {"fields": ["Leadership", "Reality"]},
     "Magic Fabrication": {"fields": ["Black Magic"]},
     "Mahout": {"fields": ["Animal Training"]},
@@ -150,20 +142,20 @@ sage_studies = {
     "Martial Music": {"fields": ["Music"]},
     "Medicine": {"fields": ["Power", "Reality", "Science"]},
     "Mercantilism": {"fields": ["Civitas (Illusionist)", "Civitas (Mage)"]},
-    "Metal Armor": {"fields": ["Metalwork"]},
+    "Metal Armour": {"fields": ["Metalwork"]},
     "Metalsmithing": {"fields": ["Metalwork"]},
     "Military Engineering": {"fields": ["Training"]},
     "Mindfulness": {"fields": ["Way of the Spirit"]},
     "Moat": {"fields": ["Way of the Stone"]},
     "Modelling": {"fields": ["Ceramics"]},
-    "Mosses and Ferns": {"fields": ["Plant Life"]},
+    "Mosses & Ferns": {"fields": ["Plant Life"]},
     "Motivation": {"fields": ["Leadership"]},
     "Mountaineer": {"fields": ["Wilderland"]},
     "Murder": {"fields": ["Grace"]},
     "Mutations": {"fields": ["Unreality"]},
-    "Natural Astronomy": {"fields": ["Earth and Sky"]},
+    "Natural Astronomy": {"fields": ["Earth & Sky"]},
     "Occultism": {"fields": ["Black Magic", "Unreality"]},
-    "Oceanography": {"fields": ["Earth and Sky"]},
+    "Oceanography": {"fields": ["Earth & Sky"]},
     "Opera": {"fields": ["Music"]},
     "Oral Tradition": {"fields": ["Literature"]},
     "Outer Planes": {"fields": ["Power"]},
@@ -174,7 +166,7 @@ sage_studies = {
     "Physics": {"fields": ["Reality"]},
     "Pickpocketing": {"fields": ["Theft"]},
     "Piety": {"fields": ["Reverence"]},
-    "Planar Travel and Gating": {"fields": ["Black Magic", "Unreality"]},
+    "Planar Travel & Gating": {"fields": ["Black Magic", "Unreality"]},
     "Playwriting": {"fields": ["Drama"]},
     "Poetry": {"fields": ["Literature"]},
     "Poisoning": {"fields": ["Grace"]},
@@ -183,16 +175,13 @@ sage_studies = {
     "Prose": {"fields": ["Literature"]},
     "Publishing": {"fields": ["Humanities"]},
     "Puissance": {"fields": ["Mastery at Arms"]},
-    "Puppet-Making": {"alexis_name": "Puppet-making", "fields": ["Puppetry"]},
+    "Puppet-making": {"fields": ["Puppetry"]},
     "Puppeteering": {"fields": ["Puppetry"]},
-    "Religious Art, Music, and Design": {
-        "alexis_name": "Religious Art, Music and Design",
-        "fields": ["The Church"],
-    },
+    "Religious Art, Music & Design": {"fields": ["The Church"]},
     "Religious Music": {"fields": ["Music"]},
     "Research": {"fields": ["Salon"]},
     "Rhetoric": {"fields": ["Literature"]},
-    "Ritual": {"fields": ["Theology and Customs"]},
+    "Ritual": {"fields": ["Theology & Customs"]},
     "Scouting": {"fields": ["Wilderland"]},
     "Sculpture": {"fields": ["Fine Art"]},
     "Sea Life": {"fields": ["Animal Life"]},
@@ -202,8 +191,8 @@ sage_studies = {
     "Smoke": {"fields": ["Way of the Stone"]},
     "Social Dance": {"fields": ["Dance"]},
     "Stage Design": {"fields": ["Drama"]},
-    "Steam and Gasgear": {"fields": ["Unreality"]},
-    "Sure-Footedness": {"alexis_name": "Sure-footedness", "fields": ["Skulduggery"]},
+    "Steam & Gasgear": {"fields": ["Unreality"]},
+    "Sure-footedness": {"fields": ["Skulduggery"]},
     "Theatrical Costuming": {"fields": ["Textiles"]},
     "Tranquility": {"fields": ["Way of the Spirit"]},
     "Trees": {"fields": ["Plant Life"]},
@@ -214,207 +203,25 @@ sage_studies = {
     "Use of Building Materials": {"fields": ["Architecture"]},
     "Wall": {"fields": ["Way of the Stone"]},
     "Weaponwright": {"fields": ["Metalwork"]},
-    "Yin and Yang": {"fields": ["Way of the Heart"]},
+    "Yin & Yang": {"fields": ["Way of the Heart"]},
 }
 
 
-sage_fields = {
-    "Animal Life": {
-        "studies": [
-            "Amphibians and Reptiles",
-            "Animal Physiology",
-            "Birds",
-            "Bugs and Spiders",
-            "Golems",
-            "Mammals",
-            "Sea Life",
-            "Slime Molds",
-        ]
-    },
-    "Animal Training": {
-        "studies": [
-            "Camelback Riding",
-            "Dog Training",
-            "Falconry",
-            "Flying Mounts",
-            "Horseback Riding",
-            "Mahout",
-            "Underwater Mounts",
-        ]
-    },
-    "Animal Training (Assassin)": {
-        "studies": [
-            "Camelback Riding",
-            "Dog Training",
-            "Falconry",
-            "Flying Mounts",
-            "Horseback Riding",
-        ],
-    },
-    "Architecture": {
-        "studies": [
-            "Architectural Aesthetics",
-            "Construction",
-            "Fortification",
-            "Use of Building Materials",
-        ]
-    },
-    "Art World": {"studies": ["Auctionhouse", "Black Market", "Patronage"]},
-    "Black Magic": {
-        "studies": [
-            "Golems",
-            "Magic Fabrication",
-            "Occultism",
-            "Planar Travel and Gating",
-        ]
-    },
-    "Ceramics": {"studies": ["Clay Masonry", "Clay Materials", "Glaze", "Modelling"]},
-    "Circus": {
-        "studies": ["Acrobatics", "Animal Performance", "Clowning", "Daredevil"]
-    },
-    "Civitas (Illusionist)": {
-        "studies": ["Current Affairs", "Guilds", "Liberalism", "Mercantilism"],
-    },
-    "Civitas (Mage)": {
-        "studies": ["Construction", "Current Affairs", "Guilds", "Mercantilism"],
-    },
-    "Dance": {
-        "studies": ["Accompaniment", "Danse Noble", "Folk Dance", "Social Dance"]
-    },
-    "Drama": {"studies": ["Acting", "Direction", "Playwriting", "Stage Design"]},
-    "Earth and Sky": {
-        "studies": [
-            "Alchemy",
-            "Geography",
-            "Geology",
-            "Natural Astronomy",
-            "Oceanography",
-        ],
-    },
-    "Fine Art": {"studies": ["Drawing", "Painting", "Printmaking", "Sculpture"]},
-    "Fraud": {"studies": ["Chicanery", "Double-Dealing", "Forgery"]},
-    "Gastronomy": {"studies": ["Baking", "Brewing and Distilling", "Cuisine"]},
-    "Grace": {"studies": ["Guile", "Jack-of-All-Trades", "Murder", "Poisoning"]},
-    "Humanities": {
-        "studies": [
-            "Geography",
-            "Language",
-            "Law and Policy",
-            "Logic and Ethics",
-            "Publishing",
-        ]
-    },
-    "Leadership": {"studies": ["Heroism", "Judgment", "Logistics", "Motivation"]},
-    "Leatherwork": {
-        "alexis_name": "Leather Work",
-        "studies": [
-            "Animal Products",
-            "Hides and Skins",
-            "Leather Armor",
-            "Leather Clothing",
-            "Leathercraft",
-        ],
-    },
-    "Legends and Folklore": {
-        "studies": ["Artifacts", "Beasts", "Demi-Gods", "Heroism"],
-    },
-    "Literature": {"studies": ["Oral Tradition", "Poetry", "Prose", "Rhetoric"]},
-    "Mastery at Arms": {
-        "studies": [
-            "Martial Discipline",
-            "Physical Balance",
-            "Puissance",
-            "Unarmed Combat",
-        ]
-    },
-    "Metalwork": {
-        "studies": [
-            "Delicate Metalwork",
-            "Metal Armor",
-            "Metalsmithing",
-            "Weaponwright",
-        ]
-    },
-    "Music": {"studies": ["Folk Music", "Martial Music", "Opera", "Religious Music"]},
-    "Plant Life": {
-        "studies": [
-            "Bushes and Shrubs",
-            "Flowers and Sprigs",
-            "Fungi",
-            "Grasses and Grains",
-            "Mosses and Ferns",
-            "Trees",
-        ]
-    },
-    "Power": {
-        "studies": ["Divination", "Dweomercraft", "Faith", "Medicine", "Outer Planes"]
-    },
-    "Puppetry": {"studies": ["Effigy", "Puppet-Making", "Puppeteering"]},
-    "Reality": {"studies": ["Engineering", "Logistics", "Medicine", "Physics"]},
-    "Reverence": {"studies": ["Beasts", "Divination", "Dweomercraft", "Piety"]},
-    "Salon": {"studies": ["College", "Instruction", "Research"]},
-    "Science": {"studies": ["Alchemy", "Engineering", "Geology", "Medicine"]},
-    "Skulduggery": {
-        "studies": [
-            "Backstabbing",
-            "Empowerment",
-            "Heightened Senses",
-            "Setting Traps",
-            "Sure-Footedness",
-        ]
-    },
-    "Streetwisdom": {
-        "studies": ["Coercion", "Guile", "Jack-of-All-Trades", "Urban Sense"]
-    },
-    "Textiles": {
-        "studies": [
-            "Cloth and Materials",
-            "Clothing",
-            "Embroidery and Print",
-            "Theatrical Costuming",
-        ]
-    },
-    "The Church": {
-        "studies": [
-            "Heraldry, Signs, and Sigils",
-            "History",
-            "Politics",
-            "Religious Art, Music, and Design",
-        ]
-    },
-    "Theft": {"studies": ["Burglary", "Concealment", "Lockpicking", "Pickpocketing"]},
-    "Theology and Customs": {
-        "studies": ["Astronomy and Astrology", "Gods", "Law and Policy", "Ritual"],
-    },
-    "Training": {
-        "studies": ["Athletics", "Empowerment", "Instruction", "Military Engineering"]
-    },
-    "Unreality": {
-        "studies": [
-            "Mutations",
-            "Occultism",
-            "Planar Travel and Gating",
-            "Steam and Gasgear",
-        ]
-    },
-    "Way of the Heart": {"studies": ["Blood", "Breath", "Dragon", "Yin and Yang"]},
-    "Way of the Spirit": {
-        "studies": ["Calligraphy", "Insight", "Mindfulness", "Tranquility"]
-    },
-    "Way of the Stick": {"studies": ["Claw", "Fist", "Foot", "Hand"]},
-    "Way of the Stone": {"studies": ["Moat", "Pedestal", "Smoke", "Wall"]},
-    "Wilderland": {
-        "studies": [
-            "Beachcomber",
-            "Blightlander",
-            "Forester",
-            "Jungle Bushcraft",
-            "Mountaineer",
-            "Scouting",
-        ]
-    },
-    "Woodworking": {"studies": ["Engines", "Joinery", "Shipbuilding", "Turning"]},
-}
+def _invert_studies(studies: dict) -> dict:
+    """Build the field -> studies index by inverting sage_studies.
+
+    sage_studies is the single source of truth for field membership, so the
+    reverse index is derived rather than maintained by hand; the two cannot
+    drift apart. Fields and their study lists are both alphabetical.
+    """
+    index: dict[str, dict] = {}
+    for study, meta in sorted(studies.items()):
+        for field in meta["fields"]:
+            index.setdefault(field, {"studies": []})["studies"].append(study)
+    return {field: index[field] for field in sorted(index)}
+
+
+sage_fields = _invert_studies(sage_studies)
 
 
 # ---------------------------------------------------------------------------
@@ -437,7 +244,7 @@ CLASS_FIELDS = {
         "Drama",
         "Fine Art",
         "Gastronomy",
-        "Leatherwork",
+        "Leather Work",
         "Literature",
         "Metalwork",
         "Music",
@@ -446,8 +253,8 @@ CLASS_FIELDS = {
         "Textiles",
         "Woodworking",
     ],
-    "cleric": ["Legends and Folklore", "Power", "The Church", "Theology and Customs"],
-    "druid": ["Animal Life", "Earth and Sky", "Plant Life"],
+    "cleric": ["Legends & Folklore", "Power", "The Church", "Theology & Customs"],
+    "druid": ["Animal Life", "Earth & Sky", "Plant Life"],
     "fighter": ["Animal Training", "Leadership", "Mastery at Arms", "Training"],
     "illusionist": ["Civitas (Illusionist)", "Humanities", "Reality", "Unreality"],
     "mage": ["Civitas (Mage)", "Humanities", "Black Magic", "Science"],

@@ -1716,7 +1716,7 @@ def _build_sage_context(character, restore_message=None):
         entry["chosen"] = row.chosen
 
     # Group entries by field. A study can belong to several fields — Beasts
-    # sits in both Reverence and Legends and Folklore — and a character can
+    # sits in both Reverence and Legends & Folklore — and a character can
     # hold more than one of those, so it is listed under every field of theirs
     # that contains it. There is still one underlying row behind those
     # listings: any edit re-renders the whole section, so the copies can't

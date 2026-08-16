@@ -77,10 +77,6 @@ class AlexisifyTests(TestCase):
     def test_parenthetical_is_stripped(self):
         self.assertEqual(alexisify("Horseback Riding (mounted)"), "Horseback Riding")
 
-    def test_alexis_name_alias_is_preferred(self):
-        # "Double-Dealing" is stored under the wiki's spelling "Double-dealing".
-        self.assertEqual(alexisify("Double-Dealing"), "Double-dealing")
-
 
 class SageLinkifyTests(TestCase):
     def test_linkify_field_wraps_display_text_and_field_url(self):
@@ -283,13 +279,13 @@ class SageFieldChosenViewTests(TestCase):
         self.assertEqual(after - before, set(sage_fields["Wilderland"]["studies"]))
 
     def test_shared_study_keeps_its_points_when_second_field_arrives(self):
-        # Beasts belongs to both Reverence and Legends and Folklore, so choosing
+        # Beasts belongs to both Reverence and Legends & Folklore, so choosing
         # the second of those must not reset the points earned under the first.
         self._add("Reverence")
         row = SageStudyPoints.objects.get(character=self.character, study="Beasts")
         row.points = 42
         row.save()
-        self._add("Legends and Folklore")
+        self._add("Legends & Folklore")
         row.refresh_from_db()
         self.assertEqual(row.points, 42)
         self.assertEqual(
@@ -523,10 +519,10 @@ class SageSectionRenderingTests(TestCase):
 
     def test_shared_study_is_listed_under_every_field_holding_it(self):
         # Beasts reaches a paladin through Reverence (a class field) and through
-        # Legends and Folklore (chosen from outside the class); one row, two
+        # Legends & Folklore (chosen from outside the class); one row, two
         # listings.
         SageChosenField.objects.create(
-            character=self.character, field="Legends and Folklore"
+            character=self.character, field="Legends & Folklore"
         )
         SageStudyPoints.objects.create(character=self.character, study="Beasts")
         html = self._sheet()
@@ -534,7 +530,7 @@ class SageSectionRenderingTests(TestCase):
 
     def test_a_chosen_study_is_starred_in_both_of_its_fields(self):
         SageChosenField.objects.create(
-            character=self.character, field="Legends and Folklore"
+            character=self.character, field="Legends & Folklore"
         )
         SageStudyPoints.objects.create(
             character=self.character, study="Beasts", chosen=True

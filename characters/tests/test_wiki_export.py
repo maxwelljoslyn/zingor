@@ -208,9 +208,7 @@ class WikiExportZMFTest(TestCase):
         one row."""
         self.char.char_class = "paladin"
         self.char.save()
-        SageChosenField.objects.create(
-            character=self.char, field="Legends and Folklore"
-        )
+        SageChosenField.objects.create(character=self.char, field="Legends & Folklore")
         SageStudyPoints.objects.create(character=self.char, study="Beasts", points=7)
         wiki = character_to_wiki(self.char)
         assert wiki.count('class="zingor-sage-study-name" | Beasts') == 1
