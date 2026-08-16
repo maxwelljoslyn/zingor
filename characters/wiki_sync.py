@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import requests
 from django.db import transaction
+from django.utils import timezone
 
+from .limits import MAX_SYNC_WARNINGS
 from .microformats import SCALARS, parse_sheet
 from .models import (
     Character,
@@ -44,6 +46,18 @@ def _canonicalize(name, resolve, label: str, warnings: list[str]) -> str:
     return canonical
 
 
+def cap_warnings(warnings: list[str]) -> list[str]:
+    """Trim a warning list to MAX_SYNC_WARNINGS, noting how many were dropped.
+
+    The count is appended as a final warning rather than stored separately, so
+    everything the sheet shows is one plain list of strings.
+    """
+    if len(warnings) <= MAX_SYNC_WARNINGS:
+        return warnings
+    dropped = len(warnings) - MAX_SYNC_WARNINGS
+    return warnings[:MAX_SYNC_WARNINGS] + [f"and {dropped} more warnings not shown"]
+
+
 def fetch_page(url: str) -> str:
     """GET a wiki page's HTML, raising on a non-2xx response."""
     response = requests.get(
@@ -58,7 +72,10 @@ def sync_character_from_wiki(character: Character) -> list[str]:
     """Parse the character's wiki page and update the row in place.
 
     Returns warnings for logging: the parser's, plus one for every sage name
-    rewritten to its catalogue spelling. Scalars are copied only when the
+    rewritten to its catalogue spelling. The same list, capped at
+    MAX_SYNC_WARNINGS, is stored on the row (``sync_warnings``, dated by
+    ``last_synced_at``) so the sheet can show the player what this run could not
+    read. Scalars are copied only when the
     parsed value is present, so a temporarily-absent field on the wiki never
     nukes existing data. Spells, chosen fields, sage studies, and sage
     abilities are
@@ -75,7 +92,6 @@ def sync_character_from_wiki(character: Character) -> list[str]:
         if attr == "name" and value == "":
             continue
         setattr(character, attr, value)
-    character.save()
 
     if Spell in parsed.sections_present:
         character.spells.all().delete()
@@ -140,4 +156,11 @@ def sync_character_from_wiki(character: Character) -> list[str]:
             ability.character = character
             ability.save()
 
+    # Saved last, not alongside the scalars: _canonicalize appends to
+    # parsed.warnings as the sage records above are written, so the list is only
+    # complete once they are. One save covers the scalars too — nothing between
+    # here and their assignment reads them back off the row.
+    character.sync_warnings = cap_warnings(parsed.warnings)
+    character.last_synced_at = timezone.now()
+    character.save()
     return parsed.warnings

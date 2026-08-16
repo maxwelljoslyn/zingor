@@ -14,6 +14,7 @@ from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils.encoding import force_bytes
+from django.utils.html import escape
 from django.utils.http import urlsafe_base64_encode
 from PIL import Image
 
@@ -717,6 +718,74 @@ class ToggleWikiSyncTests(TestCase):
     def test_get_not_allowed(self):
         response = self.client.get(f"/character/{self.character.pk}/toggle-wiki-sync/")
         self.assertEqual(response.status_code, 405)
+
+    def test_turning_sync_off_clears_stored_warnings(self):
+        self.character.sync_from_wiki = True
+        self.character.sync_warnings = ["scalar 'level': could not parse 'many'"]
+        self.character.save(update_fields=["sync_from_wiki", "sync_warnings"])
+        self.client.post(f"/character/{self.character.pk}/toggle-wiki-sync/")
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.sync_warnings, [])
+
+    def test_turning_sync_on_leaves_warnings_alone(self):
+        """Enabling doesn't invent state; the next sync writes the real list."""
+        self.character.sync_warnings = ["stale"]
+        self.character.save(update_fields=["sync_warnings"])
+        self.client.post(f"/character/{self.character.pk}/toggle-wiki-sync/")
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.sync_warnings, ["stale"])
+
+
+class SyncWarningDisplayTests(TestCase):
+    """The last sync's warnings are surfaced in the sheet's identity section."""
+
+    WARNING = "spell #1: missing required 'level'; skipped"
+    # The summary line is template text, so it reaches the page verbatim; a
+    # warning is a variable, so its quotes come through escaped.
+    SUMMARY = "couldn't be read"
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+        self.character = Character.objects.create(
+            user=self.user,
+            name="Thorn",
+            wiki_url="https://adventure.alexissmolensk.com/index.php/Thorn",
+            sync_from_wiki=True,
+            sync_warnings=[self.WARNING],
+        )
+
+    def test_warnings_are_shown_on_the_sheet(self):
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, self.SUMMARY)
+        self.assertContains(response, escape(self.WARNING))
+
+    def test_nothing_is_shown_when_the_last_sync_was_clean(self):
+        self.character.sync_warnings = []
+        self.character.save(update_fields=["sync_warnings"])
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertNotContains(response, self.SUMMARY)
+
+    def test_nothing_is_shown_when_sync_is_off(self):
+        self.character.sync_from_wiki = False
+        self.character.save(update_fields=["sync_from_wiki"])
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertNotContains(response, self.SUMMARY)
+        self.assertNotContains(response, escape(self.WARNING))
+
+    def test_warnings_are_visible_to_other_players(self):
+        """The sheet is a shared record: a party member can see it didn't import."""
+        other = User.objects.create_user(username="other", password="testpass")
+        self.client.force_login(other)
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, escape(self.WARNING))
+
+    def test_warning_text_from_the_page_is_escaped(self):
+        self.character.sync_warnings = ["scalar 'level': could not parse '<b>x</b>'"]
+        self.character.save(update_fields=["sync_warnings"])
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertNotContains(response, "<b>x</b>")
+        self.assertContains(response, "&lt;b&gt;x&lt;/b&gt;")
 
 
 class FieldUpdateTests(TestCase):

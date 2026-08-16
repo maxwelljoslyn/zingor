@@ -344,6 +344,25 @@ ul.spell-list, ul.sheet-list { list-style: none; padding: 0; }
  * neutral/info look; these recolor the accent stripe. */
 .flash--success { border-left-color: var(--success); }
 .flash--danger { border-left-color: var(--danger); }
+
+/* External-sync warnings (partials/_sync_warnings.html). Same stripe-on-band
+ * shape as .flash, but collapsed by default: the summary is the part everyone
+ * needs, and the parser's messages are for whoever maintains the page. */
+.sync-warnings {
+  padding: 0.5rem 0.7rem;
+  background: var(--surface-alt);
+  border-left: 3px solid var(--danger);
+  border-radius: 0 4px 4px 0;
+  margin-bottom: 0.5rem;
+}
+.sync-warnings > summary { font-weight: 600; }
+.sync-warnings > p { margin: 0.5rem 0 0; }
+.sync-warning-list {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.9em;
+}
+.sync-warning-list > li { margin-bottom: 0.2rem; }
 /* ---- Reusable sheet structure ----
  * Two row families share one vocabulary across every section:
  *   .sheet-row  — a horizontal row in a flex list (inventory, conditions, spells)

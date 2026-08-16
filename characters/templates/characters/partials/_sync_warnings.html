@@ -1,0 +1,16 @@
+{% comment %}Warnings recorded by the last external sync, shown in the identity section.
+Usage: {% include "characters/partials/_sync_warnings.html" %} with `character` in context.
+Renders nothing when sync is off or the last run had nothing to report.{% endcomment %}
+{% if character.sync_from_wiki and character.sync_warnings %}
+<details class="sync-warnings">
+  <summary>
+    {{ character.sync_warnings|length }} thing{{ character.sync_warnings|length|pluralize }} on the external page couldn't be read{% if character.last_synced_at %} <span class="muted">(as of {{ character.last_synced_at|timesince }} ago)</span>{% endif %}
+  </summary>
+  <p class="muted">Everything else on the page synced normally. Fix the markup below and the next sync will pick it up.</p>
+  <ul class="sync-warning-list">
+    {% for warning in character.sync_warnings %}
+    <li>{{ warning }}</li>
+    {% endfor %}
+  </ul>
+</details>
+{% endif %}

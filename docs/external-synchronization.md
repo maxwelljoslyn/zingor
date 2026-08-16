@@ -157,3 +157,17 @@ Zingor is forgiving about formatting, so your page can stay human-readable:
 - **Yes/no fields** like `zingor-spell-memorized` treat `X`, `✓`, `yes`, `y`, `true`, or `1` (in any letter case) as "yes"; anything else (including leaving the cell empty) as "no".
 
 When a value can't be understood (say, a level cell containing no number), Zingor never guesses: the rest of the page still syncs, but that field is skipped (or, for spells and sage studies, that whole record is skipped).
+
+## Seeing What Didn't Sync
+
+Every skipped value is reported back on the character sheet, so a typo in your markup doesn't quietly go unnoticed.
+
+While external sync is active, the Identity section carries a line reading, for example, "2 things on the external page couldn't be read", along with how long ago that sync ran. Click it to expand the list, which names each field or record that was skipped and why.
+
+The line appears only when the most recent sync had something to report. Fix the markup on your page, and the line disappears on the next sync — there's nothing to dismiss.
+
+:::{note}
+At most {{ max_sync_warnings }} warnings are listed. If a sync produces more than that, the list ends by telling you how many further warnings there were.
+:::
+
+Turning off external sync clears the list, since it describes a page Zingor is no longer reading.

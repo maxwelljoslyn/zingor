@@ -16,3 +16,10 @@ MAX_PICTURE_BYTES = MAX_PICTURE_MB * 1024 * 1024
 # opens it. Dimensions are read from the header, so this rejects such a file
 # before anything decodes it.
 MAX_PICTURE_PIXELS = 2048
+
+# Ceiling on how many external-sync warnings are kept on a character and shown
+# on the sheet. A page whose markup is broken wholesale can produce a warning
+# per record, and neither the row nor the reader benefits from all of them:
+# the first few say what went wrong, and the sheet reports how many were
+# dropped.
+MAX_SYNC_WARNINGS = 50
