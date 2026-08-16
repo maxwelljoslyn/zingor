@@ -13,6 +13,7 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from characters import wiki_sync
+from characters.limits import MAX_SYNC_WARNINGS
 from characters.models import (
     Character,
     Item,
@@ -321,6 +322,70 @@ class SyncCharacterFromWikiTests(TestCase):
         Spell.objects.create(character=self.character, name="Light", level=1)
         wiki_sync.sync_character_from_wiki(self.character)
         self.assertEqual(self.character.spells.count(), 0)
+
+
+class SyncWarningStorageTests(TestCase):
+    """The last run's warnings are kept on the row for the sheet to show."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="joey", password="pw")
+        self.character = Character.objects.create(
+            user=self.user, name="Lexent", wiki_url=WIKI_URL
+        )
+
+    def _sync(self, html):
+        with mock.patch.object(wiki_sync, "fetch_page", return_value=html):
+            return wiki_sync.sync_character_from_wiki(self.character)
+
+    def test_warnings_are_stored_and_dated(self):
+        """Lexent's spells have no level, so each one warns."""
+        returned = self._sync(LEXENT_HTML)
+        self.character.refresh_from_db()
+        self.assertTrue(returned)
+        self.assertEqual(self.character.sync_warnings, returned)
+        self.assertIsNotNone(self.character.last_synced_at)
+
+    def test_a_clean_page_stores_no_warnings(self):
+        html = LEXENT_HTML.replace("zingor-spell", "zingor-absent-spell")
+        self._sync(html)
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.sync_warnings, [])
+        self.assertIsNotNone(self.character.last_synced_at)
+
+    def test_a_later_clean_sync_clears_earlier_warnings(self):
+        """The stored list describes the page as it stands, not a history."""
+        self._sync(LEXENT_HTML)
+        self.character.refresh_from_db()
+        self.assertTrue(self.character.sync_warnings)
+        self._sync(LEXENT_HTML.replace("zingor-spell", "zingor-absent-spell"))
+        self.character.refresh_from_db()
+        self.assertEqual(self.character.sync_warnings, [])
+
+    def test_long_warning_lists_are_capped_with_a_count(self):
+        broken = '<tr class="zingor-sage-study"><td class="zingor-sage-study-name">X</td></tr>'
+        html = LEXENT_HTML.replace(
+            "</body>", broken * (MAX_SYNC_WARNINGS + 5) + "</body>"
+        )
+        self._sync(html)
+        self.character.refresh_from_db()
+        self.assertEqual(len(self.character.sync_warnings), MAX_SYNC_WARNINGS + 1)
+        self.assertIn("more warnings not shown", self.character.sync_warnings[-1])
+
+
+class CapWarningsTests(TestCase):
+    def test_a_short_list_passes_through_unchanged(self):
+        warnings = ["one", "two"]
+        self.assertEqual(wiki_sync.cap_warnings(warnings), warnings)
+
+    def test_a_list_at_the_limit_is_not_annotated(self):
+        warnings = [f"w{n}" for n in range(MAX_SYNC_WARNINGS)]
+        self.assertEqual(wiki_sync.cap_warnings(warnings), warnings)
+
+    def test_an_over_long_list_is_trimmed_and_counted(self):
+        warnings = [f"w{n}" for n in range(MAX_SYNC_WARNINGS + 3)]
+        capped = wiki_sync.cap_warnings(warnings)
+        self.assertEqual(capped[:MAX_SYNC_WARNINGS], warnings[:MAX_SYNC_WARNINGS])
+        self.assertEqual(capped[-1], "and 3 more warnings not shown")
 
 
 class SyncWikiCommandTests(TestCase):

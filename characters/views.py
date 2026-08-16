@@ -1647,7 +1647,13 @@ def toggle_wiki_sync(request, pk: int) -> HttpResponse:
     if not character.sync_from_wiki and not character.wiki_url:
         return HttpResponse("Set a wiki URL before enabling sync", status=400)
     character.sync_from_wiki = not character.sync_from_wiki
-    character.save(update_fields=["sync_from_wiki"])
+    update_fields = ["sync_from_wiki"]
+    if not character.sync_from_wiki:
+        # Warnings describe a page Zingor is no longer reading, so drop them
+        # rather than have them reappear the moment sync is switched back on.
+        character.sync_warnings = []
+        update_fields.append("sync_warnings")
+    character.save(update_fields=update_fields)
     return _render_section(request, character, "identity")
 
 

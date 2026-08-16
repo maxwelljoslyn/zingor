@@ -113,6 +113,14 @@ class Character(models.Model):
     # When True (and wiki_url is set), the periodic job treats the wiki page as
     # the source of truth and overwrites synced fields/spells/studies each run.
     sync_from_wiki = models.BooleanField(default=False)
+    # Human-readable warnings from the most recent sync — the values and records
+    # the parser refused to guess at. Replaced wholesale each run, so the list
+    # always describes the page as it stands rather than accumulating history.
+    sync_warnings = models.JSONField(default=list, blank=True)
+    # When that sync ran, so the sheet can date the warnings above. Only a sync
+    # that fetched and parsed the page sets it; a failed fetch leaves the last
+    # good timestamp alone.
+    last_synced_at = models.DateTimeField(null=True, blank=True)
 
     # Ability scores (base values, before modifiers)
     strength = models.IntegerField(null=True, blank=True)
