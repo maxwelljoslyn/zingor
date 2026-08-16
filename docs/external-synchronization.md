@@ -134,6 +134,27 @@ When [exporting to a wiki page](wiki-export.md), the `=== Field ===` headings ov
 A study can be listed under more than one field heading on your page (e.g. Beasts belongs to both Reverence and Legends & Folklore). As mentioned under [Single Records](#single-records), if Zingor encounters the same markup twice while importing, **the first occurrence wins**. This applies to studies too.
 :::
 
+A few studies — History, Geography, and Outer Planes — are studied one **area of concentration** at a time: points spent on the history of Ancient Europe say nothing about your grasp of Ancient Africa. Name the area in parentheses after the study, in the same `-name` cell, and Zingor keeps a separate point total for each:
+
+```html
+<tr class="zingor-sage-study">
+  <td class="zingor-sage-study-name">History (Ancient European)</td>
+  <td class="zingor-sage-study-points">31</td>
+</tr>
+<tr class="zingor-sage-study">
+  <td class="zingor-sage-study-name">History (Ancient African)</td>
+  <td class="zingor-sage-study-points">6</td>
+</tr>
+```
+
+The space before the parenthesis is optional, so `History(Ancient European)` reads the same. Each area is its own record: two areas of one study are no more "the same markup twice" than two different studies are, and only a repeat of the *same* area is deduplicated. A study with no area named — plain `History` — is the study taken as a whole, and keeps a row of its own alongside any areas.
+
+:::{note}
+Only those three studies read a parenthesised name this way. Anywhere else, `Forgery (Seals)` is taken as a study name in its entirety rather than as an area of Forgery, so nothing you write for other studies changes meaning.
+
+Studies that subdivide into things the wiki gives sage abilities of their own — Athletics and its disciplines, say — aren't areas of concentration at all. Record those as **sage abilities**, below.
+:::
+
 **Sage abilities** (also "standalone sage abilities") are one-off sage abilities gained other than through the sage study system, such as through a character's [progenitor](https://wiki.alexissmolensk.com/index.php/Progenitor). They use root class `zingor-sage-ability` with subfields `-name` (required), `-points` (required), and `-source` (optional freetext noting where the ability came from):
 
 ```html

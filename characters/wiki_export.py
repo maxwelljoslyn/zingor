@@ -208,14 +208,19 @@ def character_to_wiki(character):
             lines.append(f"=== {field} ===")
             lines.append('{| class="wikitable"')
             lines.append("! Study !! Points !! Rank !! Chosen")
-            for row in sorted(field_map[field], key=lambda r: r.study):
+            for row in sorted(
+                field_map[field], key=lambda r: (r.study, r.concentration)
+            ):
                 rank = rank_for_points(row.points)
                 lines.append('|- class="zingor-sage-study"')
                 chosen = "X" if row.chosen else ""
+                # The area of concentration rides along in the name cell, the
+                # way players already write it by hand ("History (Ancient
+                # European)"); parse_sheet splits it back off on the way in.
                 lines.append(
                     " ".join(
                         [
-                            f'| class="zingor-sage-study-name" | {row.study}',
+                            f'| class="zingor-sage-study-name" | {row.display_name}',
                             f'|| class="zingor-sage-study-points" | {row.points}',
                             f"|| {rank}",
                             f'|| class="zingor-sage-study-chosen" | {chosen}',

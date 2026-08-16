@@ -181,6 +181,61 @@ class SyncCharacterFromWikiTests(TestCase):
             wiki_sync.sync_character_from_wiki(self.character)
         self.assertEqual(self.character.sage_studies.filter(study="Beasts").count(), 1)
 
+    def test_areas_of_one_study_sync_as_separate_rows(self):
+        """The complaint behind #171: a sheet naming two areas of History in
+        the one study column has to come in as two point totals, not one."""
+        areas = "".join(
+            [
+                '<tr class="zingor-sage-study">',
+                '<td class="zingor-sage-study-name">History(Ancient European)</td>',
+                '<td class="zingor-sage-study-points">31</td>',
+                "</tr>",
+                '<tr class="zingor-sage-study">',
+                '<td class="zingor-sage-study-name">History (Ancient African)</td>',
+                '<td class="zingor-sage-study-points">6</td>',
+                "</tr>",
+            ]
+        )
+        html = LEXENT_HTML.replace("</body>", areas + "</body>")
+        with mock.patch.object(wiki_sync, "fetch_page", return_value=html):
+            wiki_sync.sync_character_from_wiki(self.character)
+        rows = self.character.sage_studies.filter(study="History")
+        self.assertEqual(
+            sorted(rows.values_list("concentration", "points")),
+            [("Ancient African", 6), ("Ancient European", 31)],
+        )
+
+    def test_hidden_area_is_preserved_and_not_resurrected(self):
+        """Soft-deletion is per area: hiding one area of History must not let
+        the page bring that area back, nor hold back the others."""
+        SageStudyPoints.objects.create(
+            character=self.character,
+            study="History",
+            concentration="Ancient European",
+            points=99,
+            hidden=True,
+        )
+        areas = "".join(
+            [
+                '<tr class="zingor-sage-study">',
+                '<td class="zingor-sage-study-name">History (Ancient European)</td>',
+                '<td class="zingor-sage-study-points">31</td>',
+                "</tr>",
+                '<tr class="zingor-sage-study">',
+                '<td class="zingor-sage-study-name">History (Ancient African)</td>',
+                '<td class="zingor-sage-study-points">6</td>',
+                "</tr>",
+            ]
+        )
+        html = LEXENT_HTML.replace("</body>", areas + "</body>")
+        with mock.patch.object(wiki_sync, "fetch_page", return_value=html):
+            wiki_sync.sync_character_from_wiki(self.character)
+        rows = self.character.sage_studies.filter(study="History")
+        self.assertEqual(
+            sorted(rows.values_list("concentration", "points", "hidden")),
+            [("Ancient African", 6, False), ("Ancient European", 99, True)],
+        )
+
     def test_absent_sage_ability_section_does_not_wipe_existing_abilities(self):
         """A page with no sage-ability markup leaves the DB's abilities alone."""
         SageAbilityPoints.objects.create(

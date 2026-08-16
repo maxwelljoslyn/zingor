@@ -39,6 +39,7 @@ from .models import (
     SageStudyPoints,
     Spell,
 )
+from .sage import split_study
 
 PREFIX = "zingor-"
 
@@ -107,6 +108,19 @@ class RecordType:
     root: str
     model: type
     subfields: list[Subfield]
+    # Optional last pass over a built record, for the cases where one cell on
+    # the page carries more than one column's worth of data.
+    normalize: Callable[[object], None] | None = None
+
+
+def _split_concentration(record) -> None:
+    """Move a study's area of concentration out of its name into its own column.
+
+    Studies taken by area are written on a page the way players already write
+    them, as one name: "History (Ancient European)". Studies that take no area
+    keep whatever they were given, parentheses and all.
+    """
+    record.study, record.concentration = split_study(record.study)
 
 
 RECORDS: list[RecordType] = [
@@ -132,6 +146,7 @@ RECORDS: list[RecordType] = [
             Subfield("points", "points", _coerce_int, required=True),
             Subfield("chosen", "chosen", _coerce_bool),
         ],
+        normalize=_split_concentration,
     ),
     RecordType(
         "sage-ability",
@@ -223,7 +238,10 @@ def _build_record(rt: RecordType, root, index: int, warnings: list[str]):
                 f"{rt.root} #{index}: could not parse '{sub.suffix}'={raw!r} ({exc}); skipped"
             )
             return None
-    return rt.model(**values)
+    record = rt.model(**values)
+    if rt.normalize is not None:
+        rt.normalize(record)
+    return record
 
 
 # --- Rendering (for the runner) --------------------------------------------------------
@@ -272,7 +290,7 @@ def render_sheet(sheet: ParsedSheet) -> str:
     lines.append(f"=== Sage studies ({len(sheet.sage_studies)}) ===")
     for ss in sheet.sage_studies:
         chosen = " (chosen)" if ss.chosen else ""
-        lines.append(f"  {ss.study}: {ss.points}{chosen}")
+        lines.append(f"  {ss.display_name}: {ss.points}{chosen}")
     if not sheet.sage_studies:
         lines.append("  (none)")
 

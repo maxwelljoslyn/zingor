@@ -215,6 +215,37 @@ class WikiExportZMFTest(TestCase):
         wiki = character_to_wiki(self.char)
         assert wiki.count('class="zingor-sage-study-name" | Beasts') == 1
 
+    def test_area_of_concentration_rides_along_in_the_name_cell(self):
+        SageStudyPoints.objects.create(
+            character=self.char,
+            study="History",
+            concentration="Ancient European",
+            points=31,
+        )
+        wiki = character_to_wiki(self.char)
+        assert 'class="zingor-sage-study-name" | History (Ancient European)' in wiki
+
+    def test_each_area_gets_its_own_row_under_the_one_field(self):
+        """Two areas of History are two point totals, but one study, so they
+        sit as two rows under a single The Church heading."""
+        for area, points in [("Ancient European", 31), ("Ancient African", 6)]:
+            SageStudyPoints.objects.create(
+                character=self.char,
+                study="History",
+                concentration=area,
+                points=points,
+            )
+        wiki = character_to_wiki(self.char)
+        assert wiki.count("=== The Church ===") == 1
+        assert wiki.count('|- class="zingor-sage-study"') == 2
+        # Alphabetical within the study, as the rest of the table is.
+        assert wiki.index("(Ancient African)") < wiki.index("(Ancient European)")
+
+    def test_a_study_taken_whole_exports_under_its_bare_name(self):
+        SageStudyPoints.objects.create(character=self.char, study="History", points=9)
+        wiki = character_to_wiki(self.char)
+        assert 'class="zingor-sage-study-name" | History |' in wiki
+
     def test_sage_ability_table_carries_zmf_classes(self):
         """Standalone abilities are exported as a table like sage studies, so
         (as there) the assertion is on the MediaWiki attribute syntax that

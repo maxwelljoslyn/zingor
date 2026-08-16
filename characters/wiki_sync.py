@@ -81,17 +81,22 @@ def sync_character_from_wiki(character: Character) -> list[str]:
     if SageStudyPoints in parsed.sections_present:
         # Preserve soft-deleted (hidden) studies across a sync: keep their rows
         # and retained points, and don't let the wiki resurrect them.
+        # Keyed by study and area of concentration together, since that is what
+        # tells one row of History from another.
         hidden_studies = set(
-            character.sage_studies.filter(hidden=True).values_list("study", flat=True)
+            character.sage_studies.filter(hidden=True).values_list(
+                "study", "concentration"
+            )
         )
         character.sage_studies.filter(hidden=False).delete()
         # A hand-edited page can list one study under two field headings; the
         # first listing wins rather than tripping the per-character unique key.
         seen_studies = set(hidden_studies)
         for study in parsed.sage_studies:
-            if study.study in seen_studies:
+            key = (study.study, study.concentration)
+            if key in seen_studies:
                 continue
-            seen_studies.add(study.study)
+            seen_studies.add(key)
             study.pk = None
             study.character = character
             study.save()
