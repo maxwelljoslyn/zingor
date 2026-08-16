@@ -13,7 +13,15 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.utils.html import escape
 
-from characters.models import Character, Condition, HitDie, Item, SageStudyPoints, Spell
+from characters.models import (
+    Character,
+    Condition,
+    HitDie,
+    Item,
+    SageChosenField,
+    SageStudyPoints,
+    Spell,
+)
 
 
 class PermissionsTestBase(TestCase):
@@ -404,27 +412,36 @@ class CharacterPicturePermissionsTests(PermissionsTestBase):
 class SagePermissionsTests(PermissionsTestBase):
     """Sage mutation endpoints are owner-only."""
 
-    def test_viewer_cannot_get_chosen_field_form(self):
-        self.login_as_viewer()
-        response = self.client.get(
-            f"/character/{self.character.pk}/sage/chosen-field/form/"
-        )
-        self.assertEqual(response.status_code, 403)
-
-    def test_viewer_cannot_post_chosen_field(self):
+    def test_viewer_cannot_choose_a_field(self):
         self.login_as_viewer()
         response = self.client.post(
-            f"/character/{self.character.pk}/sage/chosen-field/",
-            {"chosen_field": "Animal Training", "chosen_study": "Falconry"},
+            f"/character/{self.character.pk}/sage/field/chosen/",
+            {"field": "Animal Training", "chosen": "1"},
         )
         self.assertEqual(response.status_code, 403)
+        self.assertFalse(self.character.chosen_fields.exists())
 
-    def test_viewer_cannot_get_study_options(self):
+    def test_viewer_cannot_unchoose_a_field(self):
+        row = SageChosenField.objects.create(
+            character=self.character, field="Animal Training"
+        )
         self.login_as_viewer()
-        response = self.client.get(
-            f"/character/{self.character.pk}/sage/study-options/?chosen_field=Animal+Training"
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/field/chosen/",
+            {"field": "Animal Training"},
         )
         self.assertEqual(response.status_code, 403)
+        self.assertTrue(self.character.chosen_fields.filter(pk=row.pk).exists())
+
+    def test_viewer_cannot_mark_a_study_chosen(self):
+        self.login_as_viewer()
+        response = self.client.post(
+            f"/character/{self.character.pk}/sage/study/{self.sage_row.pk}/chosen/",
+            {"chosen": "1"},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.sage_row.refresh_from_db()
+        self.assertFalse(self.sage_row.chosen)
 
     def test_viewer_cannot_update_study_points(self):
         self.login_as_viewer()

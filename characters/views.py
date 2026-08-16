@@ -47,6 +47,7 @@ from .models import (
     LayoutOrder,
     Profile,
     SageAbilityPoints,
+    SageChosenField,
     SageStudyPoints,
     Spell,
 )
@@ -1710,24 +1711,41 @@ def _build_sage_context(character, restore_message=None):
         sort_keys=["name"],
     )
     for entry in sorted_entries:
-        entry["pk"] = rows[entry["name"]].pk
+        row = rows[entry["name"]]
+        entry["pk"] = row.pk
+        entry["chosen"] = row.chosen
 
-    # Group entries by field using the character's class fields.
+    # Group entries by field. A study can belong to several fields — Beasts
+    # sits in both Reverence and Legends and Folklore — and a character can
+    # hold more than one of those, so it is listed under every field of theirs
+    # that contains it. There is still one underlying row behind those
+    # listings: any edit re-renders the whole section, so the copies can't
+    # drift apart. A study in none of the character's fields falls back to the
+    # catalogue's first listing for it.
+    chosen_field_rows = list(character.chosen_fields.all())
+    chosen_fields = {r.field for r in chosen_field_rows}
     char_class = (character.char_class or "").lower()
-    class_fields = set(CLASS_FIELDS.get(char_class, []))
+    character_fields = chosen_fields | set(CLASS_FIELDS.get(char_class, []))
     field_map = {}
     for entry in sorted_entries:
         study_info = sage_studies.get(entry["name"], {})
         study_fields = study_info.get("fields", [])
-        # Use whichever of this study's fields are in the character's class fields.
-        matching = [f for f in study_fields if f in class_fields]
-        field = (
-            matching[0] if matching else (study_fields[0] if study_fields else "Other")
-        )
-        field_map.setdefault(field, []).append(entry)
+        matching = [f for f in study_fields if f in character_fields]
+        for field in matching or [study_fields[0] if study_fields else "Other"]:
+            field_map.setdefault(field, []).append(entry)
     sage_studies_by_field = [
-        {"field": f, "entries": field_map[f]} for f in sorted(field_map)
+        {"field": f, "entries": field_map[f], "chosen": f in chosen_fields}
+        for f in sorted(field_map)
     ]
+    # Fields the character has chosen but has no visible studies in yet still
+    # need a heading, so the choice stays visible and can be un-ticked.
+    for row in chosen_field_rows:
+        if row.field not in field_map:
+            sage_studies_by_field.append(
+                {"field": row.field, "entries": [], "chosen": True}
+            )
+    sage_studies_by_field.sort(key=lambda group: group["field"])
+    shown_fields = {group["field"] for group in sage_studies_by_field}
 
     ability_rows = {r.ability: r for r in character.sage_abilities.filter(hidden=False)}
     sage_abilities = sort_sage_entries(
@@ -1743,8 +1761,9 @@ def _build_sage_context(character, restore_message=None):
         "character": character,
         "sage_studies_by_field": sage_studies_by_field,
         "sage_abilities": sage_abilities,
-        "sage_fields": sage_fields,
-        "sage_fields_json": json.dumps(sage_fields),
+        # Fields that already have a heading carry their own Chosen checkbox,
+        # so the Add Field picker only offers the ones not on the sheet at all.
+        "addable_field_names": [f for f in sage_fields if f not in shown_fields],
         "all_study_names": sorted(sage_studies.keys()),
         "restore_message": restore_message,
     }
@@ -1752,83 +1771,68 @@ def _build_sage_context(character, restore_message=None):
 
 @login_required
 @character_owner_required
-@require_GET
-def sage_chosen_field_form(request, pk):
-    """Return the inline form snippet for editing chosen field/study."""
-    from .sage import sage_fields
+@require_POST
+def sage_field_chosen(request, pk):
+    """Mark or unmark a sage field as chosen, addressing it by name.
+
+    Both the Chosen checkbox on a field heading and the Add Field picker post
+    here. The field is named rather than addressed by row pk because an
+    un-chosen field has no row of its own: it earns its heading from the
+    studies filed under it. Un-choosing keeps every one of those studies.
+    """
+    from .sage import CLASS_FIELDS, sage_fields
 
     character = get_object_or_404(Character, pk=pk)
-    initial_field = character.chosen_field or next(iter(sage_fields))
-    initial_studies = (
-        sage_fields[initial_field]["studies"] if initial_field in sage_fields else []
-    )
-    return render(
-        request,
-        "characters/partials/sage_field_form.html",
-        {
-            "character": character,
-            "sage_fields": sage_fields,
-            "sage_fields_json": json.dumps(sage_fields),
-            "initial_field": initial_field,
-            "initial_studies": initial_studies,
-        },
+    field_name = request.POST.get("field", "")
+    if field_name not in sage_fields:
+        return HttpResponse("Invalid field", status=400)
+
+    if not request.POST.get("chosen"):
+        character.chosen_fields.filter(field=field_name).delete()
+        sage_ctx = _build_sage_context(character)
+        sage_ctx["is_owner"] = True
+        return render(request, "characters/partials/sage.html", sage_ctx)
+
+    first_choice = not character.chosen_fields.exists()
+    SageChosenField.objects.get_or_create(character=character, field=field_name)
+
+    studies = list(sage_fields[field_name]["studies"])
+    if first_choice:
+        # Every character has points across all of their class's studies, so
+        # the first choice seeds the whole class at once. Later choices only
+        # bring in their own field's studies.
+        studies += [
+            s
+            for class_field in CLASS_FIELDS.get(
+                (character.char_class or "").lower(), []
+            )
+            for s in sage_fields[class_field]["studies"]
+        ]
+    # ignore_conflicts leaves any row the character already has alone, points
+    # and all — which is what keeps a study shared by two fields (Beasts, say)
+    # from being reset when the second of those fields is chosen.
+    SageStudyPoints.objects.bulk_create(
+        [
+            SageStudyPoints(character=character, study=s, points=0)
+            for s in dict.fromkeys(studies)
+        ],
+        ignore_conflicts=True,
     )
 
-
-@login_required
-@character_owner_required
-@require_GET
-def sage_study_options(request, pk):
-    """Return <option> tags for the studies in the given field (used by HTMX field-select)."""
-    from .sage import sage_fields
-
-    get_object_or_404(Character, pk=pk)
-    field_name = request.GET.get("chosen_field", "")
-    studies = sage_fields.get(field_name, {}).get("studies", [])
-    return render(
-        request,
-        "characters/partials/sage_study_options.html",
-        {"studies": studies},
-    )
+    sage_ctx = _build_sage_context(character)
+    sage_ctx["is_owner"] = True
+    return render(request, "characters/partials/sage.html", sage_ctx)
 
 
 @login_required
 @character_owner_required
 @require_POST
-def sage_chosen_field(request, pk):
-    """Save chosen field/study and bulk-create class study rows."""
-    from .sage import CLASS_FIELDS, sage_fields
-
+def sage_study_chosen(request, pk, study_pk):
+    """Mark or unmark a study as one of the character's chosen studies."""
     character = get_object_or_404(Character, pk=pk)
-    chosen_field = request.POST.get("chosen_field", "")
-    chosen_study = request.POST.get("chosen_study", "")
-
-    if chosen_field not in sage_fields:
-        return HttpResponse("Invalid field", status=400)
-    if chosen_study not in sage_fields[chosen_field]["studies"]:
-        return HttpResponse("Invalid study for field", status=400)
-
-    character.chosen_field = chosen_field
-    character.chosen_study = chosen_study
-    character.save(update_fields=["chosen_field", "chosen_study", "updated_at"])
-
-    char_class = character.char_class
-    if char_class in CLASS_FIELDS:
-        all_studies = list(
-            dict.fromkeys(
-                s
-                for field_name in CLASS_FIELDS[char_class]
-                for s in sage_fields[field_name]["studies"]
-            )
-        )
-        SageStudyPoints.objects.bulk_create(
-            [
-                SageStudyPoints(character=character, study=s, points=0)
-                for s in all_studies
-            ],
-            ignore_conflicts=True,
-        )
-
+    row = get_object_or_404(SageStudyPoints, pk=study_pk, character=character)
+    row.chosen = bool(request.POST.get("chosen"))
+    row.save(update_fields=["chosen"])
     sage_ctx = _build_sage_context(character)
     sage_ctx["is_owner"] = True
     return render(request, "characters/partials/sage.html", sage_ctx)

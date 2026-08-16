@@ -145,10 +145,6 @@ class Character(models.Model):
     background = models.TextField(blank=True, default="")
     appearance = models.TextField(blank=True, default="")
 
-    # Sage knowledge
-    chosen_field = models.CharField(max_length=200, null=True, blank=True, default=None)
-    chosen_study = models.CharField(max_length=200, null=True, blank=True, default=None)
-
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -630,6 +626,28 @@ class Item(models.Model):
         return total
 
 
+class SageChosenField(models.Model):
+    """One sage field the character has chosen.
+
+    A character chooses a field at first level and picks up more as they
+    advance, sometimes from outside their class's fields, so the choices are
+    rows rather than a single column on Character.
+    """
+
+    character = models.ForeignKey(
+        Character, on_delete=models.CASCADE, related_name="chosen_fields"
+    )
+    field = models.CharField(max_length=200)
+
+    class Meta:
+        unique_together = ("character", "field")
+        ordering = ["field"]
+        verbose_name_plural = "Sage chosen fields"
+
+    def __str__(self):
+        return self.field
+
+
 class SageStudyPoints(models.Model):
     """Knowledge point total for one study on a character."""
 
@@ -639,6 +657,10 @@ class SageStudyPoints(models.Model):
     study = models.CharField(max_length=200)
     points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     hidden = models.BooleanField(default=False)
+    # A study the character has deliberately chosen, as opposed to one they
+    # merely have points in. Independent of SageChosenField: a chosen study
+    # need not sit in a chosen field, and a chosen field need not have one.
+    chosen = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ("character", "study")

@@ -137,6 +137,41 @@ class ParseRecordTests(SimpleTestCase):
         self.assertEqual(sheet.sage_studies[0].study, "Forgery")
         self.assertEqual(sheet.sage_studies[0].points, 27)
 
+    def test_sage_study_chosen_mark_parsed(self):
+        html = list(
+            [
+                '<tr class="zingor-sage-study">',
+                '<td class="zingor-sage-study-name">Forgery</td>',
+                '<td class="zingor-sage-study-points">27</td>',
+                '<td class="zingor-sage-study-chosen">X</td>',
+                "</tr>",
+            ]
+        )
+        sheet = parse_sheet("".join(html))
+        self.assertTrue(sheet.sage_studies[0].chosen)
+
+    def test_chosen_field_record_parsed(self):
+        html = list(
+            [
+                '<li class="zingor-chosen-field">',
+                '<span class="zingor-chosen-field-name">Animal Training</span>',
+                "</li>",
+                '<li class="zingor-chosen-field">',
+                '<span class="zingor-chosen-field-name">Leadership</span>',
+                "</li>",
+            ]
+        )
+        sheet = parse_sheet("".join(html))
+        self.assertEqual(
+            [f.field for f in sheet.chosen_fields], ["Animal Training", "Leadership"]
+        )
+        self.assertEqual(sheet.warnings, [])
+
+    def test_chosen_field_without_a_name_is_skipped_with_a_warning(self):
+        sheet = parse_sheet('<li class="zingor-chosen-field"></li>')
+        self.assertEqual(sheet.chosen_fields, [])
+        self.assertEqual(len(sheet.warnings), 1)
+
     def test_sage_ability_record_parsed(self):
         html = list(
             [
@@ -242,6 +277,7 @@ class RenderSheetTests(SimpleTestCase):
         self.assertIn("Forgery", out)
         self.assertIn("Read Weather", out)
         self.assertIn("=== Spells (1) ===", out)
+        self.assertIn("=== Chosen fields (0) ===", out)
         self.assertIn("=== Sage studies (1) ===", out)
         self.assertIn("=== Sage abilities (1) ===", out)
 

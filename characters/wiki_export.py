@@ -173,32 +173,31 @@ def character_to_wiki(character):
 
     # --- Sage Knowledge ---
     lines.append("== Sage Knowledge ==")
-    if character.chosen_field or character.chosen_study:
-        field = (
-            _zmf("chosen-field", character.chosen_field)
-            if character.chosen_field
-            else "?"
-        )
-        study = (
-            _zmf("chosen-study", character.chosen_study)
-            if character.chosen_study
-            else "?"
-        )
-        lines.append(f"* '''Chosen Field:''' {field}")
-        lines.append(f"* '''Chosen Study:''' {study}")
+    chosen_fields = [row.field for row in character.chosen_fields.all()]
+    if chosen_fields:
+        lines.append("* '''Chosen Fields:'''")
+        for field in chosen_fields:
+            # One record per field: a character picks up more of them as they
+            # advance, so this can't be a scalar.
+            lines.append(f"** {_zmf('chosen-field', _zmf('chosen-field-name', field))}")
         lines.append("")
     sage_rows = list(character.sage_studies.filter(hidden=False).order_by("study"))
     if sage_rows:
-        # Group by field (first field listed for the study, preferring class fields)
+        # Group by field (first field listed for the study, preferring the
+        # character's own fields). Unlike the character sheet, which lists a
+        # study under every one of the character's fields that contains it, the
+        # export files each study under exactly one: the page is parsed back in
+        # by microformats.parse_sheet, and a study listed twice would be two
+        # records for one row.
         from .sage import CLASS_FIELDS
 
         char_class = (character.char_class or "").lower()
-        class_fields = set(CLASS_FIELDS.get(char_class, []))
+        character_fields = set(chosen_fields) | set(CLASS_FIELDS.get(char_class, []))
         field_map = {}
         for row in sage_rows:
             study_info = SAGE_STUDIES.get(row.study, {})
             study_fields = study_info.get("fields", [])
-            matching = [f for f in study_fields if f in class_fields]
+            matching = [f for f in study_fields if f in character_fields]
             field = (
                 matching[0]
                 if matching
@@ -208,13 +207,20 @@ def character_to_wiki(character):
         for field in sorted(field_map):
             lines.append(f"=== {field} ===")
             lines.append('{| class="wikitable"')
-            lines.append("! Study !! Points !! Rank")
+            lines.append("! Study !! Points !! Rank !! Chosen")
             for row in sorted(field_map[field], key=lambda r: r.study):
                 rank = rank_for_points(row.points)
                 lines.append('|- class="zingor-sage-study"')
+                chosen = "X" if row.chosen else ""
                 lines.append(
-                    f'| class="zingor-sage-study-name" | {row.study} '
-                    f'|| class="zingor-sage-study-points" | {row.points} || {rank}'
+                    " ".join(
+                        [
+                            f'| class="zingor-sage-study-name" | {row.study}',
+                            f'|| class="zingor-sage-study-points" | {row.points}',
+                            f"|| {rank}",
+                            f'|| class="zingor-sage-study-chosen" | {chosen}',
+                        ]
+                    )
                 )
             lines.append("|}")
             lines.append("")

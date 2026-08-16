@@ -32,7 +32,13 @@ from typing import Callable
 
 from bs4 import BeautifulSoup
 
-from .models import Character, SageAbilityPoints, SageStudyPoints, Spell
+from .models import (
+    Character,
+    SageAbilityPoints,
+    SageChosenField,
+    SageStudyPoints,
+    Spell,
+)
 
 PREFIX = "zingor-"
 
@@ -85,8 +91,6 @@ SCALARS: list[tuple[str, str, Callable[[str], object]]] = [
     ("notes", "notes", _coerce_str),
     ("background", "background", _coerce_str),
     ("appearance", "appearance", _coerce_str),
-    ("chosen-field", "chosen_field", _coerce_str),
-    ("chosen-study", "chosen_study", _coerce_str),
 ]
 
 
@@ -116,11 +120,17 @@ RECORDS: list[RecordType] = [
         ],
     ),
     RecordType(
+        "chosen-field",
+        SageChosenField,
+        [Subfield("name", "field", _coerce_str, required=True)],
+    ),
+    RecordType(
         "sage-study",
         SageStudyPoints,
         [
             Subfield("name", "study", _coerce_str, required=True),
             Subfield("points", "points", _coerce_int, required=True),
+            Subfield("chosen", "chosen", _coerce_bool),
         ],
     ),
     RecordType(
@@ -139,6 +149,7 @@ RECORDS: list[RecordType] = [
 class ParsedSheet:
     character: Character
     spells: list[Spell] = dc_field(default_factory=list)
+    chosen_fields: list[SageChosenField] = dc_field(default_factory=list)
     sage_studies: list[SageStudyPoints] = dc_field(default_factory=list)
     sage_abilities: list[SageAbilityPoints] = dc_field(default_factory=list)
     warnings: list[str] = dc_field(default_factory=list)
@@ -176,6 +187,7 @@ def parse_sheet(html: str) -> ParsedSheet:
 
     buckets: dict[type, list] = {
         Spell: sheet.spells,
+        SageChosenField: sheet.chosen_fields,
         SageStudyPoints: sheet.sage_studies,
         SageAbilityPoints: sheet.sage_abilities,
     }
@@ -250,9 +262,17 @@ def render_sheet(sheet: ParsedSheet) -> str:
         lines.append("  (none)")
 
     lines.append("")
+    lines.append(f"=== Chosen fields ({len(sheet.chosen_fields)}) ===")
+    for cf in sheet.chosen_fields:
+        lines.append(f"  {cf.field}")
+    if not sheet.chosen_fields:
+        lines.append("  (none)")
+
+    lines.append("")
     lines.append(f"=== Sage studies ({len(sheet.sage_studies)}) ===")
     for ss in sheet.sage_studies:
-        lines.append(f"  {ss.study}: {ss.points}")
+        chosen = " (chosen)" if ss.chosen else ""
+        lines.append(f"  {ss.study}: {ss.points}{chosen}")
     if not sheet.sage_studies:
         lines.append("  (none)")
 

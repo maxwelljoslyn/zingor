@@ -2,43 +2,31 @@
 <div class="section" id="section-sage" data-section="sage" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <h2>Sage Knowledge</h2>
   {% include "characters/partials/_notice.html" with notice=restore_message notice_level="success" %}
-  {{ sage_fields_json|json_script:"sage-fields-data" }}
-  <script>window.SAGE_FIELDS = JSON.parse(document.getElementById('sage-fields-data').textContent);</script>
-  <table class="kv-table">
-    <tr>
-      <th>Chosen Field &amp; Study</th>
-      <td>
-        {% if is_owner %}
-        <span
-          id="sage-chosen-field"
-          hx-get="{% url 'characters:sage_chosen_field_form' character.pk %}"
-          hx-target="#sage-chosen-field"
-          hx-swap="outerHTML"
-          hx-trigger="click"
-          class="clickable"
-        >
-          {% if character.chosen_field %}
-            <a href="{{ character.chosen_field|field_url }}" target="_blank">{{ character.chosen_field }}</a>{% if character.chosen_study %} / <a href="{{ character.chosen_study|study_url }}" target="_blank">{{ character.chosen_study }}</a>{% endif %}
-          {% else %}
-            Not set
-          {% endif %}
-        </span>
-        {% else %}
-        <span>
-          {% if character.chosen_field %}
-            <a href="{{ character.chosen_field|field_url }}" target="_blank">{{ character.chosen_field }}</a>{% if character.chosen_study %} / <a href="{{ character.chosen_study|study_url }}" target="_blank">{{ character.chosen_study }}</a>{% endif %}
-          {% else %}
-            Not set
-          {% endif %}
-        </span>
-        {% endif %}
-      </td>
-    </tr>
-  </table>
   <h3>Studies</h3>
   {% if sage_studies_by_field %}
     {% for group in sage_studies_by_field %}
-      <h4><a href="{{ group.field|field_url }}" target="_blank">{{ group.field }}</a></h4>
+      {# The Chosen checkbox can't live inside the h4: a heading takes phrasing content, and a form isn't. #}
+      <div class="field-head">
+        <h4>
+          <a href="{{ group.field|field_url }}" target="_blank">{{ group.field }}</a>{% if group.chosen %} <span class="chosen-mark" title="Chosen field">&#9733;</span>{% endif %}
+        </h4>
+        {% if is_owner %}
+        <form
+          hx-post="{% url 'characters:sage_field_chosen' character.pk %}"
+          hx-target="#section-sage"
+          hx-swap="outerHTML"
+          hx-trigger="change"
+          class="inline"
+        >
+          {% csrf_token %}
+          <input type="hidden" name="field" value="{{ group.field }}">
+          <label class="text-sm">
+            <input type="checkbox" name="chosen" {% if group.chosen %}checked{% endif %}> Chosen
+          </label>
+        </form>
+        {% endif %}
+      </div>
+      {% if group.entries %}
       {# fixed-cols pins the column widths so every field's table lines its Points/Status columns up with the others, instead of each table sizing itself to its own longest study name. #}
       <table class="data-table fixed-cols">
         <thead>
@@ -46,13 +34,13 @@
             <th class="col-study">Study</th>
             <th class="col-points">Points</th>
             <th class="col-status">Status</th>
-            {% if is_owner %}<th class="col-actions"></th>{% endif %}
+            {% if is_owner %}<th class="col-chosen">Chosen</th><th class="col-actions"></th>{% endif %}
           </tr>
         </thead>
         <tbody>
           {% for entry in group.entries %}
             <tr>
-              <td><a href="{{ entry.name|study_url }}" target="_blank">{{ entry.name }}</a></td>
+              <td><a href="{{ entry.name|study_url }}" target="_blank">{{ entry.name }}</a>{% if entry.chosen %} <span class="chosen-mark" title="Chosen study">&#9733;</span>{% endif %}</td>
               <td>
                 {% if is_owner %}
                 <input
@@ -73,6 +61,18 @@
               <td>{{ entry.rank }}</td>
               {% if is_owner %}
               <td>
+                <form
+                  hx-post="{% url 'characters:sage_study_chosen' character.pk entry.pk %}"
+                  hx-target="#section-sage"
+                  hx-swap="outerHTML"
+                  hx-trigger="change"
+                  class="inline"
+                >
+                  {% csrf_token %}
+                  <input type="checkbox" name="chosen" aria-label="Chosen study" {% if entry.chosen %}checked{% endif %}>
+                </form>
+              </td>
+              <td>
                 {% url 'characters:sage_study_hide' character.pk entry.pk as hide_url %}
                 {% include "characters/partials/_delete_button.html" with url=hide_url target="#section-sage" confirm="Delete "|add:entry.name|add:"? Your points are kept in case you re-add it." method="post" %}
               </td>
@@ -81,9 +81,30 @@
           {% endfor %}
         </tbody>
       </table>
+      {% else %}
+      <p class="empty-note">No studies tracked in this field yet.</p>
+      {% endif %}
     {% endfor %}
   {% else %}
     <p>No studies tracked yet.</p>
+  {% endif %}
+  {% if is_owner and addable_field_names %}
+  {# Only fields with no heading yet appear here; the rest are chosen with the checkbox on their heading. #}
+  <h3>Add Field</h3>
+  <form
+    hx-post="{% url 'characters:sage_field_chosen' character.pk %}"
+    hx-target="#section-sage"
+    hx-swap="outerHTML"
+  >
+    {% csrf_token %}
+    <input type="hidden" name="chosen" value="1">
+    <select name="field" aria-label="Field to add">
+      {% for field_name in addable_field_names %}
+        <option value="{{ field_name }}">{{ field_name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Add Field</button>
+  </form>
   {% endif %}
   {% if is_owner %}
   <h3>Add Study</h3>

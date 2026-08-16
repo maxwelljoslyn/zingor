@@ -4,7 +4,9 @@ import importlib
 
 from django.apps import apps
 from django.contrib.auth.models import User
-from django.test import SimpleTestCase, TestCase
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+from django.test import SimpleTestCase, TestCase, TransactionTestCase
 
 from characters.models import Character, Item
 from characters.units import D
@@ -147,3 +149,87 @@ class WholeCoinsTests(SimpleTestCase):
     def test_negative_amounts_abort(self):
         with self.assertRaises(ValueError):
             self._whole(0, "-1", 0)
+
+
+class MultipleChosenSageFieldsTests(TransactionTestCase):
+    """0029 carries the old single chosen field/study into the new rows.
+
+    Unlike the migrations above, this one reads columns that no longer exist on
+    the live models, so it has to run against historical model states — hence
+    the executor, and TransactionTestCase to let it change the schema.
+    """
+
+    migrate_from = ("characters", "0028_character_picture")
+    migrate_to = ("characters", "0029_multiple_chosen_sage_fields")
+
+    def setUp(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate([self.migrate_from])
+        self.old_apps = executor.loader.project_state([self.migrate_from]).apps
+
+    def tearDown(self):
+        """Leave the database at the latest migration for whatever runs next."""
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate(executor.loader.graph.leaf_nodes())
+
+    def _character(self, **kwargs):
+        OldUser = self.old_apps.get_model("auth", "User")
+        OldCharacter = self.old_apps.get_model("characters", "Character")
+        user = OldUser.objects.create(username=f"u{OldUser.objects.count()}")
+        return OldCharacter.objects.create(user=user, name="Thorn", **kwargs)
+
+    def _migrate_forward(self):
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate([self.migrate_to])
+        return executor.loader.project_state([self.migrate_to]).apps
+
+    def test_chosen_field_becomes_a_row(self):
+        character = self._character(chosen_field="Animal Training")
+        new_apps = self._migrate_forward()
+        SageChosenField = new_apps.get_model("characters", "SageChosenField")
+        self.assertEqual(
+            list(
+                SageChosenField.objects.filter(character_id=character.pk).values_list(
+                    "field", flat=True
+                )
+            ),
+            ["Animal Training"],
+        )
+
+    def test_chosen_study_becomes_a_flag_on_its_existing_row(self):
+        character = self._character(chosen_study="Horseback Riding")
+        OldStudy = self.old_apps.get_model("characters", "SageStudyPoints")
+        OldStudy.objects.create(
+            character_id=character.pk, study="Horseback Riding", points=42
+        )
+        new_apps = self._migrate_forward()
+        SageStudyPoints = new_apps.get_model("characters", "SageStudyPoints")
+        row = SageStudyPoints.objects.get(
+            character_id=character.pk, study="Horseback Riding"
+        )
+        self.assertTrue(row.chosen)
+        self.assertEqual(row.points, 42)
+
+    def test_chosen_study_without_a_points_row_gets_one(self):
+        character = self._character(chosen_study="Horseback Riding")
+        new_apps = self._migrate_forward()
+        SageStudyPoints = new_apps.get_model("characters", "SageStudyPoints")
+        row = SageStudyPoints.objects.get(
+            character_id=character.pk, study="Horseback Riding"
+        )
+        self.assertTrue(row.chosen)
+        self.assertEqual(row.points, 0)
+
+    def test_character_with_no_choices_gains_nothing(self):
+        character = self._character()
+        new_apps = self._migrate_forward()
+        SageChosenField = new_apps.get_model("characters", "SageChosenField")
+        SageStudyPoints = new_apps.get_model("characters", "SageStudyPoints")
+        self.assertFalse(
+            SageChosenField.objects.filter(character_id=character.pk).exists()
+        )
+        self.assertFalse(
+            SageStudyPoints.objects.filter(character_id=character.pk).exists()
+        )

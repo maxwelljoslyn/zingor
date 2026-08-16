@@ -18,7 +18,7 @@ The export is a snapshot taken at the moment you click the button. Editing the c
 
 ## A Starting Point for External Sync
 
-The exported MediaWiki markup is more than plain text. Many parts of the exported data are wrapped in **Zingor microformats** (ZMF), the `zingor-*` HTML class names that you'll need for the [external synchronization](external-synchronization.md) feature. Ability scores, name, race, spells, sage studies / abilities, and other syncable fields are already marked up with ZMF for you.
+The exported MediaWiki markup is more than plain text. Many parts of the exported data are wrapped in **Zingor microformats** (ZMF), the `zingor-*` HTML class names that you'll need for the [external synchronization](external-synchronization.md) feature. Ability scores, name, race, spells, chosen sage fields, sage studies / abilities, and other syncable fields are already marked up with ZMF for you.
 
 Therefore, if you plan to keep your character's permanent record on a MediaWiki page, the best way to get started is to export your character, save the result to a wiki page, and point external sync at that page. Zingor will then periodically scrape the page to update your character data in Zingor. Afterwards, as long as you keep the ZMF markup intact, you can experiment with the layout of your wiki page as you see fit.
 

@@ -6,6 +6,7 @@ from .models import (
     HitDie,
     Item,
     SageAbilityPoints,
+    SageChosenField,
     SageStudyPoints,
     Spell,
 )
@@ -35,6 +36,11 @@ class ItemInline(admin.TabularInline):
     extra = 0
 
 
+class SageChosenFieldInline(admin.TabularInline):
+    model = SageChosenField
+    extra = 0
+
+
 class SageStudyPointsInline(admin.TabularInline):
     model = SageStudyPoints
     extra = 0
@@ -55,6 +61,7 @@ class CharacterAdmin(admin.ModelAdmin):
         SpellInline,
         ConditionInline,
         ItemInline,
+        SageChosenFieldInline,
         SageStudyPointsInline,
         SageAbilityPointsInline,
     ]

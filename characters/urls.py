@@ -221,24 +221,19 @@ urlpatterns = [
     ),
     # Sage knowledge
     path(
-        "character/<int:pk>/sage/chosen-field/form/",
-        views.sage_chosen_field_form,
-        name="sage_chosen_field_form",
-    ),
-    path(
-        "character/<int:pk>/sage/chosen-field/",
-        views.sage_chosen_field,
-        name="sage_chosen_field",
-    ),
-    path(
-        "character/<int:pk>/sage/study-options/",
-        views.sage_study_options,
-        name="sage_study_options",
+        "character/<int:pk>/sage/field/chosen/",
+        views.sage_field_chosen,
+        name="sage_field_chosen",
     ),
     path(
         "character/<int:pk>/sage/study/<int:study_pk>/points/",
         views.sage_study_points,
         name="sage_study_points",
+    ),
+    path(
+        "character/<int:pk>/sage/study/<int:study_pk>/chosen/",
+        views.sage_study_chosen,
+        name="sage_study_chosen",
     ),
     path(
         "character/<int:pk>/sage/study/add/",

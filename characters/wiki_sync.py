@@ -2,7 +2,8 @@
 
 ``microformats.py`` stays a pure parser; this module owns HTTP and persistence.
 The wiki is treated as the source of truth for the scalar fields, spells,
-sage studies, and standalone sage abilities it carries. Inventory — including
+chosen sage fields, sage studies, and standalone sage abilities it carries.
+Inventory — including
 coins, which are inventory
 items — is intentionally out of scope: money belongs to whichever character
 carries it, and stack/container arrangement can't round-trip through a flat
@@ -15,7 +16,13 @@ import requests
 from django.db import transaction
 
 from .microformats import SCALARS, parse_sheet
-from .models import Character, SageAbilityPoints, SageStudyPoints, Spell
+from .models import (
+    Character,
+    SageAbilityPoints,
+    SageChosenField,
+    SageStudyPoints,
+    Spell,
+)
 
 USER_AGENT = "Zingor wiki-sync (https://github.com/; character sheet importer)"
 FETCH_TIMEOUT = 20
@@ -36,7 +43,8 @@ def sync_character_from_wiki(character: Character) -> list[str]:
 
     Returns the parser's warnings for logging. Scalars are copied only when the
     parsed value is present, so a temporarily-absent field on the wiki never
-    nukes existing data. Spells, sage studies, and sage abilities are
+    nukes existing data. Spells, chosen fields, sage studies, and sage
+    abilities are
     replace-all, but only when that collection's root markup is actually
     present on the page: the wiki is
     authoritative for a section it carries, yet a missing/broken section leaves
@@ -59,6 +67,17 @@ def sync_character_from_wiki(character: Character) -> list[str]:
             spell.character = character
             spell.save()
 
+    if SageChosenField in parsed.sections_present:
+        character.chosen_fields.all().delete()
+        seen_fields = set()
+        for chosen in parsed.chosen_fields:
+            if chosen.field in seen_fields:
+                continue
+            seen_fields.add(chosen.field)
+            chosen.pk = None
+            chosen.character = character
+            chosen.save()
+
     if SageStudyPoints in parsed.sections_present:
         # Preserve soft-deleted (hidden) studies across a sync: keep their rows
         # and retained points, and don't let the wiki resurrect them.
@@ -66,9 +85,13 @@ def sync_character_from_wiki(character: Character) -> list[str]:
             character.sage_studies.filter(hidden=True).values_list("study", flat=True)
         )
         character.sage_studies.filter(hidden=False).delete()
+        # A hand-edited page can list one study under two field headings; the
+        # first listing wins rather than tripping the per-character unique key.
+        seen_studies = set(hidden_studies)
         for study in parsed.sage_studies:
-            if study.study in hidden_studies:
+            if study.study in seen_studies:
                 continue
+            seen_studies.add(study.study)
             study.pk = None
             study.character = character
             study.save()

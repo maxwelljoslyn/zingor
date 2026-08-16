@@ -50,9 +50,9 @@ ZMF uses `class` attributes (rather than, say, `data-*` attributes) because wiki
 
 Each external page describes exactly one character. The markup comes in two shapes: **single fields** and **repeating records**.
 
-### Single Fields
+### Single Records
 
-Tag any element with one of the class names below, and its text becomes that field's value:
+Tag any element with one of the class names below, and its text will become that field's value:
 
 ```html
 <td class="zingor-strength">14</td>
@@ -79,16 +79,14 @@ Tag any element with one of the class names below, and its text becomes that fie
 | `zingor-notes` | Notes |
 | `zingor-background` | Background |
 | `zingor-appearance` | Appearance |
-| `zingor-chosen-field` | Chosen sage field |
-| `zingor-chosen-study` | Chosen sage study |
 
-Any field you leave out is simply not synchronized: Zingor keeps whatever value it already has. If the same class appears more than once on the page, the first occurrence wins.
+Anything you leave out is simply not synchronized: Zingor keeps whatever value it already has. If the same markup appears more than once on the page, the first occurrence wins.
 
 :::{note}
 Money and inventory are not synchronized. Coins are inventory items in Zingor, and inventory (which containers hold what, how stacks are split) is managed in Zingor itself.
 :::
 
-### Repeating Records: Spells, Sage Studies, and Sage Abilities
+### Repeating Records: Spells and Sage Knowledge
 
 Lists of things use one level of nesting: a *root* element tagged with the record's class, containing elements tagged with the record's subfield classes. A table row per record is the natural fit, but any container element works.
 
@@ -106,14 +104,35 @@ Lists of things use one level of nesting: a *root* element tagged with the recor
 The `zingor-spell-memorized` field, if it evaluates as "yes", means that the spell *is currently memorized*, not that it has been cast/is not memorized.
 :::
 
-**Sage studies** use root class `zingor-sage-study` with subfields `-name` (required) and `-points` (required):
+**Chosen fields** are those in which your character has specialized. Possessing a field and having *chosen* it are two different things. For chosen fields, use root class `zingor-chosen-field`, with the single subfield `-name` (required):
+
+```html
+<li class="zingor-chosen-field">
+  <span class="zingor-chosen-field-name">Animal Training</span>
+</li>
+```
+
+Zingor calculates which fields appear on your character sheet as your class's fields, plus the fields of any out-of-class studies you possess. That's why there's no ZMF record for merely possessing a field: list the studies you possess, and the fields follow.
+
+:::{note}
+When [exporting to a wiki page](wiki-export.md), the `=== Field ===` headings over the study tables are *every* field you have, while the "Chosen Fields" list above them is the smaller set you picked.
+:::
+
+**Sage studies** use root class `zingor-sage-study` with subfields `-name` (required), `-points` (required), and `-chosen` (optional):
 
 ```html
 <tr class="zingor-sage-study">
   <td class="zingor-sage-study-name">Faith</td>
   <td class="zingor-sage-study-points">27</td>
+  <td class="zingor-sage-study-chosen">X</td>
 </tr>
 ```
+
+`zingor-sage-study-chosen`, if it evaluates as "yes", marks the study as one you've *chosen*, as opposed to one you just have points in. This is the same distinction as for fields, except that a study you hold is a record in its own right rather than something Zingor derives.
+
+:::{warning}
+A study can be listed under more than one field heading on your page (e.g. Beasts belongs to both Reverence and Legends & Folklore). As mentioned under [Single Records](#single-records), if Zingor encounters the same markup twice while importing, **the first occurrence wins**. This applies to studies too.
+:::
 
 **Sage abilities** (also "standalone sage abilities") are one-off sage abilities gained other than through the sage study system, such as through a character's [progenitor](https://wiki.alexissmolensk.com/index.php/Progenitor). They use root class `zingor-sage-ability` with subfields `-name` (required), `-points` (required), and `-source` (optional freetext noting where the ability came from):
 
@@ -126,7 +145,7 @@ The `zingor-spell-memorized` field, if it evaluates as "yes", means that the spe
 ```
 
 :::{warning}
-For spells, sage studies, and sage abilities, the page is authoritative *when the markup is present*. If your page contains any `zingor-spell` elements, the spells found there replace your character's spell list in Zingor on each sync. If the page contains no spell markup at all, your Zingor spell list is left alone. The same rule applies to sage studies and sage abilities.
+For spells, chosen fields, sage studies, and sage abilities, the page is authoritative *when the markup is present*. For example, if your page contains any `zingor-spell` elements, the spells found there replace your character's spell list in Zingor on each sync. If the page contains no spell markup at all, your Zingor spell list is left alone.
 :::
 
 ### How Values Are Read

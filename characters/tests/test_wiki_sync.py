@@ -17,6 +17,7 @@ from characters.models import (
     Character,
     Item,
     SageAbilityPoints,
+    SageChosenField,
     SageStudyPoints,
     Spell,
 )
@@ -40,6 +41,19 @@ SAGE_ABILITY_MARKUP = "".join(
 )
 LEXENT_HTML_WITH_SAGE_ABILITY = LEXENT_HTML.replace(
     "</body>", SAGE_ABILITY_MARKUP + "</body>"
+)
+CHOSEN_FIELD_MARKUP = "".join(
+    [
+        '<li class="zingor-chosen-field">',
+        '<span class="zingor-chosen-field-name">Animal Training</span>',
+        "</li>",
+        '<li class="zingor-chosen-field">',
+        '<span class="zingor-chosen-field-name">Leadership</span>',
+        "</li>",
+    ]
+)
+LEXENT_HTML_WITH_CHOSEN_FIELDS = LEXENT_HTML.replace(
+    "</body>", CHOSEN_FIELD_MARKUP + "</body>"
 )
 WIKI_URL = "https://adventure.alexissmolensk.com/index.php/Lexent"
 
@@ -133,6 +147,39 @@ class SyncCharacterFromWikiTests(TestCase):
             wiki_sync.sync_character_from_wiki(self.character)
         self.assertEqual(self.character.sage_studies.count(), 1)
         self.assertEqual(self.character.sage_studies.first().study, "Faith")
+
+    def test_chosen_fields_are_written(self):
+        with mock.patch.object(
+            wiki_sync, "fetch_page", return_value=LEXENT_HTML_WITH_CHOSEN_FIELDS
+        ):
+            wiki_sync.sync_character_from_wiki(self.character)
+        self.assertEqual(
+            list(self.character.chosen_fields.values_list("field", flat=True)),
+            ["Animal Training", "Leadership"],
+        )
+
+    def test_absent_chosen_field_section_does_not_wipe_existing_choices(self):
+        """A page with no chosen-field markup leaves the DB's choices alone."""
+        SageChosenField.objects.create(character=self.character, field="Wilderland")
+        wiki_sync.sync_character_from_wiki(self.character)
+        self.assertEqual(self.character.chosen_fields.count(), 1)
+        self.assertEqual(self.character.chosen_fields.first().field, "Wilderland")
+
+    def test_study_listed_under_two_fields_becomes_one_row(self):
+        """A hand-written page may repeat a study under each field heading it
+        belongs to; the per-character unique key means the first listing wins."""
+        repeated = "".join(
+            [
+                '<tr class="zingor-sage-study">',
+                '<td class="zingor-sage-study-name">Beasts</td>',
+                '<td class="zingor-sage-study-points">7</td>',
+                "</tr>",
+            ]
+        )
+        html = LEXENT_HTML.replace("</body>", repeated + repeated + "</body>")
+        with mock.patch.object(wiki_sync, "fetch_page", return_value=html):
+            wiki_sync.sync_character_from_wiki(self.character)
+        self.assertEqual(self.character.sage_studies.filter(study="Beasts").count(), 1)
 
     def test_absent_sage_ability_section_does_not_wipe_existing_abilities(self):
         """A page with no sage-ability markup leaves the DB's abilities alone."""

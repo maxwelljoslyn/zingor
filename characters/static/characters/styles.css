@@ -330,7 +330,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .condition-add-form:not(:has(select[name="modifier_type"] option[value="ability"]:checked):has(select[name="target"] option[value="strength"]:checked)) .condition-scope {
   display: none;
 }
-ul.spell-list { list-style: none; padding: 0; }
+ul.spell-list, ul.sheet-list { list-style: none; padding: 0; }
 .htmx-indicator { display: none; }
 .htmx-request .htmx-indicator { display: inline; }
 .flash {
@@ -480,9 +480,17 @@ tr.collapse-hidden { display: none; }
 /* Sage studies render one table per field, so their columns only line up with
    each other when the widths are pinned rather than derived from each table's
    own longest study name. */
-.fixed-cols .col-study { width: 42%; }
-.fixed-cols .col-points { width: 18%; }
-.fixed-cols .col-status { width: 22%; }
+.fixed-cols .col-study { width: 36%; }
+.fixed-cols .col-points { width: 14%; }
+.fixed-cols .col-status { width: 17%; }
+.fixed-cols .col-chosen { width: 15%; }
+/* The star marking a chosen field or study, shown to owner and viewer alike so
+   the choices are scannable without reading down the checkbox column. Accent
+   ink so it reads as a deliberate mark, not decoration. */
+.chosen-mark { color: var(--accent); }
+/* A field heading and its Chosen checkbox on one line. The h4 can't hold the
+   form itself — a heading takes phrasing content, and a form isn't. */
+.field-head { display: flex; align-items: baseline; gap: 0.6rem; }
 /* Caret toggle on a container row: plain glyph, not an accent button. */
 .collapse-toggle {
   background: none;

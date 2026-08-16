@@ -8,6 +8,7 @@ from characters.models import (
     Character,
     Item,
     SageAbilityPoints,
+    SageChosenField,
     SageStudyPoints,
     Spell,
 )
@@ -168,6 +169,51 @@ class WikiExportZMFTest(TestCase):
         assert '|- class="zingor-sage-study"' in wiki
         assert 'class="zingor-sage-study-name" | Divination' in wiki
         assert 'class="zingor-sage-study-points" | 13' in wiki
+
+    def test_chosen_fields_round_trip(self):
+        SageChosenField.objects.create(character=self.char, field="Animal Training")
+        SageChosenField.objects.create(character=self.char, field="Leadership")
+        sheet = parse_sheet(character_to_wiki(self.char))
+        assert [f.field for f in sheet.chosen_fields] == [
+            "Animal Training",
+            "Leadership",
+        ]
+        assert sheet.warnings == []
+
+    def test_no_chosen_fields_emits_no_records(self):
+        assert "zingor-chosen-field" not in character_to_wiki(self.char)
+
+    def test_chosen_study_carries_a_mark_and_an_unchosen_one_does_not(self):
+        """Like the other sage tables this is MediaWiki attribute syntax, only
+        HTML once the page renders, so the assertion is on the markup."""
+        SageStudyPoints.objects.create(
+            character=self.char, study="Divination", points=13, chosen=True
+        )
+        SageStudyPoints.objects.create(character=self.char, study="Faith", points=4)
+        rows = [
+            line
+            for line in character_to_wiki(self.char).splitlines()
+            if 'class="zingor-sage-study-name"' in line
+        ]
+        divination = next(line for line in rows if "| Divination " in line)
+        faith = next(line for line in rows if "| Faith " in line)
+        assert divination.endswith('class="zingor-sage-study-chosen" | X')
+        # The cell is always emitted so the column stays aligned; empty is an
+        # absent optional subfield to the parser.
+        assert faith.endswith('class="zingor-sage-study-chosen" | ')
+
+    def test_study_in_two_of_the_characters_fields_is_exported_once(self):
+        """The sheet lists such a study under both fields, but the wiki page is
+        parsed back in, so a second listing would be a second record for the
+        one row."""
+        self.char.char_class = "paladin"
+        self.char.save()
+        SageChosenField.objects.create(
+            character=self.char, field="Legends and Folklore"
+        )
+        SageStudyPoints.objects.create(character=self.char, study="Beasts", points=7)
+        wiki = character_to_wiki(self.char)
+        assert wiki.count('class="zingor-sage-study-name" | Beasts') == 1
 
     def test_sage_ability_table_carries_zmf_classes(self):
         """Standalone abilities are exported as a table like sage studies, so
