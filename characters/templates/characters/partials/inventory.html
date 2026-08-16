@@ -43,7 +43,8 @@
         <option value="{{ unit_val }}">{{ unit_label }}</option>
       {% endfor %}
     </select>
-    <input type="number" name="quantity" value="1" min="1" max="100" class="w-4" title="Quantity" required>
+    {# The quantity input starts pre-filled with 1, so a placeholder would never show; label it instead. #}
+    <label>Quantity <input type="number" name="quantity" value="1" min="1" max="100" class="w-4" required></label>
     <label><input type="checkbox" name="is_worn"> Worn</label>
     <button type="submit" class="btn btn-small">Add Item</button>
   </form>

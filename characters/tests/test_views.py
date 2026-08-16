@@ -948,6 +948,13 @@ class ItemCRUDTests(TestCase):
         self.assertContains(response, 'name="pint_unit"')
         self.assertContains(response, 'value="pennyweight"')
 
+    def test_add_item_form_labels_quantity(self):
+        """The quantity input is labelled on the page, not just on hover (#169)."""
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(
+            response, '<label>Quantity <input type="number" name="quantity"'
+        )
+
     def test_add_item_with_quantity(self):
         """Quantity creates a single stacked row, not N duplicate rows (#74)."""
         response = self.client.post(
