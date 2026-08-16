@@ -243,6 +243,51 @@ class SageStudyPointsModelTests(TestCase):
         row = SageStudyPoints.objects.create(character=self.character, study="Forgery")
         self.assertFalse(row.chosen)
 
+    def test_study_has_no_concentration_by_default(self):
+        row = SageStudyPoints.objects.create(character=self.character, study="Forgery")
+        self.assertEqual(row.concentration, "")
+        self.assertEqual(row.display_name, "Forgery")
+
+    def test_display_name_carries_the_area(self):
+        row = SageStudyPoints.objects.create(
+            character=self.character, study="History", concentration="Ancient European"
+        )
+        self.assertEqual(row.display_name, "History (Ancient European)")
+
+    def test_two_areas_of_one_study_are_two_rows(self):
+        SageStudyPoints.objects.create(
+            character=self.character,
+            study="History",
+            concentration="Ancient European",
+            points=20,
+        )
+        SageStudyPoints.objects.create(
+            character=self.character,
+            study="History",
+            concentration="Ancient African",
+            points=5,
+        )
+        self.assertEqual(self.character.sage_studies.filter(study="History").count(), 2)
+
+    def test_the_whole_study_coexists_with_its_areas(self):
+        # A blank area is its own row, not a placeholder for the others.
+        SageStudyPoints.objects.create(character=self.character, study="History")
+        SageStudyPoints.objects.create(
+            character=self.character, study="History", concentration="Ancient European"
+        )
+        self.assertEqual(self.character.sage_studies.filter(study="History").count(), 2)
+
+    def test_duplicate_area_of_one_study_raises_integrity_error(self):
+        SageStudyPoints.objects.create(
+            character=self.character, study="History", concentration="Ancient European"
+        )
+        with self.assertRaises(IntegrityError):
+            SageStudyPoints.objects.create(
+                character=self.character,
+                study="History",
+                concentration="Ancient European",
+            )
+
 
 class SageChosenFieldModelTests(TestCase):
     def setUp(self):

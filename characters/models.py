@@ -7,6 +7,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 from .fields import PintField
+from .sage import format_study
 from .units import D, u
 
 
@@ -649,12 +650,21 @@ class SageChosenField(models.Model):
 
 
 class SageStudyPoints(models.Model):
-    """Knowledge point total for one study on a character."""
+    """Knowledge point total for one study on a character.
+
+    A handful of studies (see ``sage.CONCENTRATIONS``) are taken by area of
+    concentration rather than as a whole, so a character can hold several rows
+    of one such study, one per area. Every other study leaves the area blank
+    and keeps its single row.
+    """
 
     character = models.ForeignKey(
         Character, on_delete=models.CASCADE, related_name="sage_studies"
     )
     study = models.CharField(max_length=200)
+    # The area the points belong to, e.g. "Ancient European" for History.
+    # Blank for a study taken whole, which is all but a few of them.
+    concentration = models.CharField(max_length=100, blank=True, default="")
     points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     hidden = models.BooleanField(default=False)
     # A study the character has deliberately chosen, as opposed to one they
@@ -663,12 +673,19 @@ class SageStudyPoints(models.Model):
     chosen = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ("character", "study")
-        ordering = ["study"]
+        # The area is part of the key: two areas of one study are two separate
+        # point totals, and a study taken whole is the row whose area is blank.
+        unique_together = ("character", "study", "concentration")
+        ordering = ["study", "concentration"]
         verbose_name_plural = "Sage study points"
 
+    @property
+    def display_name(self) -> str:
+        """The study as it is named on a sheet, area and all."""
+        return format_study(self.study, self.concentration)
+
     def __str__(self):
-        return f"{self.study}: {self.points} pts"
+        return f"{self.display_name}: {self.points} pts"
 
 
 class SageAbilityPoints(models.Model):
