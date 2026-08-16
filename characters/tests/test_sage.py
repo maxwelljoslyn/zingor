@@ -1,5 +1,7 @@
 """Tests for sage catalogue and rank logic."""
 
+import re
+
 from django.test import TestCase
 
 from characters.sage import (
@@ -596,6 +598,90 @@ class SageStudyAddViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
+class SageStudyAddConcentrationTests(TestCase):
+    """Adding a study that is taken by area of concentration (#171)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="area_tester", password="pass")
+        self.client = Client()
+        self.client.login(username="area_tester", password="pass")
+        self.character = Character.objects.create(user=self.user, name="Lexent")
+
+    def _add(self, study, concentration=""):
+        return self.client.post(
+            f"/character/{self.character.pk}/sage/study/add/",
+            {"study": study, "concentration": concentration},
+        )
+
+    def test_area_is_recorded_on_the_row(self):
+        response = self._add("History", "Ancient European")
+        self.assertEqual(response.status_code, 200)
+        row = SageStudyPoints.objects.get(character=self.character, study="History")
+        self.assertEqual(row.concentration, "Ancient European")
+        self.assertEqual(row.points, 0)
+
+    def test_second_area_of_the_same_study_is_its_own_row(self):
+        self._add("History", "Ancient European")
+        self._add("History", "Ancient African")
+        self.assertEqual(
+            sorted(
+                self.character.sage_studies.filter(study="History").values_list(
+                    "concentration", flat=True
+                )
+            ),
+            ["Ancient African", "Ancient European"],
+        )
+
+    def test_repeating_an_area_is_idempotent(self):
+        self._add("Outer Planes", "Nirvana")
+        self._add("Outer Planes", "Nirvana")
+        self.assertEqual(self.character.sage_studies.count(), 1)
+
+    def test_surrounding_whitespace_is_trimmed(self):
+        self._add("History", "  Ancient European  ")
+        row = SageStudyPoints.objects.get(character=self.character, study="History")
+        self.assertEqual(row.concentration, "Ancient European")
+
+    def test_the_study_taken_whole_is_still_addable(self):
+        self._add("History", "Ancient European")
+        self._add("History")
+        self.assertEqual(
+            sorted(
+                self.character.sage_studies.filter(study="History").values_list(
+                    "concentration", flat=True
+                )
+            ),
+            ["", "Ancient European"],
+        )
+
+    def test_area_on_a_study_that_takes_none_returns_400(self):
+        response = self._add("Forgery", "Seals")
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(self.character.sage_studies.exists())
+
+    def test_parentheses_in_an_area_return_400(self):
+        # "Study (Area)" is how the pair is written out and read back, so an
+        # area holding its own parens would make that ambiguous.
+        response = self._add("History", "Ancient (European)")
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(self.character.sage_studies.exists())
+
+    def test_restoring_a_hidden_area_names_it_in_full(self):
+        self._add("History", "Ancient European")
+        row = SageStudyPoints.objects.get(character=self.character, study="History")
+        row.points = 22
+        row.hidden = True
+        row.save()
+        response = self._add("History", "Ancient European")
+        self.assertIn(
+            "Restored History (Ancient European) with 22 points",
+            response.content.decode(),
+        )
+        row.refresh_from_db()
+        self.assertFalse(row.hidden)
+        self.assertEqual(row.points, 22)
+
+
 class SageSectionRenderingTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="render_tester", password="pass")
@@ -660,6 +746,49 @@ class SageSectionRenderingTests(TestCase):
             ),
             2,
         )
+
+    def test_an_area_is_shown_after_its_study(self):
+        SageStudyPoints.objects.create(
+            character=self.character,
+            study="Outer Planes",
+            concentration="Nirvana",
+            points=14,
+        )
+        self.assertIn(">Outer Planes (Nirvana)</a>", self._sheet())
+
+    def test_an_area_links_to_its_study_page(self):
+        # An area has no wiki page of its own, so the link drops it.
+        SageStudyPoints.objects.create(
+            character=self.character, study="Outer Planes", concentration="Nirvana"
+        )
+        html = self._sheet()
+        self.assertIn("Outer_Planes_(sage_study)", html)
+        self.assertNotIn("Nirvana_(sage_study)", html)
+
+    def test_areas_of_one_study_are_filed_under_its_field(self):
+        # Both rows are Outer Planes, so both sit under Power — a paladin's
+        # Reverence doesn't hold it, so it falls back to the study's own field.
+        for area in ["Nirvana", "Elysium"]:
+            SageStudyPoints.objects.create(
+                character=self.character, study="Outer Planes", concentration=area
+            )
+        html = self._sheet()
+        self.assertEqual(html.count(">Power</a>"), 1)
+        self.assertEqual(html.count("Outer_Planes_(sage_study)"), 2)
+
+    def test_the_add_study_picker_labels_studies_taken_by_area(self):
+        html = self._sheet()
+        self.assertIn(
+            '<option value="History" data-concentration="region and era">', html
+        )
+        self.assertIn('<option value="Forgery" data-concentration="">', html)
+
+    def test_the_area_input_starts_hidden(self):
+        # The picker opens on Accompaniment, which takes no area, so there is
+        # nothing to fill in until a study that does is chosen.
+        tag = re.search(r"<input[^>]*data-concentration-input[^>]*>", self._sheet())
+        self.assertIsNotNone(tag)
+        self.assertIn("hidden", tag.group(0))
 
     def test_the_star_sits_after_the_study_name(self):
         SageStudyPoints.objects.create(

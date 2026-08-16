@@ -40,7 +40,8 @@
         <tbody>
           {% for entry in group.entries %}
             <tr>
-              <td><a href="{{ entry.name|study_url }}" target="_blank">{{ entry.name }}</a>{% if entry.chosen %} <span class="chosen-mark" title="Chosen study">&#9733;</span>{% endif %}</td>
+              {# The link goes to the study's own page: an area of concentration within a study has no wiki page of its own. #}
+              <td><a href="{{ entry.study|study_url }}" target="_blank">{{ entry.name }}</a>{% if entry.chosen %} <span class="chosen-mark" title="Chosen study">&#9733;</span>{% endif %}</td>
               <td>
                 {% if is_owner %}
                 <input
@@ -114,13 +115,18 @@
     hx-swap="outerHTML"
   >
     {% csrf_token %}
-    <select name="study">
-      {% for study_name in all_study_names %}
-        <option value="{{ study_name }}">{{ study_name }}</option>
+    {# data-concentration names what an area is for the studies taken by area; sage-concentration.js reads it off the selected option to reveal the input below. #}
+    <select name="study" data-concentration-select>
+      {% for choice in study_choices %}
+        <option value="{{ choice.name }}" data-concentration="{{ choice.concentration }}">{{ choice.name }}</option>
       {% endfor %}
     </select>
+    {# Shown only while a study taken by area is picked, starting from whichever study the picker opens on. #}
+    <input type="text" name="concentration" maxlength="100" data-concentration-input aria-label="Area of concentration"
+           {% if study_choices.0.concentration %}placeholder="Area: {{ study_choices.0.concentration }}"{% else %}hidden{% endif %}>
     <button type="submit">Add Study</button>
   </form>
+  <p class="empty-note">{{ concentration_study_names|join:", " }} are taken one area of concentration at a time: add each area separately, and each keeps its own points.</p>
   {% endif %}
   <h3>Standalone Sage Abilities</h3>
   {% if sage_abilities %}

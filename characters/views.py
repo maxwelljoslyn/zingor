@@ -1703,17 +1703,32 @@ def _build_sage_context(character, restore_message=None):
     restore_message: optional transient notice shown near the top of the
     section (e.g. after re-adding a hidden study restores its points).
     """
-    from .sage import CLASS_FIELDS, sage_fields, sage_studies, sort_sage_entries
+    from .sage import (
+        CLASS_FIELDS,
+        CONCENTRATIONS,
+        concentration_label,
+        sage_fields,
+        sage_studies,
+        sort_sage_entries,
+    )
 
-    rows = {r.study: r for r in character.sage_studies.filter(hidden=False)}
+    # Keyed by display name rather than study: a study taken by area holds one
+    # row per area, and the display name ("History (Ancient European)") is what
+    # tells those rows apart on the sheet. The per-character unique key makes
+    # it unique too.
+    rows = {r.display_name: r for r in character.sage_studies.filter(hidden=False)}
     sorted_entries = sort_sage_entries(
-        {study: row.points for study, row in rows.items()},
+        {name: row.points for name, row in rows.items()},
         sort_keys=["name"],
     )
     for entry in sorted_entries:
         row = rows[entry["name"]]
         entry["pk"] = row.pk
         entry["chosen"] = row.chosen
+        # The bare study, for filing the row under a field and for linking to
+        # the wiki: an area has no page of its own.
+        entry["study"] = row.study
+        entry["concentration"] = row.concentration
 
     # Group entries by field. A study can belong to several fields — Beasts
     # sits in both Reverence and Legends and Folklore — and a character can
@@ -1728,7 +1743,7 @@ def _build_sage_context(character, restore_message=None):
     character_fields = chosen_fields | set(CLASS_FIELDS.get(char_class, []))
     field_map = {}
     for entry in sorted_entries:
-        study_info = sage_studies.get(entry["name"], {})
+        study_info = sage_studies.get(entry["study"], {})
         study_fields = study_info.get("fields", [])
         matching = [f for f in study_fields if f in character_fields]
         for field in matching or [study_fields[0] if study_fields else "Other"]:
@@ -1764,7 +1779,14 @@ def _build_sage_context(character, restore_message=None):
         # Fields that already have a heading carry their own Chosen checkbox,
         # so the Add Field picker only offers the ones not on the sheet at all.
         "addable_field_names": [f for f in sage_fields if f not in shown_fields],
-        "all_study_names": sorted(sage_studies.keys()),
+        # Each choice carries the label for its area of concentration, if it
+        # takes one, so the Add Study picker can ask for an area only where
+        # there is one to give.
+        "study_choices": [
+            {"name": name, "concentration": concentration_label(name) or ""}
+            for name in sorted(sage_studies)
+        ],
+        "concentration_study_names": sorted(CONCENTRATIONS),
         "restore_message": restore_message,
     }
 
@@ -1865,24 +1887,42 @@ def sage_study_points(request, pk, study_pk):
 @character_owner_required
 @require_POST
 def sage_study_add(request, pk):
-    """Add a new study row to the character's sage table."""
-    from .sage import sage_studies
+    """Add a new study row to the character's sage table.
+
+    A study taken by area of concentration (History and friends) is added one
+    area at a time, so the same study can be added repeatedly and each area
+    keeps its own points.
+    """
+    from .sage import concentration_label, sage_studies
 
     character = get_object_or_404(Character, pk=pk)
     study = request.POST.get("study", "")
+    concentration = request.POST.get("concentration", "").strip()
 
     if study not in sage_studies:
         return HttpResponse("Unknown study", status=400)
+    if concentration and not concentration_label(study):
+        return HttpResponse(f"{study} is not studied by area", status=400)
+    if "(" in concentration or ")" in concentration:
+        # Study and area are joined into "Study (Area)" for display and for the
+        # wiki page, and split back apart on the way in; parentheses inside an
+        # area would make that split ambiguous.
+        return HttpResponse("An area cannot contain parentheses", status=400)
 
     row, _created = SageStudyPoints.objects.get_or_create(
-        character=character, study=study, defaults={"points": 0}
+        character=character,
+        study=study,
+        concentration=concentration,
+        defaults={"points": 0},
     )
     restore_message = None
     if row.hidden:
         # Re-adding a soft-deleted study: un-hide it, keeping its retained points.
         row.hidden = False
         row.save(update_fields=["hidden"])
-        restore_message = f"Restored {study} with {row.points} points from before."
+        restore_message = (
+            f"Restored {row.display_name} with {row.points} points from before."
+        )
     sage_ctx = _build_sage_context(character, restore_message=restore_message)
     sage_ctx["is_owner"] = True
     return render(request, "characters/partials/sage.html", sage_ctx)
