@@ -90,6 +90,8 @@ Money and inventory are not synchronized. Coins are inventory items in Zingor, a
 
 Lists of things use one level of nesting: a *root* element tagged with the record's class, containing elements tagged with the record's subfield classes. A table row per record is the natural fit, but any container element works.
 
+Records never nest inside other records, so your page can stay a set of ordinary tables. Where one record belongs to another, it names it instead — as sage concentrations name their study.
+
 **Spells** use root class `zingor-spell` with subfields `-name` (required), `-level` (required), and `-memorized` (optional):
 
 ```html
@@ -131,10 +133,52 @@ When [exporting to a wiki page](wiki-export.md), the `=== Field ===` headings ov
 `zingor-sage-study-chosen`, if it evaluates as "yes", marks the study as one you've *chosen*, as opposed to one you just have points in. This is the same distinction as for fields, except that a study you hold is a record in its own right rather than something Zingor derives.
 
 :::{warning}
-A study can be listed under more than one field heading on your page (e.g. Beasts belongs to both Reverence and Legends & Folklore). As mentioned under [Single Records](#single-records), if Zingor encounters the same markup twice while importing, **the first occurrence wins**. This applies to studies too.
+A study can be listed under more than one field heading on your page (e.g. Beasts belongs to both Reverence and Legends & Folklore). As mentioned under [Single Records](#single-records), if Zingor encounters the same markup twice while importing, **the first occurrence wins**. This applies to studies too, and to concentrations: listing the same subject twice under one study keeps the first and warns about the second.
 :::
 
-**Sage abilities** (also "standalone sage abilities") are one-off sage abilities gained other than through the sage study system, such as through a character's [progenitor](https://wiki.alexissmolensk.com/index.php/Progenitor). They use root class `zingor-sage-ability` with subfields `-name` (required), `-points` (required), and `-source` (optional freetext noting where the ability came from):
+### Concentrations
+
+A few studies don't hold their points as a single pool. Their points are committed to named subjects — a period and sphere of History, one of the Outer Planes, a locus of Geography — and knowledge aimed at one does nothing for any other. Thirty points of History never makes you an authority on history as such, only on some particular slice of it.
+
+Concentrations are records of their own, `zingor-sage-concentration`, with subfields `-study` (required), `-name` (required), and `-points` (optional). They sit alongside your study records rather than inside them, so each one names the study it belongs to:
+
+```html
+<tr class="zingor-sage-study">
+  <td class="zingor-sage-study-name">History</td>
+  <td class="zingor-sage-study-points">37</td>
+</tr>
+
+<tr class="zingor-sage-concentration">
+  <td class="zingor-sage-concentration-study">History</td>
+  <td class="zingor-sage-concentration-name">Ancient Asia</td>
+  <td class="zingor-sage-concentration-points">22</td>
+</tr>
+<tr class="zingor-sage-concentration">
+  <td class="zingor-sage-concentration-study">History</td>
+  <td class="zingor-sage-concentration-name">Medieval Asia</td>
+  <td class="zingor-sage-concentration-points">15</td>
+</tr>
+```
+
+The study record still carries your overall total, and it may exceed the sum of your concentrations: the difference is points you hold but haven't committed anywhere yet, which your sheet shows as an "unallocated" line. If you list concentrations for a study you never list on its own, Zingor works the total out from them and says so in a warning.
+
+Some studies have a fixed set of concentrations and some don't, and Zingor treats the two differently:
+
+- **History, the Outer Planes, and Heraldry** have complete lists — History's twelve period-and-sphere pairs, Heraldry's four mega-cultures, and the outer planes themselves. Zingor will correct your spelling of any of them, but a name that isn't on the list is ignored with a warning, because it isn't an allocation the rules allow. On your sheet these appear as a dropdown rather than a text box.
+- **Geography, Beasts, Artifacts, Law & Policy, and Politics** are open. A locus, a studied beast, or a political entity is your DM's invention or a list too long and too changeable for Zingor to hold, so whatever you type is kept verbatim.
+
+#### When to leave the points out
+
+For some studies a concentration has no number of its own, and you can leave the `-points` cell empty:
+
+- **Beasts and Artifacts** grant you one studied subject per ten points, so every subject is worth the same ten. Writing a different number gets you a warning and the rule is applied anyway.
+- **Law & Policy and Politics** don't divide their points at all — each of their concentrations is worth the study's *whole* total. A character with 22 points in Politics is a 22-point authority on their chosen entity (and, per the study, counts at half that everywhere else, which your sheet works out for you).
+
+:::{warning}
+Naming a concentration under a study that doesn't have any (Faith, say) is ignored, with a warning on your sheet. So is naming one under Athletics — see below.
+:::
+
+**Sage abilities** (also "standalone sage abilities") are one-off sage abilities gained other than through the sage study system, such as through a character's [progenitor](https://wiki.alexissmolensk.com/index.php/Progenitor). They use root class `zingor-sage-ability` with subfields `-name` (required), `-points` (required), `-source` (optional freetext noting where the ability came from), and `-from-study` (optional):
 
 ```html
 <tr class="zingor-sage-ability">
@@ -144,8 +188,20 @@ A study can be listed under more than one field heading on your page (e.g. Beast
 </tr>
 ```
 
+`zingor-sage-ability-from-study` handles the studies whose concentrations *are* sage abilities in their own right. Athletics is the one Zingor knows: the wiki counts each of its disciplines a sage ability outright, so there is no reason for Zingor to invent a second kind of record for them. Name the study the ability comes from, and it is listed both under that study on your sheet and among your standalone abilities:
+
+```html
+<tr class="zingor-sage-ability">
+  <td class="zingor-sage-ability-name">Swimming</td>
+  <td class="zingor-sage-ability-points">14</td>
+  <td class="zingor-sage-ability-from-study">Athletics</td>
+</tr>
+```
+
 :::{warning}
-For spells, chosen fields, sage studies, and sage abilities, the page is authoritative *when the markup is present*. For example, if your page contains any `zingor-spell` elements, the spells found there replace your character's spell list in Zingor on each sync. If the page contains no spell markup at all, your Zingor spell list is left alone.
+For spells, chosen fields, sage studies, sage concentrations, and sage abilities, the page is authoritative *when the markup is present*. For example, if your page contains any `zingor-spell` elements, the spells found there replace your character's spell list in Zingor on each sync. If the page contains no spell markup at all, your Zingor spell list is left alone.
+
+Each of those is a section in its own right, concentrations included. A page with a study table but no concentration table is saying nothing about your concentrations, so Zingor keeps the ones you have. Once your page *does* list concentrations, though, that table is the whole truth: one you delete from it is deleted on your sheet.
 :::
 
 ### How Values Are Read

@@ -6,8 +6,8 @@ from pathlib import Path
 # nothing, so this needs neither the app's dependencies nor Django settings.
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from characters.limits import (  # noqa: E402
-    MAX_PICTURE_MB,
+from characters.limits import (
+    MAX_PICTURE_MB,  # noqa: E402
     MAX_PICTURE_PIXELS,
     MAX_SYNC_WARNINGS,
 )
@@ -32,3 +32,5 @@ myst_substitutions = {
     "max_picture_pixels": MAX_PICTURE_PIXELS,
     "max_sync_warnings": MAX_SYNC_WARNINGS,
 }
+
+myst_heading_anchors = 3

@@ -246,6 +246,21 @@ urlpatterns = [
         name="sage_study_hide",
     ),
     path(
+        "character/<int:pk>/sage/study/<int:study_pk>/concentration/add/",
+        views.sage_concentration_add,
+        name="sage_concentration_add",
+    ),
+    path(
+        "character/<int:pk>/sage/concentration/<int:concentration_pk>/points/",
+        views.sage_concentration_points,
+        name="sage_concentration_points",
+    ),
+    path(
+        "character/<int:pk>/sage/concentration/<int:concentration_pk>/hide/",
+        views.sage_concentration_hide,
+        name="sage_concentration_hide",
+    ),
+    path(
         "character/<int:pk>/sage/ability/<int:ability_pk>/points/",
         views.sage_ability_points,
         name="sage_ability_points",

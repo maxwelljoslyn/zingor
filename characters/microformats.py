@@ -18,6 +18,22 @@ Two shapes, mirroring the data model:
         <td class="zingor-sage-study-points">27</td>
       </tr>
 
+  A few studies split their points into named buckets (see ``sage.Concentrations``).
+  Those are ``sage-concentration`` records, siblings of the study's own rather than
+  nested inside it, so a bucket names its study instead of living within it. Nesting
+  would suit the data better — a bucket really is a child of a study — but a wiki
+  page's sage section is a table and ``<tr>`` cannot contain ``<tr>``, so nesting
+  would cost the player their table. See ``adr/0001-zmf-stays-flat.md``::
+
+      <tr class="zingor-sage-concentration">
+        <td class="zingor-sage-concentration-study">History</td>
+        <td class="zingor-sage-concentration-name">Ancient Asia</td>
+        <td class="zingor-sage-concentration-points">22</td>
+      </tr>
+
+  Resolving that study name to a row is ``wiki_sync``'s job; the parser reports every
+  record it finds.
+
 The vocabulary is closed (see SCALARS / RECORDS below), so the parser never has to
 guess: ``zingor-spell-name`` is unambiguously the ``name`` subfield of a ``spell``
 record, never a scalar called ``spell-name``. Coercion is by declared type; on failure
@@ -36,6 +52,7 @@ from .models import (
     Character,
     SageAbilityPoints,
     SageChosenField,
+    SageConcentration,
     SageStudyPoints,
     Spell,
 )
@@ -100,6 +117,12 @@ class Subfield:
     attr: str
     coerce: Callable[[str], object]
     required: bool = False
+    # Not a column on the record's model: set on the built instance afterwards
+    # rather than passed to its constructor, and set to ``default`` when the page
+    # omits it. A sage study's concentration is one of these — it names a bucket
+    # that ``wiki_sync`` resolves into a row of another model entirely.
+    transient: bool = False
+    default: object = ""
 
 
 @dataclass(frozen=True)
@@ -140,6 +163,31 @@ RECORDS: list[RecordType] = [
             Subfield("name", "ability", _coerce_str, required=True),
             Subfield("points", "points", _coerce_int, required=True),
             Subfield("source", "source", _coerce_str),
+            # Names the study this ability is a concentration of, for the studies
+            # whose concentrations are sage abilities outright (Athletics). The
+            # wiki-facing name is spelled out because "sage-ability-study" reads
+            # as a kind of study rather than as where the ability came from.
+            Subfield("from-study", "study", _coerce_str),
+        ],
+    ),
+    RecordType(
+        "sage-concentration",
+        SageConcentration,
+        [
+            # The study is transient because the model reaches it by foreign key
+            # and a parsed record has only a name; wiki_sync resolves it to a row.
+            Subfield("study", "study_name", _coerce_str, required=True, transient=True),
+            Subfield("name", "name", _coerce_str, required=True),
+            # Transient, and None when the page gives no number at all: a
+            # block-priced study's subjects cost a fixed amount and a mirrored
+            # study's hold the study's whole total, so neither has a figure worth
+            # writing down. Only wiki_sync knows the study's rule, so it works out
+            # what the row's points should actually be — and telling "page said
+            # nothing" apart from "page said zero" is what lets it warn when a
+            # number the page did give contradicts that rule.
+            Subfield(
+                "points", "page_points", _coerce_int, transient=True, default=None
+            ),
         ],
     ),
 ]
@@ -152,6 +200,8 @@ class ParsedSheet:
     chosen_fields: list[SageChosenField] = dc_field(default_factory=list)
     sage_studies: list[SageStudyPoints] = dc_field(default_factory=list)
     sage_abilities: list[SageAbilityPoints] = dc_field(default_factory=list)
+    # Each carries a transient ``study_name`` naming the study it belongs to.
+    concentrations: list[SageConcentration] = dc_field(default_factory=list)
     warnings: list[str] = dc_field(default_factory=list)
     # Record models whose root markup appeared on the page, even if every row
     # failed to parse. Lets the save step tell "section absent" (leave the DB
@@ -190,6 +240,7 @@ def parse_sheet(html: str) -> ParsedSheet:
         SageChosenField: sheet.chosen_fields,
         SageStudyPoints: sheet.sage_studies,
         SageAbilityPoints: sheet.sage_abilities,
+        SageConcentration: sheet.concentrations,
     }
     for rt in RECORDS:
         roots = soup.select(f".{PREFIX}{rt.root}")
@@ -206,6 +257,9 @@ def parse_sheet(html: str) -> ParsedSheet:
 def _build_record(rt: RecordType, root, index: int, warnings: list[str]):
     """Build one (unsaved) record instance from a root element, or None on failure."""
     values: dict[str, object] = {}
+    transient: dict[str, object] = {
+        sub.attr: sub.default for sub in rt.subfields if sub.transient
+    }
     for sub in rt.subfields:
         el = root.select_one(f".{PREFIX}{rt.root}-{sub.suffix}")
         raw = _text(el) if el is not None else ""
@@ -217,13 +271,20 @@ def _build_record(rt: RecordType, root, index: int, warnings: list[str]):
                 return None
             continue
         try:
-            values[sub.attr] = sub.coerce(raw)
+            value = sub.coerce(raw)
         except Exception as exc:
             warnings.append(
                 f"{rt.root} #{index}: could not parse '{sub.suffix}'={raw!r} ({exc}); skipped"
             )
             return None
-    return rt.model(**values)
+        if sub.transient:
+            transient[sub.attr] = value
+        else:
+            values[sub.attr] = value
+    record = rt.model(**values)
+    for attr, value in transient.items():
+        setattr(record, attr, value)
+    return record
 
 
 # --- Rendering (for the runner) --------------------------------------------------------
@@ -277,10 +338,19 @@ def render_sheet(sheet: ParsedSheet) -> str:
         lines.append("  (none)")
 
     lines.append("")
+    lines.append(f"=== Sage concentrations ({len(sheet.concentrations)}) ===")
+    for conc in sheet.concentrations:
+        points = "" if conc.page_points is None else f": {conc.page_points}"
+        lines.append(f"  {conc.study_name} / {conc.name}{points}")
+    if not sheet.concentrations:
+        lines.append("  (none)")
+
+    lines.append("")
     lines.append(f"=== Sage abilities ({len(sheet.sage_abilities)}) ===")
     for sa in sheet.sage_abilities:
         source = f" [{sa.source}]" if sa.source else ""
-        lines.append(f"  {sa.ability}: {sa.points}{source}")
+        study = f" (under {sa.study})" if sa.study else ""
+        lines.append(f"  {sa.ability}{study}: {sa.points}{source}")
     if not sheet.sage_abilities:
         lines.append("  (none)")
 

@@ -679,6 +679,44 @@ class SageStudyPoints(models.Model):
         return f"{self.study}: {self.points} pts"
 
 
+class SageConcentration(models.Model):
+    """Points committed to one named bucket within a study.
+
+    A few studies (see ``sage.concentration_spec``) do not hold their points as
+    one pool: the points are aimed at a period of history, an outer plane, a
+    locus, and knowledge of one does nothing for the others. The parent study's
+    ``points`` stays the character's overall total, so the difference between it
+    and the sum of these rows is what they have yet to commit.
+
+    Only ``mode == "bucket"`` studies use this model. Athletics-style studies,
+    whose buckets are standalone sage abilities in their own right, store them
+    as ``SageAbilityPoints`` instead.
+    """
+
+    study = models.ForeignKey(
+        SageStudyPoints, on_delete=models.CASCADE, related_name="concentrations"
+    )
+    name = models.CharField(max_length=200)
+    # Ignored where the study's points rule is "mirrored": those buckets hold
+    # the study's whole total, so there is nothing per-bucket to store.
+    points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    # A bucket the study confers rather than one the player chose — Law &
+    # Policy's theological law. It does not count against the study's cap on
+    # chosen buckets, and the sheet marks it so the two read differently.
+    granted = models.BooleanField(default=False)
+    hidden = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("study", "name")
+        # Granted buckets first: a conferred subject reads as part of the study
+        # rather than as one more of the player's picks.
+        ordering = ["-granted", "name"]
+        verbose_name_plural = "Sage concentrations"
+
+    def __str__(self):
+        return f"{self.name}: {self.points} pts"
+
+
 class SageAbilityPoints(models.Model):
     """Knowledge point total for one standalone sage ability on a character.
 
@@ -692,6 +730,12 @@ class SageAbilityPoints(models.Model):
     )
     ability = models.CharField(max_length=200)
     source = models.CharField(max_length=100, blank=True, default="")
+    # Set when this ability is one study's concentration — Athletics counts each
+    # of its disciplines a sage ability, so the row is listed both under the
+    # study and among the standalone abilities. Held as the study's name rather
+    # than a foreign key so it survives the replace-all a wiki sync does to the
+    # ability rows, exactly as the study's own name does.
+    study = models.CharField(max_length=200, blank=True, default="")
     points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     hidden = models.BooleanField(default=False)
 

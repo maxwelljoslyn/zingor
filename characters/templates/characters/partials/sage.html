@@ -78,6 +78,115 @@
               </td>
               {% endif %}
             </tr>
+            {% if entry.has_concentrations %}
+              {# A few studies commit their points to named buckets instead of holding one pool; the study's own number above stays the overall total. #}
+              {% for c in entry.concentrations %}
+                <tr class="concentration-row{% if c.derived %} concentration-row--derived{% endif %}{% if c.placeholder %} concentration-row--unnamed{% endif %}">
+                  <td class="concentration-name">
+                    {% if c.placeholder and is_owner %}
+                      {# The study confers this one, but only the player knows what it is. Naming it is what creates the row. #}
+                      <form
+                        hx-post="{% url 'characters:sage_concentration_add' character.pk entry.pk %}"
+                        hx-target="#section-sage"
+                        hx-swap="outerHTML"
+                        class="inline"
+                      >
+                        {% csrf_token %}
+                        <input type="hidden" name="granted" value="1">
+                        <input type="text" name="name" placeholder="{{ c.name }}&hellip;" aria-label="{{ c.name }}" required>
+                        <button type="submit">Name it</button>
+                      </form>
+                    {% else %}
+                      {{ c.name }}
+                    {% endif %}
+                    {% if c.is_ability %} <span class="concentration-tag" title="Tracked as a standalone sage ability">ability</span>{% endif %}
+                    {% if c.granted and not c.placeholder %} <span class="concentration-tag" title="Granted by the study rather than chosen">granted</span>{% endif %}
+                    {% if c.derived %} <span class="concentration-tag" title="Worked out from the study's points, not tracked separately">at half</span>{% endif %}
+                  </td>
+                  <td>
+                    {% if is_owner and not c.fixed_points %}
+                    <input
+                      type="number"
+                      name="points"
+                      value="{{ c.points }}"
+                      min="0"
+                      aria-label="Points in {{ c.name }}"
+                      {% if c.is_ability %}hx-post="{% url 'characters:sage_ability_points' character.pk c.pk %}"{% else %}hx-post="{% url 'characters:sage_concentration_points' character.pk c.pk %}"{% endif %}
+                      hx-target="#section-sage"
+                      hx-swap="outerHTML"
+                      hx-trigger="change"
+                      class="w-5"
+                    >
+                    {% else %}
+                    {{ c.points }}
+                    {% endif %}
+                  </td>
+                  <td>{{ c.rank }}</td>
+                  {% if is_owner %}
+                  <td></td>
+                  <td>
+                    {% if not c.derived and not c.placeholder %}
+                      {% if c.is_ability %}
+                        {% url 'characters:sage_ability_hide' character.pk c.pk as c_hide_url %}
+                      {% else %}
+                        {% url 'characters:sage_concentration_hide' character.pk c.pk as c_hide_url %}
+                      {% endif %}
+                      {% include "characters/partials/_delete_button.html" with url=c_hide_url target="#section-sage" confirm="Delete "|add:c.name|add:"? Your points are kept in case you re-add it." method="post" %}
+                    {% endif %}
+                  </td>
+                  {% endif %}
+                </tr>
+              {% endfor %}
+              {# Shown for allocated studies only, including at zero: points held but not yet committed to a bucket are an ordinary state, and a study with no bucket at all needs somewhere to show where its points are sitting. A mirrored study never has a remainder — every bucket holds the whole total. #}
+              {% if not entry.concentration_mirrored %}
+              <tr class="concentration-row concentration-row--unallocated">
+                <td class="concentration-name">unallocated</td>
+                <td>{{ entry.unallocated }}</td>
+                <td>{% if entry.unallocated < 0 %}over-allocated{% endif %}</td>
+                {% if is_owner %}<td></td><td></td>{% endif %}
+              </tr>
+              {% endif %}
+              {% if is_owner and entry.concentration_can_add %}
+              <tr class="concentration-row concentration-add-row">
+                <td colspan="5">
+                  <form
+                    hx-post="{% url 'characters:sage_concentration_add' character.pk entry.pk %}"
+                    hx-target="#section-sage"
+                    hx-swap="outerHTML"
+                    class="inline"
+                  >
+                    {% csrf_token %}
+                    {% if entry.concentration_closed %}
+                      {# The rules define the whole list, so a picker is the honest control: anything else would offer a freedom the study does not have. Already-taken subjects are left out rather than disabled, so what remains is exactly what can be added. #}
+                      <select name="name" aria-label="Concentration to add to {{ entry.name }}">
+                        {% for choice in entry.concentration_addable %}
+                          <option value="{{ choice }}">{{ choice }}</option>
+                        {% endfor %}
+                      </select>
+                    {% else %}
+                      {# Freetext: Geography's loci are the DM's, and the beast and artifact lists are long and still growing, so a name Zingor has not heard of is the player's to make up. #}
+                      {# The id is qualified by field because a study in two of the character's fields is listed under both, and the two listings would otherwise share it. #}
+                      <input
+                        type="text"
+                        name="name"
+                        placeholder="Add to {{ entry.name }}&hellip;"
+                        aria-label="Concentration to add to {{ entry.name }}"
+                        {% if entry.concentration_choices %}list="concentrations-{{ group.field|slugify }}-{{ entry.pk }}"{% endif %}
+                        required
+                      >
+                      {% if entry.concentration_choices %}
+                      <datalist id="concentrations-{{ group.field|slugify }}-{{ entry.pk }}">
+                        {% for choice in entry.concentration_choices %}<option value="{{ choice }}"></option>{% endfor %}
+                      </datalist>
+                      {% endif %}
+                    {% endif %}
+                    <button type="submit">Add</button>
+                    {% if entry.concentration_block %}<span class="empty-note">{{ entry.concentration_block }} points each; you can have {{ entry.concentration_affordable }}</span>{% endif %}
+                  </form>
+                </td>
+              </tr>
+              {% endif %}
+            {% endif %}
           {% endfor %}
         </tbody>
       </table>
@@ -143,6 +252,8 @@
               {% else %}
                 {{ entry.name }}
               {% endif %}
+              {# An ability that is also a study's concentration is listed in both places; this says which study's points it is drawn from. #}
+              {% if entry.study %}<a class="concentration-tag" href="{{ entry.study|study_url }}" target="_blank" title="A concentration of {{ entry.study }}">{{ entry.study }}</a>{% endif %}
             </td>
             <td>
               {% if is_owner %}

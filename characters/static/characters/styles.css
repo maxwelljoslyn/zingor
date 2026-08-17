@@ -507,6 +507,33 @@ tr.collapse-hidden { display: none; }
    the choices are scannable without reading down the checkbox column. Accent
    ink so it reads as a deliberate mark, not decoration. */
 .chosen-mark { color: var(--accent); }
+/* Rows for the buckets a concentrated study commits its points to. They sit
+   inside the study table rather than in one of their own so a bucket reads as
+   part of its study's total, so they opt out of the table's zebra striping and
+   take one flat, recessive ground instead — otherwise the stripe would cut a
+   study's block in half and the sub-rows would read as peers of the studies. */
+.data-table tbody tr.concentration-row,
+.data-table tbody tr.concentration-row:nth-child(odd),
+.data-table tbody tr.concentration-row:nth-child(even) {
+  background: var(--surface);
+}
+.concentration-row td { border-top: none; color: var(--text-muted); }
+/* The indent is what marks these as subordinate; the study name is not
+   repeated on every one of its buckets. */
+.concentration-name { padding-left: 1.6rem; }
+/* Unallocated points are always shown, at zero too: a study holding points it
+   has not committed is ordinary, and there is otherwise nowhere to say so. */
+.concentration-row--unallocated .concentration-name { font-style: italic; }
+/* Marks an ability that is also some study's concentration, in either of the
+   two places such a row appears. */
+.concentration-tag {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 0.3rem;
+  white-space: nowrap;
+}
 /* A field heading and its Chosen checkbox on one line. The h4 can't hold the
    form itself — a heading takes phrasing content, and a form isn't. */
 .field-head { display: flex; align-items: baseline; gap: 0.6rem; }

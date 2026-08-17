@@ -181,7 +181,11 @@ def character_to_wiki(character):
             # advance, so this can't be a scalar.
             lines.append(f"** {_zmf('chosen-field', _zmf('chosen-field-name', field))}")
         lines.append("")
-    sage_rows = list(character.sage_studies.filter(hidden=False).order_by("study"))
+    sage_rows = list(
+        character.sage_studies.filter(hidden=False)
+        .order_by("study")
+        .prefetch_related("concentrations")
+    )
     if sage_rows:
         # Group by field (first field listed for the study, preferring the
         # character's own fields). Unlike the character sheet, which lists a
@@ -224,6 +228,7 @@ def character_to_wiki(character):
                 )
             lines.append("|}")
             lines.append("")
+        lines.extend(_concentration_lines(sage_rows))
     else:
         lines.append("No sage studies.")
         lines.append("")
@@ -233,14 +238,22 @@ def character_to_wiki(character):
     if ability_rows:
         lines.append("=== Standalone Abilities ===")
         lines.append('{| class="wikitable"')
-        lines.append("! Ability !! Source !! Points !! Rank")
+        # Study names the study whose concentrations are abilities in their own
+        # right (Athletics), and is blank for an ability that stands alone.
+        lines.append("! Ability !! Study !! Source !! Points !! Rank")
         for row in ability_rows:
             rank = rank_for_points(row.points)
             lines.append('|- class="zingor-sage-ability"')
             lines.append(
-                f'| class="zingor-sage-ability-name" | {row.ability} '
-                f'|| class="zingor-sage-ability-source" | {row.source} '
-                f'|| class="zingor-sage-ability-points" | {row.points} || {rank}'
+                " ".join(
+                    [
+                        f'| class="zingor-sage-ability-name" | {row.ability}',
+                        f'|| class="zingor-sage-ability-from-study" | {row.study}',
+                        f'|| class="zingor-sage-ability-source" | {row.source}',
+                        f'|| class="zingor-sage-ability-points" | {row.points}',
+                        f"|| {rank}",
+                    ]
+                )
             )
         lines.append("|}")
         lines.append("")
@@ -264,6 +277,59 @@ def character_to_wiki(character):
         lines.append("")
 
     return "\n".join(lines)
+
+
+def _concentration_lines(sage_rows) -> list[str]:
+    """The Concentrations table, or nothing if no study has any.
+
+    One table for the lot rather than one per study: a concentration record
+    names its own study (see adr/0001-zmf-stays-flat.md), so there is nothing to
+    gain by splitting them up, and a player looking for where their points went
+    gets one place to look.
+    """
+    from .sage import concentration_spec
+
+    rows = []
+    for study_row in sage_rows:
+        spec = concentration_spec(study_row.study)
+        if spec is None:
+            continue
+        for conc in sorted(
+            (c for c in study_row.concentrations.all() if not c.hidden),
+            key=lambda c: c.name,
+        ):
+            rows.append((study_row, spec, conc))
+    if not rows:
+        return []
+
+    lines = [
+        "=== Concentrations ===",
+        '{| class="wikitable"',
+        "! Study !! Subject !! Points",
+    ]
+    for study_row, spec, conc in rows:
+        # A block-priced subject costs what the catalogue says, so the page
+        # states no number for it: writing one would only invite it to drift out
+        # of step with the rule. A mirrored one is worth the study's whole total,
+        # which is written out rather than left implied so a human reading the
+        # page can see what the subject is actually worth.
+        if spec.block is not None:
+            points = ""
+        else:
+            points = str(spec.display_points(conc.points, study_row.points))
+        lines.append('|- class="zingor-sage-concentration"')
+        lines.append(
+            " ".join(
+                [
+                    f'| class="zingor-sage-concentration-study" | {study_row.study}',
+                    f'|| class="zingor-sage-concentration-name" | {conc.name}',
+                    f'|| class="zingor-sage-concentration-points" | {points}',
+                ]
+            )
+        )
+    lines.append("|}")
+    lines.append("")
+    return lines
 
 
 def _zmf(suffix: str, value) -> str:

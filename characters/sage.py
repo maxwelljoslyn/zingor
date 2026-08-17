@@ -6,6 +6,7 @@ sage_fields is the reverse index, derived from it at import.
 """
 
 import re
+from dataclasses import dataclass
 
 # ---------------------------------------------------------------------------
 # Rank thresholds (descending). rank_for_points returns the first name
@@ -32,6 +33,155 @@ def rank_for_points(points: int) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Concentrations
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Concentrations:
+    """How one study splits its points into named buckets.
+
+    A handful of studies do not hold their points as a single pool. The points
+    are committed to named subjects within the study, and knowledge aimed at one
+    does nothing for any other: thirty points of History never makes an
+    authority on history, only on some period and sphere of it.
+
+    Every field has a default, so a catalogue entry states only what makes that
+    study unusual — ``Concentrations()`` on its own describes Geography, the
+    plainest case. Frozen because the instances are catalogue data shared by
+    every request; nothing may edit one in passing.
+    """
+
+    # The buckets are standalone sage abilities in their own right, so they are
+    # stored as SageAbilityPoints carrying the study's name instead of as rows
+    # of their own. Athletics alone: the wiki calls each of its disciplines a
+    # sage ability outright, so inventing a second kind of record for them would
+    # be Zingor disagreeing with the rules for no reason.
+    are_abilities: bool = False
+    # Every bucket holds the study's whole total rather than a portion of it,
+    # because the buckets are not divisions of the knowledge but subjects it
+    # applies to in full (Law & Policy, Politics). Nothing is ever left over,
+    # and a bucket has no number of its own to store.
+    mirrored: bool = False
+    # The names the catalogue knows. Geography's is empty because the loci are
+    # the DM's invention and there are thousands of them, so a player naming one
+    # is the only way it can ever be known.
+    choices: tuple[str, ...] = ()
+    # Whether `choices` is the complete set of legal names or merely a set of
+    # suggestions. Closed where the rules define the whole list and nothing else
+    # is a legal allocation — History's twelve period-and-sphere pairs, or
+    # Heraldry's four mega-cultures. Open where a list exists but Zingor does not
+    # hold all of it: the wiki catalogues beasts and artifacts, but those lists
+    # are long and still growing, so a name Zingor has not heard of is the
+    # player's to make up rather than a mistake.
+    closed: bool = False
+    # A bucket costs exactly this many points, so how many the study can hold is
+    # arithmetic (Beasts, Artifacts: ten points per studied subject).
+    block: int | None = None
+    # Cap on the buckets the player may choose. A granted one is the study's
+    # own and does not count against it.
+    max_chosen: int | None = None
+    # Names a bucket the study confers rather than the player choosing it. The
+    # player still says what it is — Zingor does not know their religion.
+    granted_label: str | None = None
+    # Politics counts the character at half strength outside their chosen
+    # entity; this labels the row the sheet works that out into.
+    half_rate_label: str | None = None
+
+    def __post_init__(self):
+        """Reject combinations that describe no rule any study actually has.
+
+        The fields are close to independent but not entirely, and a spec that
+        contradicts itself would fail far from here — as a bucket priced in
+        points it can never spend, or a half-rate row computed off a total no
+        bucket holds. Catching it at import means a bad catalogue entry cannot
+        start the app at all.
+        """
+        if self.are_abilities and (
+            self.mirrored
+            or self.block is not None
+            or self.granted_label is not None
+            or self.half_rate_label is not None
+        ):
+            raise ValueError(
+                "are_abilities buckets are standalone sage abilities: they are "
+                + "not priced, mirrored, granted, or halved"
+            )
+        if self.mirrored and self.block is not None:
+            raise ValueError(
+                "a mirrored bucket holds the study's whole total, so it has no "
+                + "per-bucket cost to pay out of it"
+            )
+        if self.half_rate_label is not None and not self.mirrored:
+            raise ValueError(
+                "a half-rate row restates the total a mirrored bucket holds; it "
+                + "means nothing where buckets divide the total instead"
+            )
+        if self.closed and not self.choices:
+            raise ValueError(
+                "a closed set of names needs names in it; leave closed False "
+                + "where the player invents their own"
+            )
+        if self.block is not None and self.block <= 0:
+            raise ValueError("a bucket's block price must be positive")
+        if self.max_chosen is not None and self.max_chosen <= 0:
+            raise ValueError("max_chosen must be positive, or None for no cap")
+
+    def permits(self, name: str) -> bool:
+        """Whether this study may hold a bucket by that name.
+
+        Everything is permitted unless the catalogue holds the complete list.
+        Callers should canonicalize first, so a difference of case or
+        punctuation is not mistaken for a different subject.
+        """
+        return not self.closed or name in self.choices
+
+    def stored_points(self, page_points: int) -> int:
+        """What to persist for one bucket, given the number a page put on it.
+
+        A mirrored bucket has no number of its own and a block-priced one costs
+        a fixed amount however the page has it written, so only an allocated
+        study reads the figure off the page at all.
+        """
+        if self.mirrored:
+            return 0
+        if self.block is not None:
+            return self.block
+        return page_points
+
+    def display_points(self, stored: int, study_points: int) -> int:
+        """What one bucket is worth, given what is stored and the study's total."""
+        return study_points if self.mirrored else stored
+
+    def page_disagrees(self, page_points: int, study_points: int) -> bool:
+        """Whether a number a page put on a bucket contradicts this study's rule.
+
+        Only a contradiction is worth reporting. A mirrored bucket is worth the
+        study's whole total, which is exactly what ``display_points`` writes into
+        an exported page — so a page repeating that figure is agreeing, and
+        round-tripping Zingor's own export must stay silent.
+        """
+        if self.mirrored:
+            return page_points != study_points
+        if self.block is not None:
+            return page_points != self.block
+        return False
+
+    def total_from_buckets(self, page_points: list[int]) -> int:
+        """The study's total, inferred from its buckets alone.
+
+        Used when a page lists where the points went but never states the total.
+        Allocated buckets are portions of it, so they add up to it; mirrored ones
+        each carry the whole of it, so the largest is it.
+        """
+        if not page_points:
+            return 0
+        if self.mirrored:
+            return max(page_points)
+        return sum(self.stored_points(points) for points in page_points)
+
+
+# ---------------------------------------------------------------------------
 # Static catalogue
 # ---------------------------------------------------------------------------
 
@@ -45,14 +195,44 @@ sage_studies = {
     "Animal Physiology": {"fields": ["Earth & Sky"]},
     "Animal Products": {"fields": ["Leather Work"]},
     "Architectural Aesthetics": {"fields": ["Architecture"]},
-    "Artifacts": {"fields": ["Legends & Folklore"]},
+    "Artifacts": {
+        "fields": ["Legends & Folklore"],
+        # One studied artifact per ten points. The wiki does keep a list of
+        # them, but it is long and still growing, so the player names theirs.
+        "concentrations": Concentrations(block=10),
+    },
     "Astronomy & Astrology": {"fields": ["Theology & Customs"]},
-    "Athletics": {"fields": ["Training"]},
+    "Athletics": {
+        "fields": ["Training"],
+        "concentrations": Concentrations(
+            are_abilities=True,
+            choices=(
+                "Cliff Diving",
+                "Free-diving",
+                "Hurling",
+                "Ice Sailing",
+                "Kayaking",
+                "Martial Arts",
+                "Running",
+                "Sailing",
+                "Scrambling",
+                "Skating",
+                "Skiing",
+                "Surfing",
+                "Swimming",
+            ),
+        ),
+    },
     "Auctionhouse": {"fields": ["Art World"]},
     "Backstabbing": {"fields": ["Skulduggery"]},
     "Baking": {"fields": ["Gastronomy"]},
     "Beachcomber": {"fields": ["Wilderland"]},
-    "Beasts": {"fields": ["Legends & Folklore", "Reverence"]},
+    "Beasts": {
+        "fields": ["Legends & Folklore", "Reverence"],
+        # One studied beast per ten points, named by the player for the same
+        # reason as Artifacts.
+        "concentrations": Concentrations(block=10),
+    },
     "Birds": {"fields": ["Animal Life"]},
     "Blightlander": {"fields": ["Wilderland"]},
     "Black Market": {"fields": ["Art World"]},
@@ -105,7 +285,13 @@ sage_studies = {
     "Forgery": {"fields": ["Fraud"]},
     "Fortification": {"fields": ["Architecture"]},
     "Fungi": {"fields": ["Plant Life"]},
-    "Geography": {"fields": ["Earth & Sky", "Humanities"]},
+    "Geography": {
+        "fields": ["Earth & Sky", "Humanities"],
+        # Loci are the DM's, not the wiki's: there is no list to pick from, so
+        # the player names one and the empty choices tuple makes the input
+        # freetext. The plainest concentrated study there is.
+        "concentrations": Concentrations(),
+    },
     "Geology": {"fields": ["Earth & Sky", "Science"]},
     "Glaze": {"fields": ["Ceramics"]},
     "Gods": {"fields": ["Theology & Customs"]},
@@ -115,10 +301,39 @@ sage_studies = {
     "Guile": {"fields": ["Grace", "Streetwisdom"]},
     "Hand": {"fields": ["Way of the Stick"]},
     "Heightened Senses": {"fields": ["Skulduggery"]},
-    "Heraldry, Signs & Sigils": {"fields": ["The Church"]},
+    "Heraldry, Signs & Sigils": {
+        "fields": ["The Church"],
+        # Each level's points go wholly to one mega-culture, but which one is
+        # free to change from level to level, so this is ordinary allocation.
+        "concentrations": Concentrations(
+            choices=("European", "Islamic", "Oriental", "Prehistoric"),
+            closed=True,
+        ),
+    },
     "Heroism": {"fields": ["Legends & Folklore", "Leadership"]},
     "Hides & Skins": {"fields": ["Leather Work"]},
-    "History": {"fields": ["The Church"]},
+    "History": {
+        "fields": ["The Church"],
+        # Points are assigned to a combination of one of the wiki's three
+        # periods and one of its four geographic spheres.
+        "concentrations": Concentrations(
+            choices=(
+                "Ancient Africa",
+                "Ancient Asia",
+                "Ancient Europe",
+                "Ancient New World",
+                "Medieval Africa",
+                "Medieval Asia",
+                "Medieval Europe",
+                "Medieval New World",
+                "Modern Africa",
+                "Modern Asia",
+                "Modern Europe",
+                "Modern New World",
+            ),
+            closed=True,
+        ),
+    },
     "Horseback Riding": {"fields": ["Animal Training", "Animal Training (Assassin)"]},
     "Insight": {"fields": ["Way of the Spirit"]},
     "Instruction": {"fields": ["Salon", "Training"]},
@@ -127,7 +342,18 @@ sage_studies = {
     "Judgment": {"fields": ["Leadership"]},
     "Jungle Bushcraft": {"fields": ["Wilderland"]},
     "Language": {"fields": ["Humanities"]},
-    "Law & Policy": {"fields": ["Humanities", "Theology & Customs"]},
+    "Law & Policy": {
+        "fields": ["Humanities", "Theology & Customs"],
+        # The character knows their religion's theological law, "supplemented by
+        # an equal amount of knowledge in a single political entity of the
+        # character's choice" — so neither bucket divides the study's points;
+        # both hold all of them.
+        "concentrations": Concentrations(
+            mirrored=True,
+            max_chosen=1,
+            granted_label="Your religion's theological law",
+        ),
+    },
     "Leather Armour": {"fields": ["Leather Work"]},
     "Leather Clothing": {"fields": ["Leather Work"]},
     "Leathercraft": {"fields": ["Leather Work"]},
@@ -158,7 +384,39 @@ sage_studies = {
     "Oceanography": {"fields": ["Earth & Sky"]},
     "Opera": {"fields": ["Music"]},
     "Oral Tradition": {"fields": ["Literature"]},
-    "Outer Planes": {"fields": ["Power"]},
+    "Outer Planes": {
+        "fields": ["Power"],
+        # Alternate names are part of the bucket's name rather than aliases for
+        # it: the campaign uses both, and folding them away would make the
+        # sheet name a plane the player did not.
+        "concentrations": Concentrations(
+            choices=(
+                "Abyss",
+                "Acheron",
+                "Arborea (Olympus)",
+                "Arcadia",
+                "Astral Plane",
+                "Beastlands (Happy Hunting Grounds)",
+                "Bytopia (Twin Paradises)",
+                "Elysium",
+                "Ethereal Plane",
+                "Gehenna",
+                "Grey Waste",
+                "Hades",
+                "Heaven",
+                "Limbo",
+                "Mechanus",
+                "Mount Celestia (Purgatory)",
+                "Nine Hells (Baator)",
+                "Nirvana",
+                "Outlands",
+                "Pandemonium",
+                "Tartarus (Carceri)",
+                "Ysgard (Gladsheim)",
+            ),
+            closed=True,
+        ),
+    },
     "Painting": {"fields": ["Fine Art"]},
     "Patronage": {"fields": ["Art World"]},
     "Pedestal": {"fields": ["Way of the Stone"]},
@@ -170,7 +428,17 @@ sage_studies = {
     "Playwriting": {"fields": ["Drama"]},
     "Poetry": {"fields": ["Literature"]},
     "Poisoning": {"fields": ["Grace"]},
-    "Politics": {"fields": ["The Church"]},
+    "Politics": {
+        "fields": ["The Church"],
+        # All the points go to one entity; the character is still counted at
+        # half that everywhere else, which the sheet works out rather than
+        # storing.
+        "concentrations": Concentrations(
+            mirrored=True,
+            max_chosen=1,
+            half_rate_label="All other entities",
+        ),
+    },
     "Printmaking": {"fields": ["Fine Art"]},
     "Prose": {"fields": ["Literature"]},
     "Publishing": {"fields": ["Humanities"]},
@@ -309,6 +577,34 @@ def canonical_study(name: str) -> str:
 def canonical_field(name: str) -> str:
     """Return the catalogue's spelling of a field, or the name unchanged."""
     return _FIELDS_BY_NORMALIZED.get(_normalize(name), name)
+
+
+def concentration_spec(study: str) -> Concentrations | None:
+    """Return a study's Concentrations, or None if it has no buckets.
+
+    Takes the catalogue's spelling or any variant of it, so a stored study name
+    predating a spelling correction still resolves.
+    """
+    return sage_studies.get(canonical_study(study), {}).get("concentrations")
+
+
+def concentration_choices(study: str) -> list[str]:
+    """Return the names the catalogue suggests for a study's buckets."""
+    spec = concentration_spec(study)
+    return list(spec.choices) if spec else []
+
+
+def canonical_concentration(study: str, name: str) -> str:
+    """Return the catalogue's spelling of one of a study's buckets.
+
+    Unrecognised names pass through for the same reason unrecognised studies
+    do: the list is a suggestion, and Geography has none at all.
+    """
+    wanted = _normalize(name)
+    for choice in concentration_choices(study):
+        if _normalize(choice) == wanted:
+            return choice
+    return name
 
 
 # ---------------------------------------------------------------------------

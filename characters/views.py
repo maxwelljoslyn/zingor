@@ -48,6 +48,7 @@ from .models import (
     Profile,
     SageAbilityPoints,
     SageChosenField,
+    SageConcentration,
     SageStudyPoints,
     Spell,
 )
@@ -1703,6 +1704,155 @@ def wiki_url_control(request, pk: int) -> HttpResponse:
 # --- Sage knowledge ---
 
 
+def _concentration_entry(row, ability_rows) -> dict:
+    """Build the concentration half of one study entry's template context.
+
+    Returns empty-ish values for the great majority of studies, which hold their
+    points as one pool and have no concentrations at all. For the few that do,
+    the sub-rows come from one of two places depending on the study's mode: an
+    "ability" study's buckets are standalone sage abilities, which live in
+    ability_rows and are shown in the abilities table as well, while a "bucket"
+    study's are rows of its own.
+
+    How a sub-row gets its points then depends on the study's points rule. Under
+    "allocated" the study's total is divided among the buckets and ``unallocated``
+    is what has not been committed yet — shown as a row of its own, since a study
+    with points but no bucket chosen is a perfectly ordinary state and needs
+    somewhere to say so. Under "mirrored" every bucket holds the study's whole
+    total, so nothing is ever left over and the row is dropped.
+    """
+    from .sage import concentration_spec, rank_for_points
+
+    spec = concentration_spec(row.study)
+    if spec is None:
+        return {"concentrations": [], "has_concentrations": False}
+
+    if spec.are_abilities:
+        sources = sorted(
+            (a for a in ability_rows.values() if a.study == row.study),
+            key=lambda a: a.ability.lower(),
+        )
+        entries = [
+            {
+                "pk": a.pk,
+                "name": a.ability,
+                "points": a.points,
+                "is_ability": True,
+                "granted": False,
+            }
+            for a in sources
+        ]
+    else:
+        entries = [
+            {
+                "pk": c.pk,
+                "name": c.name,
+                "points": c.points,
+                "is_ability": False,
+                "granted": c.granted,
+            }
+            for c in sorted(
+                (c for c in row.concentrations.all() if not c.hidden),
+                key=lambda c: (not c.granted, c.name.lower()),
+            )
+        ]
+
+    mirrored = spec.mirrored
+    for entry in entries:
+        entry["points"] = spec.display_points(entry["points"], row.points)
+        entry["rank"] = rank_for_points(entry["points"])
+        # A mirrored bucket has no number of its own, and a block-priced one
+        # costs a fixed amount, so neither offers an editable points input.
+        entry["fixed_points"] = mirrored or spec.block is not None
+        entry["derived"] = False
+
+    for entry in entries:
+        entry["placeholder"] = False
+    # A study that confers a subject shows its row from the start, waiting to be
+    # named. Zingor cannot fill it in — it does not know the character's
+    # religion — and creating it on the player's behalf would mean writing rows
+    # from a render, so the row exists because the catalogue says it does and
+    # becomes real when the player names it.
+    if spec.granted_label and not any(entry["granted"] for entry in entries):
+        entries.insert(
+            0,
+            {
+                "pk": None,
+                "name": spec.granted_label,
+                "points": row.points if mirrored else 0,
+                "rank": rank_for_points(row.points if mirrored else 0),
+                "is_ability": False,
+                "granted": True,
+                "fixed_points": True,
+                "derived": False,
+                "placeholder": True,
+            },
+        )
+
+    chosen = sum(1 for entry in entries if not entry["granted"])
+    # Politics' half-rate row is worked out at render time rather than stored:
+    # it is a consequence of the chosen entity's points, not a bucket the
+    # player can edit, delete, or put points into.
+    if spec.half_rate_label and entries:
+        half = row.points // 2
+        entries.append(
+            {
+                "pk": None,
+                "name": spec.half_rate_label,
+                "points": half,
+                "rank": rank_for_points(half),
+                "is_ability": False,
+                "granted": False,
+                "fixed_points": True,
+                "derived": True,
+            }
+        )
+
+    # What a closed list still has left. Offering a subject the character
+    # already holds would only produce a refusal, so the picker drops it. The
+    # derived and not-yet-named rows are not subjects anyone holds, so they take
+    # nothing off the list.
+    taken = {
+        entry["name"]
+        for entry in entries
+        if not entry["derived"] and not entry["placeholder"]
+    }
+    addable = [choice for choice in spec.choices if choice not in taken]
+
+    can_add = spec.max_chosen is None or chosen < spec.max_chosen
+    if spec.closed and not addable:
+        can_add = False
+    affordable = None
+    if spec.block is not None:
+        # One subject per block of points, so what the study can afford is
+        # arithmetic and the sheet holds the player to it.
+        affordable = row.points // spec.block
+        can_add = can_add and chosen < affordable
+
+    allocated = (
+        0
+        if mirrored
+        else sum(
+            entry["points"]
+            for entry in entries
+            if not entry["derived"] and not entry["placeholder"]
+        )
+    )
+    return {
+        "concentrations": entries,
+        "has_concentrations": True,
+        "concentration_choices": spec.choices,
+        "concentration_closed": spec.closed,
+        "concentration_addable": addable,
+        "concentration_block": spec.block,
+        "concentration_affordable": affordable,
+        "concentration_can_add": can_add,
+        "concentration_mirrored": mirrored,
+        "allocated": allocated,
+        "unallocated": None if mirrored else row.points - allocated,
+    }
+
+
 def _build_sage_context(character, restore_message=None):
     """Build template context for the sage.html partial.
 
@@ -1711,15 +1861,22 @@ def _build_sage_context(character, restore_message=None):
     """
     from .sage import CLASS_FIELDS, sage_fields, sage_studies, sort_sage_entries
 
-    rows = {r.study: r for r in character.sage_studies.filter(hidden=False)}
+    rows = {
+        r.study: r
+        for r in character.sage_studies.filter(hidden=False).prefetch_related(
+            "concentrations"
+        )
+    }
     sorted_entries = sort_sage_entries(
         {study: row.points for study, row in rows.items()},
         sort_keys=["name"],
     )
+    ability_rows = {r.ability: r for r in character.sage_abilities.filter(hidden=False)}
     for entry in sorted_entries:
         row = rows[entry["name"]]
         entry["pk"] = row.pk
         entry["chosen"] = row.chosen
+        entry.update(_concentration_entry(row, ability_rows))
 
     # Group entries by field. A study can belong to several fields — Beasts
     # sits in both Reverence and Legends & Folklore — and a character can
@@ -1753,7 +1910,6 @@ def _build_sage_context(character, restore_message=None):
     sage_studies_by_field.sort(key=lambda group: group["field"])
     shown_fields = {group["field"] for group in sage_studies_by_field}
 
-    ability_rows = {r.ability: r for r in character.sage_abilities.filter(hidden=False)}
     sage_abilities = sort_sage_entries(
         {ability: row.points for ability, row in ability_rows.items()},
         sort_keys=["name"],
@@ -1762,6 +1918,7 @@ def _build_sage_context(character, restore_message=None):
         row = ability_rows[entry["name"]]
         entry["pk"] = row.pk
         entry["source"] = row.source
+        entry["study"] = row.study
 
     return {
         "character": character,
@@ -1901,6 +2058,162 @@ def sage_study_hide(request, pk, study_pk):
     """Soft-delete a study row: hide it from the sheet but keep its points."""
     character = get_object_or_404(Character, pk=pk)
     row = get_object_or_404(SageStudyPoints, pk=study_pk, character=character)
+    row.hidden = True
+    row.save(update_fields=["hidden"])
+    sage_ctx = _build_sage_context(character)
+    sage_ctx["is_owner"] = True
+    return render(request, "characters/partials/sage.html", sage_ctx)
+
+
+def _existing_concentration_names(row, spec) -> set[str]:
+    """Names already committed under a study, whichever model holds them."""
+    if spec.are_abilities:
+        return set(
+            row.character.sage_abilities.filter(
+                study=row.study, hidden=False
+            ).values_list("ability", flat=True)
+        )
+    return set(
+        row.concentrations.filter(hidden=False, granted=False).values_list(
+            "name", flat=True
+        )
+    )
+
+
+def _concentration_limit_refusal(row, spec, name: str) -> str | None:
+    """Why this study cannot take another concentration, or None if it can.
+
+    Re-adding something already on the study is never refused: it is a no-op
+    that the add view turns into an un-hide, and counting it against the limit
+    would make restoring a deleted bucket impossible at the cap.
+    """
+    existing = _existing_concentration_names(row, spec)
+    if name in existing:
+        return None
+    if spec.max_chosen is not None and len(existing) >= spec.max_chosen:
+        subject = "concentration" if spec.max_chosen == 1 else "concentrations"
+        return f"{row.study} allows only {spec.max_chosen} chosen {subject}."
+    if spec.block is not None:
+        block = spec.block
+        affordable = row.points // block
+        if len(existing) >= affordable:
+            needed = (len(existing) + 1) * block - row.points
+            return (
+                f"{row.study} grants one subject per {block} points. "
+                + f"With {row.points} you can have {affordable}; "
+                + f"you need {needed} more for another."
+            )
+    return None
+
+
+@login_required
+@character_owner_required
+@require_POST
+def sage_concentration_add(request, pk, study_pk):
+    """Add a concentration to a study, as whichever kind of row it keeps them in.
+
+    An "ability" study's concentrations are standalone sage abilities, so this
+    creates a SageAbilityPoints stamped with the study's name; every other
+    concentrated study gets a SageConcentration of its own. The name is accepted
+    as typed even where the catalogue suggests a list, because Geography's
+    buckets are the DM's loci and no list of those can exist.
+    """
+    from .sage import canonical_concentration, concentration_spec
+
+    character = get_object_or_404(Character, pk=pk)
+    row = get_object_or_404(SageStudyPoints, pk=study_pk, character=character)
+    spec = concentration_spec(row.study)
+    if spec is None:
+        return HttpResponse(f"{row.study} has no concentrations", status=400)
+
+    name = canonical_concentration(row.study, request.POST.get("name", "").strip())
+    if not name:
+        return HttpResponse("Concentration name is required", status=400)
+    # Checked ahead of the granted/chosen split so it covers every way in. A
+    # study whose list the rules close takes nothing off it, however it arrives.
+    if not spec.permits(name):
+        return HttpResponse(
+            f"{name} is not one of {row.study}'s concentrations. "
+            + f"Choose one of: {', '.join(spec.choices)}.",
+            status=400,
+        )
+
+    # The granted slot is the study's own — Law & Policy's theological law —
+    # so it is exempt from the cap on what the player may choose, and there is
+    # only ever one of it.
+    granted = bool(request.POST.get("granted")) and spec.granted_label is not None
+    if granted:
+        if row.concentrations.filter(granted=True).exists():
+            return HttpResponse(
+                f"{row.study} already has its granted subject", status=400
+            )
+    else:
+        refusal = _concentration_limit_refusal(row, spec, name)
+        if refusal is not None:
+            return HttpResponse(refusal, status=400)
+
+    if spec.are_abilities:
+        target, _created = SageAbilityPoints.objects.get_or_create(
+            character=character,
+            ability=name,
+            defaults={"points": 0, "study": row.study},
+        )
+        # An ability that already existed loose gets adopted by the study rather
+        # than refused: it is the same ability either way.
+        if target.study != row.study:
+            target.study = row.study
+            target.save(update_fields=["study"])
+    else:
+        target, _created = SageConcentration.objects.get_or_create(
+            study=row,
+            name=name,
+            defaults={"points": spec.block or 0, "granted": granted},
+        )
+
+    restore_message = None
+    if target.hidden:
+        target.hidden = False
+        target.save(update_fields=["hidden"])
+        restore_message = f"Restored {name} with {target.points} points from before."
+    sage_ctx = _build_sage_context(character, restore_message=restore_message)
+    sage_ctx["is_owner"] = True
+    return render(request, "characters/partials/sage.html", sage_ctx)
+
+
+@login_required
+@character_owner_required
+@require_POST
+def sage_concentration_points(request, pk, concentration_pk):
+    """Update points for a single concentration row."""
+    character = get_object_or_404(Character, pk=pk)
+    row = get_object_or_404(
+        SageConcentration, pk=concentration_pk, study__character=character
+    )
+
+    raw = request.POST.get("points")
+    try:
+        points = int(raw)
+        if points < 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return HttpResponse("Points must be a non-negative integer", status=400)
+
+    row.points = points
+    row.save(update_fields=["points"])
+    sage_ctx = _build_sage_context(character)
+    sage_ctx["is_owner"] = True
+    return render(request, "characters/partials/sage.html", sage_ctx)
+
+
+@login_required
+@character_owner_required
+@require_POST
+def sage_concentration_hide(request, pk, concentration_pk):
+    """Soft-delete a concentration row: hide it but keep its points."""
+    character = get_object_or_404(Character, pk=pk)
+    row = get_object_or_404(
+        SageConcentration, pk=concentration_pk, study__character=character
+    )
     row.hidden = True
     row.save(update_fields=["hidden"])
     sage_ctx = _build_sage_context(character)
