@@ -2,7 +2,7 @@
 <div class="section" id="section-sage" data-section="sage" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <h2>Sage Knowledge</h2>
   {% include "characters/partials/_notice.html" with notice=restore_message notice_level="success" %}
-  <h3>Studies</h3>
+  <h3>Fields</h3>
   {% if sage_studies_by_field %}
     {% for group in sage_studies_by_field %}
       {# The Chosen checkbox can't live inside the h4: a heading takes phrasing content, and a form isn't. #}
