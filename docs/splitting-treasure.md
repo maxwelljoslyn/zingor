@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Splitting Treasure
 
 A hoard is a pile of things nobody can cut in half: one gem is worth 4,200 XP whether it goes to Alix or to Bront, and there is no dividing it. Zingor's treasure splitter takes the list of what the party found, the list of who is dividing it, and hands out the items so that everybody's XP comes out as close to even as indivisible loot allows.
