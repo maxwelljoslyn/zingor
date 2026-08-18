@@ -187,6 +187,89 @@
               </tr>
               {% endif %}
             {% endif %}
+            {% if entry.has_maintenance %}
+              {# This study's knowledge points double as a daily pool of maintenance points, spent on built devices. #}
+              {# The devices are the character's own inventory items, marked as built inventions; the rows here are where the day's points get aimed at them. #}
+              {# The summary leads rather than trails the device rows: those grow as inventions are marked, and the pool figure should hold its place under the study instead of drifting down. #}
+              {% if entry.maintenance_items %}
+              {# Assigning beyond the pool is legitimate — that is how hired assistants' contributions are expressed — so the overage is stated, not flagged as an error. #}
+              <tr class="concentration-row concentration-row--unallocated">
+                <td class="concentration-name">maintenance</td>
+                <td class="nowrap">{{ entry.maintenance_total }} / {{ entry.maintenance_pool }} MP</td>
+                <td class="nowrap">{% if entry.maintenance_delta > 0 %}{{ entry.maintenance_delta }} left{% elif entry.maintenance_delta == 0 %}fully assigned{% else %}{{ entry.maintenance_assist }} MP from assistants{% endif %}</td>
+                {% if is_owner %}<td></td><td></td>{% endif %}
+              </tr>
+              {% endif %}
+              {% for m in entry.maintenance_items %}
+                <tr class="concentration-row">
+                  <td class="concentration-name">
+                    {{ m.item_name }}
+                    {# The tag sits on its own line: item names run long, and the two side by side crowd the cell. The block wrapper breaks the line while the tag keeps its shrink-wrapped border. #}
+                    <span class="block"><span class="concentration-tag" title="{% if m.rank %}A built invention of {{ m.rank }} status{% else %}Not in the invention catalogue{% endif %}">&#9881; {{ m.invention }}</span></span>
+                  </td>
+                  <td>
+                    <span class="nowrap">
+                    {% if is_owner %}
+                    <input
+                      type="number"
+                      name="points"
+                      value="{{ m.points }}"
+                      min="0"
+                      {% if m.cost %}max="{{ m.cost }}"{% endif %}
+                      aria-label="Maintenance points for {{ m.item_name }}"
+                      hx-post="{% url 'characters:sage_maintenance_points' character.pk entry.pk m.item_pk %}"
+                      hx-target="#section-sage"
+                      hx-swap="outerHTML"
+                      hx-trigger="change"
+                      class="w-5"
+                    >
+                    {% else %}
+                    {{ m.points }}
+                    {% endif %}
+                    {% if m.cost %}<span class="muted text-sm">/ {{ m.cost }} MP</span>{% endif %}
+                    </span>
+                  </td>
+                  <td></td>
+                  {% if is_owner %}
+                  <td></td>
+                  <td>
+                    {% url 'characters:sage_invention_unflag' character.pk m.item_pk as unflag_url %}
+                    {# A worded button, not the red x: this only clears the mark — the item survives — so it must not read like the item deletions around it. #}
+                    <button type="button" hx-post="{{ unflag_url }}" hx-target="#section-sage" hx-swap="outerHTML" hx-confirm="Unmark {{ m.item_name }} as a built invention? Maintenance points aimed at it are discarded; the item itself stays in the inventory." class="btn btn-small btn-secondary">unmark</button>
+                  </td>
+                  {% endif %}
+                </tr>
+              {% endfor %}
+              {% if is_owner and entry.maintenance_flaggable %}
+              <tr class="concentration-row concentration-add-row">
+                <td colspan="5">
+                  <span class="subhead block">Mark Items as Inventions</span>
+                  <form
+                    hx-post="{% url 'characters:sage_invention_flag' character.pk entry.pk %}"
+                    hx-target="#section-sage"
+                    hx-swap="outerHTML"
+                    class="invention-mark"
+                  >
+                    {% csrf_token %}
+                    <select name="item" aria-label="Item to mark as a built invention">
+                      {% for item in entry.maintenance_flaggable %}
+                        <option value="{{ item.pk }}">{{ item.name }}</option>
+                      {% endfor %}
+                    </select>
+                    <span class="text-sm no-shrink">is a</span>
+                    <select name="invention" aria-label="Which invention it is">
+                      {% for g in entry.invention_groups %}
+                        <optgroup label="{{ g.rank }}">
+                          {% for inv in g.inventions %}<option value="{{ inv.name }}">{{ inv.name }} ({{ inv.cost }} MP)</option>{% endfor %}
+                        </optgroup>
+                      {% endfor %}
+                    </select>
+                    <button type="submit" class="no-shrink">Mark</button>
+                  </form>
+                </td>
+              </tr>
+              {% endif %}
+            {% endif %}
           {% endfor %}
         </tbody>
       </table>

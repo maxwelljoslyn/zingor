@@ -173,6 +173,7 @@ For some studies a concentration has no number of its own, and you can leave the
 
 - **Beasts and Artifacts** grant you one studied subject per ten points, so every subject is worth the same ten. Writing a different number gets you a warning and the rule is applied anyway.
 - **Law & Policy and Politics** don't divide their points at all — each of their concentrations is worth the study's *whole* total. A character with 22 points in Politics is a 22-point authority on their chosen entity (and, per the study, counts at half that everywhere else, which your sheet works out for you).
+- **Steam & Gasgear** is a special case. It has no concentrations per se, nor markup of its own beyond the ordinary `zingor-sage-study` record for its knowledge points. Its built inventions are inventory items on your sheet which you mark as Steam & Gasgear inventions within that study on your character sheet. Accordingly, the maintenance points (MP) which you allocate to them day are local sheet state: like a concentration's `granted` mark or a hidden row, they are never read from your page. Zingor's wiki export mentions each built invention in the inventory table's status column, but as plain text only, so nothing about them round-trips through a sync.
 
 :::{warning}
 Naming a concentration under a study that doesn't have any (Faith, say) is ignored, with a warning on your sheet. So is naming one under Athletics — see below.

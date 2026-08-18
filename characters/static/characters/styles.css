@@ -524,8 +524,9 @@ tr.collapse-hidden { display: none; }
 /* Unallocated points are always shown, at zero too: a study holding points it
    has not committed is ordinary, and there is otherwise nowhere to say so. */
 .concentration-row--unallocated .concentration-name { font-style: italic; }
-/* Marks an ability that is also some study's concentration, in either of the
-   two places such a row appears. */
+/* A small identifying tag beside a name: an ability that is also some study's
+   concentration (in either of the two places such a row appears), or an
+   inventory item that is a built invention. */
 .concentration-tag {
   font-size: 0.75rem;
   color: var(--text-muted);
@@ -537,6 +538,10 @@ tr.collapse-hidden { display: none; }
 /* A field heading and its Chosen checkbox on one line. The h4 can't hold the
    form itself — a heading takes phrasing content, and a form isn't. */
 .field-head { display: flex; align-items: baseline; gap: 0.6rem; }
+/* The mark-items-as-inventions form: both pickers share one line, shrinking as
+   needed, and a long item name truncates instead of wrapping the row. */
+.invention-mark { display: flex; align-items: center; gap: 0.4rem; }
+.invention-mark select { min-width: 0; flex: 0 1 auto; text-overflow: ellipsis; }
 /* Caret toggle on a container row: plain glyph, not an accent button. */
 .collapse-toggle {
   background: none;
@@ -557,6 +562,7 @@ th.sortable:hover { color: var(--accent-hover); }
 
 /* ---- Utilities (replace former inline styles) ---- */
 .muted { color: var(--text-muted); }
+.nowrap { white-space: nowrap; }
 .clickable { cursor: pointer; }
 .inline { display: inline; }
 .block { display: block; }

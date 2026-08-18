@@ -4,6 +4,7 @@ from .models import (
     Character,
     Condition,
     HitDie,
+    InventionMaintenance,
     Item,
     SageAbilityPoints,
     SageChosenField,
@@ -57,14 +58,20 @@ class SageConcentrationInline(admin.TabularInline):
     extra = 0
 
 
-# Concentrations hang off a study rather than off the character, so they get
-# their own admin page instead of riding along on CharacterAdmin's inlines.
+class InventionMaintenanceInline(admin.TabularInline):
+    model = InventionMaintenance
+    extra = 0
+
+
+# Concentrations and invention maintenance hang off a study rather than off
+# the character, so they get their own admin page instead of riding along on
+# CharacterAdmin's inlines.
 @admin.register(SageStudyPoints)
 class SageStudyPointsAdmin(admin.ModelAdmin):
     list_display = ["study", "character", "points", "chosen", "hidden"]
     list_filter = ["chosen", "hidden"]
     search_fields = ["study", "character__name"]
-    inlines = [SageConcentrationInline]
+    inlines = [SageConcentrationInline, InventionMaintenanceInline]
 
 
 @admin.register(Character)

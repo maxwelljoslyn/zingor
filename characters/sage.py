@@ -182,6 +182,70 @@ class Concentrations:
 
 
 # ---------------------------------------------------------------------------
+# Inventions
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Invention:
+    """One buildable device of a study, and what its daily upkeep costs.
+
+    Steam & Gasgear does not commit its points to named subjects the way the
+    concentrated studies do. Its knowledge points double as a daily pool of
+    maintenance points, spent keeping built devices operational — and each
+    device is a physical item the character had to build in play, so the
+    things the points are aimed at are inventory items, not buckets. This
+    class is only the catalogue's price list; which devices a character has
+    built is read off her items. Frozen for the same reason Concentrations
+    is: catalogue data shared by every request.
+
+    rank is the status the wiki lists the device under (amateur, authority,
+    expert, sage). It gates nothing in Zingor — building is governed by the
+    DM in play — but the sheet's picker groups by it so the list reads the
+    way the wiki writes it.
+    """
+
+    name: str
+    cost: int
+    rank: str
+
+    def __post_init__(self):
+        if self.cost <= 0:
+            raise ValueError("a device's daily maintenance cost must be positive")
+
+
+# Every device on the wiki's Steam & Gasgear page, priced by its daily
+# maintenance cost. Mechanical Repair I and II are left out deliberately:
+# they are skills of the practitioner, not devices, so there is nothing to
+# build or maintain. The Rotating Ballista's per-volley cost and the
+# Hydraulic Exosuit's refill cost are operational expenses beyond the daily
+# upkeep tracked here.
+steam_gasgear_inventions = (
+    Invention("Armoured Weave", 2, "amateur"),
+    Invention("Gas Pistol", 3, "amateur"),
+    Invention("Infravision Goggles", 1, "amateur"),
+    Invention("Pocket Timepiece", 1, "amateur"),
+    Invention("Brass-fired Velocipede", 7, "authority"),
+    Invention("Clockwork Typograph", 3, "authority"),
+    Invention("Little Clank", 1, "authority"),
+    Invention("Underwater Goggles", 2, "authority"),
+    Invention("Articulated Maniple", 10, "expert"),
+    Invention("Gyro-stabilised Steam Glider", 20, "expert"),
+    Invention("Piston-driven Carriage", 30, "expert"),
+    Invention("Rotating Ballista", 15, "expert"),
+    Invention("Collapsible Cart", 3, "expert"),
+    Invention("Folding Spyglass", 3, "expert"),
+    Invention("Hand-crank Fan", 3, "expert"),
+    Invention("Pressure-sealed Storage", 3, "expert"),
+    Invention("Spring-loaded Stylus", 3, "expert"),
+    Invention("Steam-heated Canteen", 3, "expert"),
+    Invention("Airship", 62, "sage"),
+    Invention("Hydraulic Exosuit", 30, "sage"),
+    Invention("Steam-driven Subterranean Drill", 25, "sage"),
+)
+
+
+# ---------------------------------------------------------------------------
 # Static catalogue
 # ---------------------------------------------------------------------------
 
@@ -459,7 +523,10 @@ sage_studies = {
     "Smoke": {"fields": ["Way of the Stone"]},
     "Social Dance": {"fields": ["Dance"]},
     "Stage Design": {"fields": ["Drama"]},
-    "Steam & Gasgear": {"fields": ["Unreality"]},
+    "Steam & Gasgear": {
+        "fields": ["Unreality"],
+        "inventions": steam_gasgear_inventions,
+    },
     "Sure-footedness": {"fields": ["Skulduggery"]},
     "Theatrical Costuming": {"fields": ["Textiles"]},
     "Tranquility": {"fields": ["Way of the Spirit"]},
@@ -605,6 +672,29 @@ def canonical_concentration(study: str, name: str) -> str:
         if _normalize(choice) == wanted:
             return choice
     return name
+
+
+def invention_catalogue(study: str) -> tuple[Invention, ...] | None:
+    """Return a study's buildable devices, or None if it has none.
+
+    Takes the catalogue's spelling or any variant of it, like
+    ``concentration_spec``.
+    """
+    return sage_studies.get(canonical_study(study), {}).get("inventions")
+
+
+def canonical_invention(study: str, name: str) -> Invention | None:
+    """Return the catalogue entry for one of a study's devices, or None.
+
+    Unlike concentration names, an unrecognised device does not pass
+    through: the catalogue is the price list, and a device it has never
+    heard of has no maintenance cost to look up.
+    """
+    wanted = _normalize(name)
+    for invention in invention_catalogue(study) or ():
+        if _normalize(invention.name) == wanted:
+            return invention
+    return None
 
 
 # ---------------------------------------------------------------------------

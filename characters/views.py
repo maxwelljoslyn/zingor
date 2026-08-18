@@ -43,6 +43,7 @@ from .models import (
     Character,
     Condition,
     HitDie,
+    InventionMaintenance,
     Item,
     LayoutOrder,
     Profile,
@@ -978,6 +979,40 @@ def delete_picture(request, pk):
 ITEM_ROW_LEVEL_FIELDS = {"name", "capacity"}
 
 
+def _sage_lists_inventory(character) -> bool:
+    """Whether the sage section renders rows derived from the inventory.
+
+    True when any visible study keeps built inventions: its device rows and
+    its mark-items picker are both read off the item table, so a view that
+    adds, removes, splits, or renames items must re-render the sage section
+    out-of-band or those lists go stale. For everyone else the sage section
+    never mentions items and the extra render would be waste.
+    """
+    from .sage import invention_catalogue
+
+    return any(
+        invention_catalogue(study) is not None
+        for study in character.sage_studies.filter(hidden=False).values_list(
+            "study", flat=True
+        )
+    )
+
+
+def _item_field_is_row_level(item, field_name) -> bool:
+    """Whether editing this field of this item can swap just its <tr>.
+
+    A name edit loses the shortcut when the sage section lists the inventory:
+    the name appears there too, and a bare-row response cannot carry the sage
+    section out-of-band (a <tr> primary with a <div> OOB sibling is the
+    foster-parenting gotcha above), so the edit takes the whole-section path.
+    edit_item_field and update_item_field must both use this, so the form's
+    target and the response agree.
+    """
+    if field_name not in ITEM_ROW_LEVEL_FIELDS:
+        return False
+    return not (field_name == "name" and _sage_lists_inventory(item.owner))
+
+
 def _item_depth(item) -> int:
     """Nesting depth of an item in the container tree (top-level == 0)."""
     depth = 0
@@ -1079,7 +1114,7 @@ def edit_item_field(request, item_id):
         "pint_unit_choices": pint_unit_choices,
         # Row-level fields swap this item's <tr>; the rest re-render the whole section
         # (see update_item_field), so the form must aim Save/Cancel at the right target.
-        "row_level": field_name in ITEM_ROW_LEVEL_FIELDS,
+        "row_level": _item_field_is_row_level(item, field_name),
     }
     return render(request, "characters/partials/item_edit_field.html", ctx)
 
@@ -1158,7 +1193,7 @@ def update_item_field(request, item_id):
     character = item.owner
     # Fields with no cross-section effect swap just this item's <tr>. The response
     # is a bare row, so htmx parses it in table context with nothing to foster-parent.
-    if field_name in ITEM_ROW_LEVEL_FIELDS:
+    if _item_field_is_row_level(item, field_name):
         # Render from the freshly primed inventory cache so a container's total-weight
         # walk stays cache-served (see _sheet_context / _stitch_container_tree).
         _sheet_context(character, request.user)
@@ -1175,6 +1210,10 @@ def update_item_field(request, item_id):
     # This value-conditional dependency stays inline (not in SECTION_DEPENDENCIES).
     if item.currency:
         oob.append("identity")
+    # A rename lands here (rather than row-level) exactly when the sage section
+    # lists the inventory, and the name shown there must follow.
+    if field_name == "name" and _sage_lists_inventory(character):
+        oob.append("sage")
     return _render_section(request, character, "inventory", oob_sections=oob or None)
 
 
@@ -1258,7 +1297,10 @@ def split_item(request, item_id):
         quantity=count,
         props=dict(item.props or {}),
     )
-    return _render_section(request, item.owner, "inventory")
+    # The new sibling row belongs in the sage section too, where the sheet has
+    # one: as another built device if the stack was marked, else in the picker.
+    oob = ["sage"] if _sage_lists_inventory(item.owner) else None
+    return _render_section(request, item.owner, "inventory", oob_sections=oob)
 
 
 # --- Item CRUD ---
@@ -1299,7 +1341,10 @@ def add_item(request, pk):
         quantity=quantity,
     )
 
-    return _render_section(request, character, "inventory")
+    # A new item belongs in the sage section's mark-items picker, where the
+    # sheet has one (see _sage_lists_inventory).
+    oob = ["sage"] if _sage_lists_inventory(character) else None
+    return _render_section(request, character, "inventory", oob_sections=oob)
 
 
 @login_required
@@ -1343,13 +1388,17 @@ def delete_item(request, item_id):
         return HttpResponse(status=405)
     item = get_object_or_404(Item, pk=item_id)
     character = item.owner
-    oob = ["identity"] if item.currency else None
+    oob = ["identity"] if item.currency else []
+    # The sage section loses the item too, where the sheet has one: its device
+    # row if it was marked, else its entry in the mark-items picker.
+    if _sage_lists_inventory(character):
+        oob.append("sage")
     # Deleting a container is losing the container, not its contents: spill them
     # back into the normal inventory first, or the FK cascade would take them too
     # (same rule as unticking Container in update_item_field).
     item.contents.update(container=None)
     item.delete()
-    return _render_section(request, character, "inventory", oob_sections=oob)
+    return _render_section(request, character, "inventory", oob_sections=oob or None)
 
 
 # --- Condition CRUD ---
@@ -1853,6 +1902,71 @@ def _concentration_entry(row, ability_rows) -> dict:
     }
 
 
+def _maintenance_entry(row, character) -> dict:
+    """Build the invention-maintenance half of one study entry's context.
+
+    Nothing for every study but Steam & Gasgear, whose knowledge points double
+    as a daily pool of maintenance points spent on built devices. The devices
+    are the character's inventory items carrying ``props["invention"]``, so
+    the list here is read off the inventory rather than off rows of its own:
+    an item flagged but never allocated to still shows, at zero. The
+    allocation rows are only storage for the numbers.
+
+    Each device's daily cost comes from the catalogue at render time, so a
+    rules change flows through without touching stored data. An item whose
+    recorded invention has dropped out of the catalogue keeps its row with no
+    cost or cap rather than vanishing.
+    """
+    from .sage import canonical_invention, invention_catalogue
+
+    inventions = invention_catalogue(row.study)
+    if inventions is None:
+        return {"has_maintenance": False}
+
+    allocations = {m.item_id: m.points for m in row.maintenance.all()}
+    flagged = []
+    flaggable = []
+    for item in character.inventory.all():
+        invention_name = (item.props or {}).get("invention")
+        if invention_name:
+            spec = canonical_invention(row.study, invention_name)
+            flagged.append(
+                {
+                    "item_pk": item.pk,
+                    "item_name": item.name,
+                    "invention": spec.name if spec else invention_name,
+                    "cost": spec.cost if spec else None,
+                    "rank": spec.rank if spec else None,
+                    "points": allocations.get(item.pk, 0),
+                }
+            )
+        elif not item.currency:
+            # Coin stacks are the one kind of item that can never be a device.
+            flaggable.append(item)
+    flagged.sort(key=lambda entry: (entry["item_name"].lower(), entry["item_pk"]))
+    flaggable.sort(key=lambda item: item.name.lower())
+    total = sum(entry["points"] for entry in flagged)
+
+    groups: dict[str, list] = {}
+    for invention in inventions:
+        groups.setdefault(invention.rank, []).append(invention)
+    return {
+        "has_maintenance": True,
+        "maintenance_items": flagged,
+        "maintenance_total": total,
+        "maintenance_pool": row.points,
+        "maintenance_delta": row.points - total,
+        # What assistants must cover for everything to hold, where the total
+        # exceeds the character's own pool. Never negative: a template cannot
+        # negate a number, so the view does the arithmetic.
+        "maintenance_assist": max(0, total - row.points),
+        "maintenance_flaggable": flaggable,
+        "invention_groups": [
+            {"rank": rank, "inventions": entries} for rank, entries in groups.items()
+        ],
+    }
+
+
 def _build_sage_context(character, restore_message=None):
     """Build template context for the sage.html partial.
 
@@ -1864,7 +1978,7 @@ def _build_sage_context(character, restore_message=None):
     rows = {
         r.study: r
         for r in character.sage_studies.filter(hidden=False).prefetch_related(
-            "concentrations"
+            "concentrations", "maintenance"
         )
     }
     sorted_entries = sort_sage_entries(
@@ -1877,6 +1991,7 @@ def _build_sage_context(character, restore_message=None):
         entry["pk"] = row.pk
         entry["chosen"] = row.chosen
         entry.update(_concentration_entry(row, ability_rows))
+        entry.update(_maintenance_entry(row, character))
 
     # Group entries by field. A study can belong to several fields — Beasts
     # sits in both Reverence and Legends & Folklore — and a character can
@@ -2216,6 +2331,130 @@ def sage_concentration_hide(request, pk, concentration_pk):
     )
     row.hidden = True
     row.save(update_fields=["hidden"])
+    sage_ctx = _build_sage_context(character)
+    sage_ctx["is_owner"] = True
+    return render(request, "characters/partials/sage.html", sage_ctx)
+
+
+def _sage_and_inventory_response(request, character):
+    """Render the sage section with the inventory section riding along OOB.
+
+    Flagging and unflagging a built invention changes the item's badge in the
+    inventory table, so both sections must re-render from one response.
+    """
+    sage_ctx = _build_sage_context(character)
+    sage_ctx["is_owner"] = True
+    sage_html = render(request, "characters/partials/sage.html", sage_ctx)
+    sheet_ctx = _sheet_context(character, request.user)
+    sheet_ctx["is_owner"] = True
+    return HttpResponse(
+        sage_html.content.decode() + _oob_section_html(request, sheet_ctx, "inventory")
+    )
+
+
+@login_required
+@character_owner_required
+@require_POST
+def sage_invention_flag(request, pk, study_pk):
+    """Mark one of the character's items as a built device of a study.
+
+    "Built" is a fact about the item — its builder may be nobody Zingor knows
+    of — so the mark is a props entry on the Item rather than a row pointing
+    at a character. The catalogue entry it names is what prices the device's
+    daily maintenance from then on.
+    """
+    from .sage import canonical_invention, invention_catalogue
+
+    character = get_object_or_404(Character, pk=pk)
+    row = get_object_or_404(SageStudyPoints, pk=study_pk, character=character)
+    if invention_catalogue(row.study) is None:
+        return HttpResponse(f"{row.study} has no inventions", status=400)
+
+    try:
+        item_pk = int(request.POST.get("item"))
+    except (TypeError, ValueError):
+        return HttpResponse("Choose an item to mark", status=400)
+    item = get_object_or_404(Item, pk=item_pk, owner=character)
+    if (item.props or {}).get("invention"):
+        return HttpResponse(
+            f"{item.name} is already marked as a built invention", status=400
+        )
+
+    invention = canonical_invention(row.study, request.POST.get("invention", ""))
+    if invention is None:
+        return HttpResponse(f"That is not one of {row.study}'s inventions", status=400)
+
+    props = dict(item.props or {})
+    props["invention"] = invention.name
+    item.props = props
+    item.save(update_fields=["props"])
+    return _sage_and_inventory_response(request, character)
+
+
+@login_required
+@character_owner_required
+@require_POST
+def sage_invention_unflag(request, pk, item_id):
+    """Unmark a built invention, discarding maintenance pointed at it.
+
+    The item itself stays in the inventory untouched. The maintenance rows go
+    with the mark rather than being kept the way hidden concentrations keep
+    their points: the allocation is a daily arrangement, not accumulated
+    knowledge, so there is nothing worth restoring.
+    """
+    character = get_object_or_404(Character, pk=pk)
+    item = get_object_or_404(Item, pk=item_id, owner=character)
+    props = dict(item.props or {})
+    if props.pop("invention", None) is None:
+        return HttpResponse(
+            f"{item.name} is not marked as a built invention", status=400
+        )
+    item.props = props
+    item.save(update_fields=["props"])
+    item.maintenance.all().delete()
+    return _sage_and_inventory_response(request, character)
+
+
+@login_required
+@character_owner_required
+@require_POST
+def sage_maintenance_points(request, pk, study_pk, item_id):
+    """Set the maintenance points a study row puts toward one built device.
+
+    Capped at the device's daily cost — more would keep it no more operational
+    — but never against the study's pool: assigning beyond the pool is how the
+    sheet expresses that assistants are covering the difference.
+    """
+    from .sage import canonical_invention, invention_catalogue
+
+    character = get_object_or_404(Character, pk=pk)
+    row = get_object_or_404(SageStudyPoints, pk=study_pk, character=character)
+    if invention_catalogue(row.study) is None:
+        return HttpResponse(f"{row.study} has no inventions", status=400)
+    item = get_object_or_404(Item, pk=item_id, owner=character)
+    invention_name = (item.props or {}).get("invention")
+    if not invention_name:
+        return HttpResponse(
+            f"{item.name} is not marked as a built invention", status=400
+        )
+
+    raw = request.POST.get("points")
+    try:
+        points = int(raw)
+        if points < 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return HttpResponse("Points must be a non-negative integer", status=400)
+    invention = canonical_invention(row.study, invention_name)
+    if invention is not None and points > invention.cost:
+        return HttpResponse(
+            f"{invention.name} takes at most {invention.cost} MP per day",
+            status=400,
+        )
+
+    InventionMaintenance.objects.update_or_create(
+        study=row, item=item, defaults={"points": points}
+    )
     sage_ctx = _build_sage_context(character)
     sage_ctx["is_owner"] = True
     return render(request, "characters/partials/sage.html", sage_ctx)

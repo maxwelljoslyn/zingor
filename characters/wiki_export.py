@@ -361,4 +361,10 @@ def _item_status(item):
         parts.append("worn")
     if not item.is_carried:
         parts.append("not carried")
-    return ", ".join(parts) if parts else "carried"
+    status = ", ".join(parts) if parts else "carried"
+    # Plain text, not a ZMF record: items are never parsed back from the wiki,
+    # and the invention mark is local sheet state that must not round-trip.
+    invention = (item.props or {}).get("invention")
+    if invention:
+        status += f", invention ({invention})"
+    return status

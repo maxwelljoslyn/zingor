@@ -42,6 +42,11 @@
     {% elif item.quantity > 1 %}
     <span class="muted text-sm">×{{ item.quantity }}</span>
     {% endif %}
+    {# A built Steam & Gasgear device. The mark is set and cleared from the sage section, where its daily maintenance is assigned; here it only identifies the item. #}
+    {# On its own line below the name and stack count — the two side by side run long. The block wrapper breaks the line while the tag keeps its shrink-wrapped border. #}
+    {% if item.props.invention %}
+    <span class="block"><span class="concentration-tag" title="A built invention">&#9881; {{ item.props.invention }}</span></span>
+    {% endif %}
     {% if item.is_container %}
     <span class="muted text-sm">
       [cap: {% if is_owner %}<span id="item-{{ item.pk }}-capacity"

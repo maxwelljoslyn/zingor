@@ -717,6 +717,39 @@ class SageConcentration(models.Model):
         return f"{self.name}: {self.points} pts"
 
 
+class InventionMaintenance(models.Model):
+    """Maintenance points one study row puts toward one built invention.
+
+    A Steam & Gasgear character's daily pool of maintenance points equals her
+    knowledge points in the study, and each built device costs a fixed number
+    of them per day to stay operational (``sage.steam_gasgear_inventions`` is
+    the price list). Which devices exist is not stored here: a built invention
+    is an inventory ``Item`` carrying ``props["invention"]``, because "built"
+    is a fact about the item — its builder may not be a character Zingor knows
+    of at all — and a character may own any number of devices, copies included.
+
+    A row holds a free amount from zero up to the device's cost, never a
+    checkbox: an allocation can deliberately fall short, with a hired
+    assistant supplying the remainder. The sheet reports how the rows' total
+    compares with the pool — under, met, or over (the overage being what
+    assistants must cover) — rather than enforcing it. Zingor has no notion
+    of game time, so nothing resets these day to day.
+    """
+
+    study = models.ForeignKey(
+        SageStudyPoints, on_delete=models.CASCADE, related_name="maintenance"
+    )
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name="maintenance")
+    points = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+
+    class Meta:
+        unique_together = ("study", "item")
+        verbose_name_plural = "Invention maintenance"
+
+    def __str__(self):
+        return f"{self.item.name}: {self.points} mp"
+
+
 class SageAbilityPoints(models.Model):
     """Knowledge point total for one standalone sage ability on a character.
 
