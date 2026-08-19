@@ -1,7 +1,11 @@
 """Tests for sage catalogue and rank logic."""
 
-from django.test import TestCase
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+from django.test import Client, TestCase
 
+from characters.models import Character, SageChosenField, SageStudyPoints
 from characters.sage import (
     CLASS_FIELDS,
     canonical_field,
@@ -141,13 +145,6 @@ class ClassFieldsTests(TestCase):
                 )
 
 
-from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
-from django.db import IntegrityError
-
-from characters.models import Character, SageChosenField, SageStudyPoints
-
-
 class SageStudyPointsModelTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="sage_tester", password="pass")
@@ -192,9 +189,6 @@ class SageChosenFieldModelTests(TestCase):
             SageChosenField.objects.create(
                 character=self.character, field="Animal Training"
             )
-
-
-from django.test import Client
 
 
 class SageFieldChosenViewTests(TestCase):

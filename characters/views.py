@@ -35,9 +35,6 @@ from .auth_emails import EmailSendError, send_confirmation_email
 from .forms import CharacterPictureForm, FeedbackForm, RegistrationForm
 from .hoard import HoardError, parse_hoard
 from .limits import MAX_PICTURE_MB, MAX_PICTURE_PIXELS
-from .treasure import split_treasure_by_share
-
-logger = logging.getLogger(__name__)
 from .models import (
     BonusHitPoints,
     Character,
@@ -53,7 +50,10 @@ from .models import (
     SageStudyPoints,
     Spell,
 )
+from .treasure import split_treasure_by_share
 from .units import D, u
+
+logger = logging.getLogger(__name__)
 
 
 def character_owner_required(view_func):
