@@ -34,6 +34,9 @@
   --overlay: rgba(38, 34, 26, 0.55);
   --shadow: 0 1px 2px rgba(38, 34, 26, 0.10), 0 2px 10px rgba(38, 34, 26, 0.05);
   --ring: 0 0 0 3px rgba(178, 58, 46, 0.20);
+  /* How much of the viewport top the sticky header covers. Republished with the
+     measured height by sticky-header.js; this value is the JS-off fallback. */
+  --header-height: 3.75rem;
 
   /* Type */
   --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Hoefler Text", Georgia, serif;
@@ -126,7 +129,14 @@ a:active {
 }
 
 .container { max-width: 1280px; margin: 0 auto; padding: 1.25rem 1rem; }
+/* The header follows the page down, so "back to the homepage" is always one
+   click away however far you've scrolled. It stays in normal flow (sticky, not
+   fixed), so nothing needs a compensating top margin; z-index only has to beat
+   the page content it scrolls over, and stays well under the modal layer. */
 header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow);
@@ -135,6 +145,11 @@ header {
   justify-content: space-between;
   align-items: center;
 }
+/* Keep in-page jumps clear of the sticky header: without this the browser would
+   scroll the target flush to the viewport top, i.e. underneath the header. Set
+   on the scrolling element so every anchor and scrollIntoView gets it, rather
+   than repeating an offset on each jump target. */
+html { scroll-padding-top: var(--header-height); }
 /* Brand wordmark — set in the display serif, inked rather than rubricated */
 .logo {
   font-family: var(--font-display);
@@ -179,8 +194,8 @@ h1 { color: var(--accent); letter-spacing: 0.01em; }
 /* The rail itself is what sticks, so the picture rides along with the contents. */
 .sheet-rail {
   position: sticky;
-  top: 1rem;
-  max-height: calc(100vh - 2rem);
+  top: calc(var(--header-height) + 1rem);
+  max-height: calc(100vh - var(--header-height) - 2rem);
   overflow-y: auto;
 }
 /* An index in the margin: quieter than a section heading, same hand. */
