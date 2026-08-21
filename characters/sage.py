@@ -468,6 +468,7 @@ sage_studies = {
                 "Grey Waste",
                 "Hades",
                 "Heaven",
+                "Ihmemaa",
                 "Limbo",
                 "Mechanus",
                 "Mount Celestia (Purgatory)",
