@@ -12,6 +12,8 @@ wiki page.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import requests
 from django.db import transaction
 from django.utils import timezone
@@ -27,6 +29,7 @@ from .models import (
     Spell,
 )
 from .sage import (
+    Concentrations,
     canonical_concentration,
     canonical_field,
     canonical_study,
@@ -64,14 +67,25 @@ def cap_warnings(warnings: list[str]) -> list[str]:
     return warnings[:MAX_SYNC_WARNINGS] + [f"and {dropped} more warnings not shown"]
 
 
-def _group_concentrations(parsed) -> dict[str, dict[str, int | None]]:
-    """Fold the page's sage-concentration records into {study: {bucket: points}}.
+@dataclass(frozen=True)
+class _PageBucket:
+    """What one page row claims about a bucket, before any rule is applied.
 
-    Points stay as the page gave them — None where it gave none — because what a
-    bucket is actually worth depends on its study's rule, which only
-    ``_apply_concentrations`` is in a position to apply.
+    Both fields stay exactly as the page gave them, ``None`` where it gave
+    nothing, because what a bucket is actually worth and whether its study can
+    confer one at all are the study's rules — and only ``_apply_concentrations``
+    is in a position to apply them. ``None`` is not ``0`` or ``False``: a page
+    that says nothing about a bucket's points or its granted mark leaves both to
+    the rule and to the sheet, where a page that does say something overrides.
     """
-    groups: dict[str, dict[str, int | None]] = {}
+
+    points: int | None
+    granted: bool | None
+
+
+def _group_concentrations(parsed) -> dict[str, dict[str, _PageBucket]]:
+    """Fold the page's sage-concentration records into {study: {bucket: claim}}."""
+    groups: dict[str, dict[str, _PageBucket]] = {}
     for record in parsed.concentrations:
         study = _canonicalize(
             record.study_name, canonical_study, "sage study", parsed.warnings
@@ -115,7 +129,7 @@ def _group_concentrations(parsed) -> dict[str, dict[str, int | None]]:
                 + "the first listing wins"
             )
             continue
-        buckets[name] = record.page_points
+        buckets[name] = _PageBucket(record.page_points, record.page_granted)
     return groups
 
 
@@ -194,7 +208,11 @@ def _apply_studies(character: Character, parsed) -> None:
                 character=character,
                 study=study,
                 points=spec.total_from_buckets(
-                    [points for points in buckets.values() if points is not None]
+                    [
+                        bucket.points
+                        for bucket in buckets.values()
+                        if bucket.points is not None
+                    ]
                 ),
             )
             parsed.warnings.append(
@@ -222,7 +240,7 @@ def _apply_studies(character: Character, parsed) -> None:
 
 
 def _apply_concentrations(
-    row: SageStudyPoints, buckets: dict[str, int | None], warnings: list[str]
+    row: SageStudyPoints, buckets: dict[str, _PageBucket], warnings: list[str]
 ) -> None:
     """Make one study's visible concentration rows match the page's.
 
@@ -230,10 +248,6 @@ def _apply_concentrations(
     block-priced subject costs a fixed amount and a mirrored one holds the
     study's whole total. A number the page gives anyway is not silently
     discarded — where it contradicts the rule, it is reported.
-
-    ``granted`` is deliberately not read from the page. Like ``hidden`` it is
-    local sheet state, so it is carried across by name rather than overwritten
-    by a sync that has nothing to say about it.
     """
     spec = concentration_spec(row.study)
     hidden = {
@@ -243,20 +257,67 @@ def _apply_concentrations(
         )
     }
     stale = {c.name: c for c in row.concentrations.filter(hidden=False)}
+    page_decides_grant, granted_name = (
+        _page_grant(row, spec, buckets, warnings) if spec else (False, None)
+    )
     # Buckets are only ever collected for a study that has a spec, so this is
     # empty for the great majority of studies — but the delete pass below still
     # has to run, to clear rows a study kept from before it lost its spec.
-    for name, page_points in buckets.items() if spec else ():
+    for name, bucket in buckets.items() if spec else ():
         if name in hidden:
             continue
-        points = spec.stored_points(page_points or 0)
-        if page_points is not None and spec.page_disagrees(page_points, row.points):
-            warnings.append(_points_disagreement(row, spec, name, page_points, points))
+        points = spec.stored_points(bucket.points or 0)
+        if bucket.points is not None and spec.page_disagrees(bucket.points, row.points):
+            warnings.append(
+                _points_disagreement(row, spec, name, bucket.points, points)
+            )
         concentration = stale.pop(name, None) or SageConcentration(study=row, name=name)
         concentration.points = points
+        if page_decides_grant:
+            concentration.granted = name == granted_name
         concentration.save()
     for concentration in stale.values():
         concentration.delete()
+
+
+def _page_grant(
+    row: SageStudyPoints,
+    spec: Concentrations,
+    buckets: dict[str, _PageBucket],
+    warnings: list[str],
+) -> tuple[bool, str | None]:
+    """Which bucket, if any, the page marks as the one the study confers.
+
+    Returns whether the page said anything about the grant at all, and the name
+    it granted — ``(True, None)`` where the page carries the mark and gives it to
+    nobody, which is how a grant is taken back.
+
+    A page saying nothing leaves ``granted`` exactly as it is. It is the study
+    that confers the bucket, but only the player can say what their religion is,
+    so the name is theirs and the mark had nowhere to live but the sheet until
+    the page could carry it. Where the page is silent it is still sheet state,
+    carried across by name the way ``hidden`` is, rather than cleared by a sync
+    with no opinion.
+    """
+    marked = [name for name, bucket in buckets.items() if bucket.granted]
+    if spec.granted_label is None:
+        if marked:
+            warnings.append(
+                f"sage concentration {marked[0]!r}: {row.study!r} confers no "
+                + "subject of its own, so the granted mark was ignored"
+            )
+        return False, None
+    if not any(bucket.granted is not None for bucket in buckets.values()):
+        return False, None
+    if len(marked) > 1:
+        # The study confers one subject, so a page marking several is describing
+        # a character who cannot exist. Same rule as a bucket listed twice: the
+        # first listing wins rather than the last silently taking the slot.
+        warnings.append(
+            f"sage concentrations under {row.study!r}: {len(marked)} marked as "
+            + f"granted, but the study confers one; {marked[0]!r} was kept"
+        )
+    return True, marked[0] if marked else None
 
 
 def _points_disagreement(row, spec, name: str, page_points: int, stored: int) -> str:

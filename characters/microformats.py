@@ -31,6 +31,10 @@ Two shapes, mirroring the data model:
         <td class="zingor-sage-concentration-points">22</td>
       </tr>
 
+  A study that confers a bucket of its own names it in the same table, marking it
+  with ``zingor-sage-concentration-granted`` — the one piece of a concentration the
+  player cannot state by name alone, because the name is theirs to invent.
+
   Resolving that study name to a row is ``wiki_sync``'s job; the parser reports every
   record it finds.
 
@@ -123,6 +127,13 @@ class Subfield:
     # that ``wiki_sync`` resolves into a row of another model entirely.
     transient: bool = False
     default: object = ""
+    # Whether an element that is present but empty is a value rather than a
+    # silence. Off everywhere else, because an empty cell is how a page declines
+    # to state a spell's level or a bucket's points. On for a mark whose whole
+    # job is to single one record out of many: there, the empty cells are the
+    # ones saying "not this one", and they are only distinguishable from a page
+    # that has no such column at all because the element itself is there.
+    empty_is_value: bool = False
 
 
 @dataclass(frozen=True)
@@ -187,6 +198,19 @@ RECORDS: list[RecordType] = [
             # number the page did give contradicts that rule.
             Subfield(
                 "points", "page_points", _coerce_int, transient=True, default=None
+            ),
+            # Marks the bucket a study confers rather than the player choosing it
+            # (Law & Policy's theological law). Transient and None when the page
+            # has no such cell, for the same reason as points: a page that never
+            # mentions the grant is saying nothing about it, which wiki_sync must
+            # tell apart from a page saying this bucket is not the granted one.
+            Subfield(
+                "granted",
+                "page_granted",
+                _coerce_bool,
+                transient=True,
+                default=None,
+                empty_is_value=True,
             ),
         ],
     ),
@@ -263,7 +287,7 @@ def _build_record(rt: RecordType, root, index: int, warnings: list[str]):
     for sub in rt.subfields:
         el = root.select_one(f".{PREFIX}{rt.root}-{sub.suffix}")
         raw = _text(el) if el is not None else ""
-        if not raw:
+        if not raw and not (sub.empty_is_value and el is not None):
             if sub.required:
                 warnings.append(
                     f"{rt.root} #{index}: missing required '{sub.suffix}'; skipped"
@@ -341,7 +365,8 @@ def render_sheet(sheet: ParsedSheet) -> str:
     lines.append(f"=== Sage concentrations ({len(sheet.concentrations)}) ===")
     for conc in sheet.concentrations:
         points = "" if conc.page_points is None else f": {conc.page_points}"
-        lines.append(f"  {conc.study_name} / {conc.name}{points}")
+        granted = " (granted)" if conc.page_granted else ""
+        lines.append(f"  {conc.study_name} / {conc.name}{points}{granted}")
     if not sheet.concentrations:
         lines.append("  (none)")
 

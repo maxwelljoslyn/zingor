@@ -305,7 +305,7 @@ def _concentration_lines(sage_rows) -> list[str]:
     lines = [
         "=== Concentrations ===",
         '{| class="wikitable"',
-        "! Study !! Subject !! Points",
+        "! Study !! Subject !! Points !! Granted",
     ]
     for study_row, spec, conc in rows:
         # A block-priced subject costs what the catalogue says, so the page
@@ -317,6 +317,12 @@ def _concentration_lines(sage_rows) -> list[str]:
             points = ""
         else:
             points = str(spec.display_points(conc.points, study_row.points))
+        # The granted mark is written out for every subject, blank included, so
+        # the column is already there for a player who wants to move the grant by
+        # hand. Only Law & Policy confers one, and only the player can name it:
+        # without this the page had no way to say which subject it was, and a
+        # sync could only guess it was one more subject the player had chosen.
+        granted = "X" if conc.granted else ""
         lines.append('|- class="zingor-sage-concentration"')
         lines.append(
             " ".join(
@@ -324,6 +330,7 @@ def _concentration_lines(sage_rows) -> list[str]:
                     f'| class="zingor-sage-concentration-study" | {study_row.study}',
                     f'|| class="zingor-sage-concentration-name" | {conc.name}',
                     f'|| class="zingor-sage-concentration-points" | {points}',
+                    f'|| class="zingor-sage-concentration-granted" | {granted}',
                 ]
             )
         )

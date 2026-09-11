@@ -142,7 +142,7 @@ A study can be listed under more than one field heading on your page (e.g. Beast
 
 #### Sage Concentrations
 
-Sage concentrations are Zingor's catchall term for the subareas to which some sage studies' points must be allocated, such as one of the Outer Planes or a locus of Geography. Concentrations are records of their own, `zingor-sage-concentration`, with subfields `-study` (required), `-name` (required), and `-points` (optional). They sit alongside your study records rather than inside them, so each one names the study it belongs to:
+Sage concentrations are Zingor's catchall term for the subareas to which some sage studies' points must be allocated, such as one of the Outer Planes or a locus of Geography. Concentrations are records of their own, `zingor-sage-concentration`, with subfields `-study` (required), `-name` (required), `-points` (optional), and `-granted` (optional). They sit alongside your study records rather than inside them, so each one names the study it belongs to:
 
 ```html
 <tr class="zingor-sage-study">
@@ -173,7 +173,30 @@ For some studies a concentration has no number of its own, and you can leave the
 
 - **Beasts and Artifacts** grant you one studied subject per ten points, so every subject is worth the same ten. Writing a different number gets you a warning and the rule is applied anyway.
 - **Law & Policy and Politics** don't divide their points at all — each of their concentrations is worth the study's *whole* total. A character with 22 points in Politics is a 22-point authority on their chosen entity (and, per the study, counts at half that everywhere else, which your sheet works out for you).
-- **Steam & Gasgear** is a special case. It has no concentrations per se, nor markup of its own beyond the ordinary `zingor-sage-study` record for its knowledge points. Its built inventions are inventory items on your sheet which you mark as Steam & Gasgear inventions within that study on your character sheet. Accordingly, the maintenance points (MP) which you allocate to them day are local sheet state: like a concentration's `granted` mark or a hidden row, they are never read from your page. Zingor's wiki export mentions each built invention in the inventory table's status column, but as plain text only, so nothing about them round-trips through a sync.
+- **Steam & Gasgear** is a special case. It has no concentrations per se, nor markup of its own beyond the ordinary `zingor-sage-study` record for its knowledge points. Its built inventions are inventory items on your sheet which you mark as Steam & Gasgear inventions within that study on your character sheet. Accordingly, the maintenance points (MP) which you allocate to them day are local sheet state: like a hidden row, they are never read from your page. Zingor's wiki export mentions each built invention in the inventory table's status column, but as plain text only, so nothing about them round-trips through a sync.
+
+##### Granted Concentrations
+
+Law & Policy gives you two subjects, not one: your religion's theological law, which the study confers, and an equal knowledge of a single political entity, which you choose. Zingor can't fill the first one in — it doesn't know your religion — so you name it, and `zingor-sage-concentration-granted` is how your page says which of the two it is:
+
+```html
+<tr class="zingor-sage-concentration">
+  <td class="zingor-sage-concentration-study">Law &amp; Policy</td>
+  <td class="zingor-sage-concentration-name">Gnomish theological law</td>
+  <td class="zingor-sage-concentration-points">30</td>
+  <td class="zingor-sage-concentration-granted">X</td>
+</tr>
+<tr class="zingor-sage-concentration">
+  <td class="zingor-sage-concentration-study">Law &amp; Policy</td>
+  <td class="zingor-sage-concentration-name">The Duchy of Brabant</td>
+  <td class="zingor-sage-concentration-points">30</td>
+  <td class="zingor-sage-concentration-granted"></td>
+</tr>
+```
+
+Without the mark, a subject you list is one you chose, so the granted row on your sheet stays empty and waiting to be named — and the subject you meant for it counts against the one choice the study allows you.
+
+The mark is read per study, and only where the study confers something: marking a concentration of any other study is ignored with a warning, since there is no grant for it to describe. Once your page carries a `-granted` cell anywhere under Law & Policy — even an empty one — those cells settle the question for the whole study: the marked subject is the granted one and every other is a chosen one. That is how you move the grant from one subject to another, and how you take it back, by leaving the cells in place and emptying them. Marking two subjects is a character who can't exist, so the first one listed keeps the grant and your sheet warns about the rest. A page with no `-granted` cell at all under that study isn't saying the grant is gone: as with a hidden row, whatever your sheet already has is kept.
 
 :::{warning}
 Naming a concentration under a study that doesn't have any (Faith, say) is ignored, with a warning on your sheet. So is naming one under Athletics — see below.

@@ -665,6 +665,17 @@ def _entry_for(response, study_name):
     raise AssertionError(f"{study_name} not on the sheet")
 
 
+# The cell the export writes the granted mark into, and the one
+# microformats.parse_sheet reads it back out of once MediaWiki has rendered the
+# table.
+_GRANTED_CELL = '|| class="zingor-sage-concentration-granted" |'
+
+
+def _export_row(markup: str, name: str) -> str:
+    """The exported concentration row naming a given subject."""
+    return next(line for line in markup.splitlines() if name in line)
+
+
 def _page(rows: str) -> str:
     return f"<html><body>{rows}</body></html>"
 
@@ -680,15 +691,27 @@ def _study_row(name: str, points: int) -> str:
     )
 
 
-def _bucket_row(study: str, name: str, points: int | None = None) -> str:
-    """One zingor-sage-concentration row, a sibling of its study's own row."""
+def _bucket_row(
+    study: str, name: str, points: int | None = None, granted: str | None = None
+) -> str:
+    """One zingor-sage-concentration row, a sibling of its study's own row.
+
+    ``granted`` is the literal text of the mark's cell, so a test can tell a page
+    with no such cell (None) apart from one carrying it empty ("").
+    """
     cell = "" if points is None else str(points)
+    mark = (
+        ""
+        if granted is None
+        else f'<td class="zingor-sage-concentration-granted">{granted}</td>'
+    )
     return "".join(
         [
             '<tr class="zingor-sage-concentration">',
             f'<td class="zingor-sage-concentration-study">{study}</td>',
             f'<td class="zingor-sage-concentration-name">{name}</td>',
             f'<td class="zingor-sage-concentration-points">{cell}</td>',
+            mark,
             "</tr>",
         ]
     )
@@ -720,6 +743,27 @@ class ConcentrationParsingTests(TestCase):
         # apart from a page that really did say zero.
         record = parse_sheet(_page(_bucket_row("Beasts", "Chimera"))).concentrations[0]
         self.assertIsNone(record.page_points)
+
+    def test_the_granted_mark_is_read_off_the_page(self):
+        record = parse_sheet(
+            _page(_bucket_row("Law & Policy", "Gnomish law", 30, granted="X"))
+        ).concentrations[0]
+        self.assertTrue(record.page_granted)
+
+    def test_a_page_with_no_granted_cell_says_none_not_false(self):
+        # The sync has to tell "this page never mentions the grant" apart from
+        # "this page says this subject is not the granted one", and an empty cell
+        # is the second: it is the column the export writes for every subject,
+        # and emptying the marked one is how a player takes the grant back.
+        record = parse_sheet(
+            _page(_bucket_row("Law & Policy", "Gnomish law", 30))
+        ).concentrations[0]
+        self.assertIsNone(record.page_granted)
+        for cell in ("", "no"):
+            record = parse_sheet(
+                _page(_bucket_row("Law & Policy", "Brabant", 30, granted=cell))
+            ).concentrations[0]
+            self.assertIs(record.page_granted, False, cell)
 
     def test_a_study_record_no_longer_carries_a_concentration(self):
         sheet = parse_sheet(_page(_study_row("History", 37)))
@@ -909,7 +953,7 @@ class ConcentrationSyncTests(TestCase):
         )
         self.assertEqual(self._history().concentrations.count(), 0)
 
-    def test_granted_is_local_state_a_sync_leaves_alone(self):
+    def test_granted_is_left_alone_by_a_page_that_never_marks_it(self):
         # Like `hidden`: the page says nothing about it, so a sync must not
         # clear what the player set on the sheet.
         law = _page(
@@ -921,6 +965,93 @@ class ConcentrationSyncTests(TestCase):
         row.concentrations.filter(name="Catholic canon law").update(granted=True)
         self._sync(law)
         self.assertTrue(row.concentrations.get(name="Catholic canon law").granted)
+
+    def test_the_page_can_say_which_subject_the_study_conferred(self):
+        # The bug this markup exists for: without the mark, the religion the
+        # study confers arrives as one more subject the player chose, and the
+        # granted row on the sheet stays empty with no way to fill it from the
+        # page.
+        self._sync(
+            _page(
+                _study_row("Law & Policy", 30)
+                + _bucket_row(
+                    "Law & Policy", "Gnomish theological law", 30, granted="X"
+                )
+                + _bucket_row("Law & Policy", "Brabant", 30, granted="")
+            )
+        )
+        row = self.character.sage_studies.get(study="Law & Policy")
+        self.assertTrue(row.concentrations.get(name="Gnomish theological law").granted)
+        self.assertFalse(row.concentrations.get(name="Brabant").granted)
+
+    def test_the_page_can_move_the_grant_to_another_subject(self):
+        self._sync(
+            _page(
+                _study_row("Law & Policy", 30)
+                + _bucket_row(
+                    "Law & Policy", "Gnomish theological law", 30, granted="X"
+                )
+                + _bucket_row("Law & Policy", "Brabant", 30, granted="")
+            )
+        )
+        self._sync(
+            _page(
+                _study_row("Law & Policy", 30)
+                + _bucket_row("Law & Policy", "Gnomish theological law", 30, granted="")
+                + _bucket_row("Law & Policy", "Brabant", 30, granted="X")
+            )
+        )
+        row = self.character.sage_studies.get(study="Law & Policy")
+        self.assertFalse(row.concentrations.get(name="Gnomish theological law").granted)
+        self.assertTrue(row.concentrations.get(name="Brabant").granted)
+
+    def test_a_page_that_marks_nobody_takes_the_grant_back(self):
+        # The column is there and every cell is empty: that is the page saying
+        # no subject is the conferred one, not the page saying nothing.
+        self._sync(
+            _page(
+                _study_row("Law & Policy", 30)
+                + _bucket_row(
+                    "Law & Policy", "Gnomish theological law", 30, granted="X"
+                )
+            )
+        )
+        self._sync(
+            _page(
+                _study_row("Law & Policy", 30)
+                + _bucket_row("Law & Policy", "Gnomish theological law", 30, granted="")
+            )
+        )
+        row = self.character.sage_studies.get(study="Law & Policy")
+        self.assertFalse(row.concentrations.get(name="Gnomish theological law").granted)
+
+    def test_only_one_subject_can_be_the_granted_one(self):
+        warnings = self._sync(
+            _page(
+                _study_row("Law & Policy", 30)
+                + _bucket_row(
+                    "Law & Policy", "Gnomish theological law", 30, granted="X"
+                )
+                + _bucket_row("Law & Policy", "Brabant", 30, granted="X")
+            )
+        )
+        row = self.character.sage_studies.get(study="Law & Policy")
+        self.assertTrue(row.concentrations.get(name="Gnomish theological law").granted)
+        self.assertFalse(row.concentrations.get(name="Brabant").granted)
+        self.assertTrue(any("confers one" in w for w in warnings))
+
+    def test_a_grant_under_a_study_that_confers_nothing_is_ignored(self):
+        # Politics is mirrored like Law & Policy but hands out no subject of its
+        # own, so there is nothing for the mark to mean.
+        warnings = self._sync(
+            _page(
+                _study_row("Politics", 22)
+                + _bucket_row("Politics", "Brabant", 22, granted="X")
+            )
+        )
+        row = self.character.sage_studies.get(study="Politics")
+        self.assertFalse(row.concentrations.get(name="Brabant").granted)
+        self.assertTrue(any("confers no subject" in w for w in warnings))
 
     def test_a_study_the_page_drops_is_removed(self):
         self._sync(_page(_study_row("History", 10) + _study_row("Faith", 5)))
@@ -1114,7 +1245,8 @@ class ConcentrationExportTests(TestCase):
             for line in character_to_wiki(self.character).splitlines()
             if "Chimera" in line
         )
-        self.assertTrue(row.rstrip().endswith("|"), row)
+        cell = row.split('class="zingor-sage-concentration-points" |')[1]
+        self.assertEqual(cell.split("||")[0].strip(), "", row)
 
     def test_a_mirrored_subject_is_exported_at_the_studys_total(self):
         politics = SageStudyPoints.objects.create(
@@ -1127,6 +1259,23 @@ class ConcentrationExportTests(TestCase):
             if "France" in line
         )
         self.assertIn("22", row)
+
+    def test_the_conferred_subject_is_marked_in_the_export(self):
+        # Zingor's own page had no way to say which subject the study conferred,
+        # so exporting and re-importing turned the character's religion into one
+        # more subject they had chosen.
+        law = SageStudyPoints.objects.create(
+            character=self.character, study="Law & Policy", points=30
+        )
+        SageConcentration.objects.create(
+            study=law, name="Gnomish theological law", points=0, granted=True
+        )
+        SageConcentration.objects.create(study=law, name="Brabant", points=0)
+        markup = character_to_wiki(self.character)
+        self.assertIn(
+            _GRANTED_CELL + " X", _export_row(markup, "Gnomish theological law")
+        )
+        self.assertTrue(_export_row(markup, "Brabant").rstrip().endswith(_GRANTED_CELL))
 
     def test_an_abilitys_study_is_exported(self):
         SageAbilityPoints.objects.create(
