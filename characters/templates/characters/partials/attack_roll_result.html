@@ -1,0 +1,3 @@
+{# Inner content of the attack-roll result region in the abilities section; swapped in by htmx. #}
+{# Blank when the roll is empty or unparseable, so a half-typed number reads as "no answer yet". #}
+{% if ac_hit is not None %}hits <strong class="attack-calc-ac">AC {{ ac_hit }}</strong> or worse{% endif %}

@@ -743,6 +743,35 @@ def character_sheet(request, pk):
 
 
 @login_required
+@require_GET
+def attack_roll(request, pk):
+    """Which armour class a total adjusted attack roll hits, for this character.
+
+    Counting backwards down a descending AC track is the part that is hard to do
+    under time pressure at the table, so the roll is entered already adjusted and
+    the sheet answers with the AC. Nothing is stored and nothing is character-
+    specific beyond THAC0, so this is a GET available to any viewer of the sheet.
+    An unparseable or blank roll renders an empty result rather than an error:
+    the field is being typed into, not submitted.
+    """
+    character = get_object_or_404(Character, pk=pk)
+    raw_roll = request.GET.get("roll", "").strip()
+    try:
+        roll = int(raw_roll)
+    except ValueError:
+        roll = None
+    ac_hit = None
+    if roll is not None and character.char_class and character.level:
+        thac0 = rules.thac0(character.char_class, character.level)
+        ac_hit = rules.armor_class_hit(thac0, roll)
+    return render(
+        request,
+        "characters/partials/attack_roll_result.html",
+        {"ac_hit": ac_hit},
+    )
+
+
+@login_required
 @require_POST
 def save_order(request, scope):
     """Persist the viewer's preferred order for an orderable scope.

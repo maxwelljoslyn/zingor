@@ -180,6 +180,12 @@ urlpatterns = [
         views.update_field,
         name="update_field",
     ),
+    # Attack-roll helper (read-only; no character state is touched)
+    path(
+        "character/<int:pk>/attack-roll/",
+        views.attack_roll,
+        name="attack_roll",
+    ),
     # Items
     path("character/<int:pk>/add-item/", views.add_item, name="add_item"),
     path("character/<int:pk>/add-money/", views.add_money, name="add_money"),

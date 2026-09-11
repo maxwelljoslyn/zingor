@@ -491,6 +491,71 @@ class PartyInventorySearchTests(TestCase):
         self.assertNotContains(response, "update-field")
 
 
+class AttackRollViewTests(TestCase):
+    """The abilities section's reverse-THAC0 helper: roll in, armour class out."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="testpass")
+        self.client.login(username="testuser", password="testpass")
+        # A 6th-level fighter has THAC0 15, the example worked through in issue #195.
+        self.character = Character.objects.create(
+            user=self.user, name="Thorn", char_class="fighter", level=6
+        )
+
+    def _roll(self, value):
+        return self.client.get(
+            f"/character/{self.character.pk}/attack-roll/", {"roll": value}
+        )
+
+    def test_sheet_renders_the_helper_when_thac0_is_known(self):
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, "Adjusted attack roll")
+        self.assertContains(response, f"/character/{self.character.pk}/attack-roll/")
+
+    def test_sheet_omits_the_helper_without_a_thac0(self):
+        """No class means no THAC0, so there is nothing to count backwards from."""
+        self.character.char_class = None
+        self.character.save(update_fields=["char_class"])
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertNotContains(response, "Adjusted attack roll")
+
+    def test_roll_meeting_thac0_hits_ac_zero(self):
+        self.assertContains(self._roll("15"), "AC 0")
+
+    def test_roll_short_of_thac0_hits_a_worse_ac(self):
+        self.assertContains(self._roll("12"), "AC 3")
+
+    def test_roll_beating_thac0_hits_a_negative_ac(self):
+        self.assertContains(self._roll("17"), "AC -2")
+
+    def test_blank_roll_answers_with_nothing(self):
+        self.assertNotContains(self._roll(""), "hits")
+
+    def test_unparseable_roll_answers_with_nothing(self):
+        """A half-typed entry is not an error; it just has no answer yet."""
+        self.assertNotContains(self._roll("-"), "hits")
+
+    def test_character_without_a_thac0_answers_with_nothing(self):
+        self.character.char_class = None
+        self.character.save(update_fields=["char_class"])
+        self.assertNotContains(self._roll("15"), "hits")
+
+    def test_any_logged_in_viewer_may_ask(self):
+        """The helper reads THAC0 and stores nothing, so it is not owner-only."""
+        User.objects.create_user(username="other", password="testpass")
+        self.client.login(username="other", password="testpass")
+        self.assertContains(self._roll("15"), "AC 0")
+
+    def test_login_required(self):
+        self.client.logout()
+        response = self._roll("15")
+        self.assertEqual(response.status_code, 302)
+
+    def test_post_not_allowed(self):
+        response = self.client.post(f"/character/{self.character.pk}/attack-roll/")
+        self.assertEqual(response.status_code, 405)
+
+
 class CharacterSheetViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="testpass")

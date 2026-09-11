@@ -76,6 +76,20 @@
   <div class="mt-sm text-meta">
     <strong>THAC0:</strong> {{ derived.thac0 }}
   </div>
+  {# Counting backwards down a descending AC track is the hard part in play, so the sheet does it. #}
+  {# The roll is entered already adjusted; the result region is a stable live region swapped innerHTML. #}
+  <div class="mt-sm text-meta attack-calc">
+    <label class="attack-calc-label">
+      Adjusted attack roll:
+      <input type="number" name="roll" class="attack-calc-roll" inputmode="numeric"
+             autocomplete="off"
+             hx-get="{% url 'characters:attack_roll' character.pk %}"
+             hx-trigger="keyup changed delay:300ms, change"
+             hx-target="#attack-roll-result"
+             hx-swap="innerHTML">
+    </label>
+    <span id="attack-roll-result" aria-live="polite"></span>
+  </div>
   {% endif %}
 
   {% if derived.save_poison is not None %}

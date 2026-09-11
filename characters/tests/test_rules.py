@@ -3,6 +3,7 @@
 from django.test import TestCase
 
 from characters.rules import (
+    armor_class_hit,
     calculate_derived_stats,
     cha_max_henchmen,
     cha_morale_adj,
@@ -322,6 +323,19 @@ class THAC0Tests(TestCase):
 
     def test_none_class(self):
         self.assertEqual(thac0(None, 1), 21)
+
+
+class ArmorClassHitTests(TestCase):
+    """Counting backwards from THAC0 down the descending armour class track."""
+
+    def test_meeting_thac0_exactly_hits_ac_zero(self):
+        self.assertEqual(armor_class_hit(15, 15), 0)
+
+    def test_falling_short_of_thac0_hits_a_worse_ac(self):
+        self.assertEqual(armor_class_hit(15, 12), 3)
+
+    def test_beating_thac0_hits_a_negative_ac(self):
+        self.assertEqual(armor_class_hit(15, 17), -2)
 
 
 class MaximumHPTests(TestCase):

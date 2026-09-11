@@ -679,6 +679,12 @@ tr.collapse-hidden { display: none; }
 .capacity-fill { color: var(--text-muted); }
 .capacity-fill--over { color: var(--danger); }
 .drop-target { outline: 2px dashed var(--accent); border-radius: 4px; background: var(--surface-alt); }
+/* Reverse-THAC0 helper under the THAC0 line: a roll goes in, the armour class
+   it hits comes out, rubricated so it reads at a glance in play. */
+.attack-calc { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.attack-calc-label { display: inline-flex; align-items: center; gap: 0.4rem; }
+.attack-calc-roll { width: 4.5rem; }
+.attack-calc-ac { color: var(--accent); }
 th.sortable { cursor: pointer; }
 th.sortable:hover { color: var(--accent-hover); }
 

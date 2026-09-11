@@ -1049,6 +1049,18 @@ def thac0(klass, level):
     return row[idx]
 
 
+def armor_class_hit(thac0_value: int, adjusted_roll: int) -> int:
+    """The armour class a total adjusted attack roll hits, given THAC0.
+
+    THAC0 is the roll needed to hit armour class 0, and armour class descends,
+    so every point the roll beats THAC0 by reaches one AC lower: against THAC0
+    15, an adjusted 15 hits AC 0, a 12 hits AC 3, and a 17 hits AC -2. The roll
+    is expected to arrive already adjusted for every bonus and penalty. A hit on
+    the returned AC also lands on any worse (higher-numbered) AC.
+    """
+    return thac0_value - adjusted_roll
+
+
 def maximum_hp(hit_dice_list, char_class=None, bonus_hp=0):
     """Calculate max HP from a list of hit die dicts plus any flat bonus HP.
 
