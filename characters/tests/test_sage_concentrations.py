@@ -79,6 +79,10 @@ class ConcentrationCatalogueTests(TestCase):
         self.assertEqual(spec.max_chosen, 1)
         self.assertIsNotNone(spec.granted_label)
 
+    def test_law_and_policy_counts_the_character_at_half_elsewhere(self):
+        spec = concentration_spec("Law & Policy")
+        self.assertEqual(spec.half_rate_label, "All other legal codes")
+
     def test_politics_counts_the_character_at_half_elsewhere(self):
         spec = concentration_spec("Politics")
         self.assertTrue(spec.mirrored)
@@ -655,6 +659,27 @@ class MirroredConcentrationTests(TestCase):
 
     def test_no_half_rate_row_before_an_entity_is_chosen(self):
         self.assertEqual(self._entry("Politics")["concentrations"], [])
+
+    def test_law_and_policy_counts_the_character_at_half_on_other_codes(self):
+        self._add(self.law, "Catholic canon law", granted=True)
+        self._add(self.law, "France")
+        half = next(
+            c for c in self._entry("Law & Policy")["concentrations"] if c["derived"]
+        )
+        self.assertEqual(half["name"], "All other legal codes")
+        self.assertEqual(half["points"], 15)
+
+    def test_law_and_policys_half_rate_row_stands_from_the_start(self):
+        # Its granted slot is there from the first point, so there is always a
+        # body of law held in full for the rest to be counted at half of.
+        half = next(
+            c for c in self._entry("Law & Policy")["concentrations"] if c["derived"]
+        )
+        self.assertEqual(half["points"], 15)
+
+    def test_the_half_rate_row_does_not_use_up_the_players_one_choice(self):
+        self.assertEqual(self._add(self.law, "France").status_code, 200)
+        self.assertEqual(self.law.concentrations.count(), 1)
 
 
 def _entry_for(response, study_name):

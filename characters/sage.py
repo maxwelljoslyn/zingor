@@ -84,8 +84,8 @@ class Concentrations:
     # Names a bucket the study confers rather than the player choosing it. The
     # player still says what it is — Zingor does not know their religion.
     granted_label: str | None = None
-    # Politics counts the character at half strength outside their chosen
-    # entity; this labels the row the sheet works that out into.
+    # Law & Policy and Politics count the character at half strength outside the
+    # subjects they hold; this labels the row the sheet works that out into.
     half_rate_label: str | None = None
 
     def __post_init__(self):
@@ -411,11 +411,13 @@ sage_studies = {
         # The character knows their religion's theological law, "supplemented by
         # an equal amount of knowledge in a single political entity of the
         # character's choice" — so neither bucket divides the study's points;
-        # both hold all of them.
+        # both hold all of them. Every other body of law is still known at half
+        # that, which the sheet works out rather than storing.
         "concentrations": Concentrations(
             mirrored=True,
             max_chosen=1,
             granted_label="Your religion's theological law",
+            half_rate_label="All other legal codes",
         ),
     },
     "Leather Armour": {"fields": ["Leather Work"]},

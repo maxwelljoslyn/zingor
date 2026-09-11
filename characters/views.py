@@ -1839,9 +1839,12 @@ def _concentration_entry(row, ability_rows) -> dict:
         )
 
     chosen = sum(1 for entry in entries if not entry["granted"])
-    # Politics' half-rate row is worked out at render time rather than stored:
-    # it is a consequence of the chosen entity's points, not a bucket the
-    # player can edit, delete, or put points into.
+    # A half-rate row is worked out at render time rather than stored: it is a
+    # consequence of the subjects the study already holds, not a bucket the
+    # player can edit, delete, or put points into. It waits for the study to
+    # hold a subject at all, since half of nothing in particular is nothing —
+    # which for Law & Policy is from the start, its granted slot standing there
+    # from the first point, and for Politics only once an entity is chosen.
     if spec.half_rate_label and entries:
         half = row.points // 2
         entries.append(
