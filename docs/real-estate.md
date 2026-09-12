@@ -24,3 +24,11 @@ At the bottom of the Real Estate page, name the parcel/building and choose which
 Click a parcel/building's name to open its page. It lists the owners (with the player behind each), the parcel a building stands on, and the buildings standing on a parcel.
 
 Owners see an **Edit** form for the name and notes, an **Add Owner** control that offers every character in the campaign, a **Remove** button beside each owner, and a **Delete** button. A parcel/building must keep at least one owner, so the last owner's Remove button is not offered. You may remove your own last character from a parcel/building you co-own; that is how it changes hands, and the remaining owners can always add you back.
+
+## Leaving Items at a Parcel/Building
+
+Each row of a character's [inventory](inventory.md) has a **Location** dropdown. Choose a parcel/building there and the item is left there: it stops counting toward the character's encumbrance, and it appears under **Kept Here** on its page, grouped with its owner's other items. A container takes its contents with it.
+
+The item still belongs to the character. Ownership of the stuff and ownership of the place are separate facts, so a strongbox in a jointly held cellar remains one character's strongbox, and only that character's player can move it again. Any parcel/building in the campaign can be chosen, not only ones the character owns.
+
+If a parcel/building is deleted, the items kept there are not lost: they become **Stashed elsewhere**, still not carried, until their owners say where they went.

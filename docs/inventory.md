@@ -26,12 +26,20 @@ Every editable part of a row is edited on the row itself: click the value, a sma
 - the **weight**;
 - the **capacity** of a container (see [Containers](#containers)).
 
-The **Worn**, **Carried**, and **Container** checkboxes have no Save button: they take effect the moment you tick or untick them.
+The **Worn** and **Container** checkboxes and the **Location** dropdown have no Save button: they take effect the moment you change them.
 
-Worn and Carried are linked, because you cannot wear something you aren't carrying:
+The Location dropdown says where the item is:
 
-- ticking **Worn** ticks **Carried** as well;
-- unticking **Carried** unticks **Worn**.
+- **Carried**: on your character's person. This is the default for a new item.
+- **Stashed elsewhere**: not on your character, at no place Zingor knows of, such as a chest left at an inn.
+- a **parcel/building** the party has recorded on the [Real Estate](real-estate.md) page: the item has been left there. Any parcel/building in the campaign can be chosen, whoever owns it, and its page lists everything kept there.
+
+Worn and Location are linked, because you cannot wear something you aren't carrying:
+
+- ticking **Worn** sets the Location to Carried;
+- choosing any Location other than Carried unticks **Worn**.
+
+Moving a container moves everything inside it, and putting an item into a container takes it to wherever the container is.
 
 ## Deleting an Item
 
@@ -93,7 +101,7 @@ A capacity given as a *volume* is recorded and displayed, but no fill percentage
 
 Stack splitting is how you can divide a large number of identical items between multiple places. For example, you might want to carry 20 arrows in a quiver and 20 more wrapped in a piece of leather in your backpack.
 
-A stack of more than one item has a **Split** button. Click it, type how many to split off, and click **Split**,  that many of the items in the stack will be moved to a second inventory row, keeping the same name, per-unit weight, container, and Worn/Carried flags. From there you can interact with the new row independently, such as by dragging it into a different container or marking it as not carried.
+A stack of more than one item has a **Split** button. Click it, type how many to split off, and click **Split**,  that many of the items in the stack will be moved to a second inventory row, keeping the same name, per-unit weight, container, Worn flag, and Location. From there you can interact with the new row independently, such as by dragging it into a different container or leaving it at a parcel/building.
 
 Nothing is created or destroyed in this process: the two rows still add up to the original quantity, and your character's encumbrance and wealth are unchanged. 
 
@@ -127,9 +135,9 @@ On the Action Points line, the first number is your **current AP**; the second n
 
 ### What Counts as Carried
 
-Current encumbrance is the total weight of everything in your inventory that has the **Carried** box ticked, including the contents of carried containers (however deeply nested). Untick **Carried** on an item to represent situations like leaving a chest of goods at an inn, or putting items on a wagon which is itself not carried.
+Current encumbrance is the total weight of everything in your inventory whose **Location** is Carried, including the contents of carried containers (however deeply nested). Choose any other Location to represent situations like leaving a chest of goods at an inn or at the party's manor, or putting items on a wagon which is itself not carried.
 
-Every edit you make to your inventory is immediately reflected in your Encumbrance. Adding, deleting, or splitting items; editing a weight or a quantity; and toggling the Worn and Carried boxes will all recalculate the Encumbrance line, and possibly the Action points line.
+Every edit you make to your inventory is immediately reflected in your Encumbrance. Adding, deleting, or splitting items; editing a weight or a quantity; toggling the Worn box; and changing a Location will all recalculate the Encumbrance line, and possibly the Action points line.
 
 :::{note}
 If a container is not carried, none of the items inside will be counted as carried.

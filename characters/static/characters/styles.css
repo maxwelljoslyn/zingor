@@ -492,10 +492,13 @@ tr.collapse-hidden { display: none; }
    size the whole column; in the read-only 4-column variant the leftover
    width is distributed proportionally, which is fine. */
 .fixed-cols { table-layout: fixed; }
-.fixed-cols .col-name { width: 36%; }
-.fixed-cols .col-weight { width: 22%; }
+.fixed-cols .col-name { width: 32%; }
+.fixed-cols .col-weight { width: 20%; }
 .fixed-cols .col-flag { width: 8%; }
-.fixed-cols .col-actions { width: 18%; }
+.fixed-cols .col-location { width: 16%; }
+.fixed-cols .col-actions { width: 16%; }
+/* The Location dropdown must not widen its column past the fixed width. */
+.location-select { max-width: 100%; }
 /* Sage studies render one table per field, so their columns only line up with
    each other when the widths are pinned rather than derived from each table's
    own longest study name. */

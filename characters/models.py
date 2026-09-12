@@ -500,6 +500,26 @@ class Item(models.Model):
     is_container = models.BooleanField(default=False)
     capacity = PintField(null=True, blank=True)
     is_carried = models.BooleanField(default=True)
+    # Where a not-carried item is. Ownership of the stuff and ownership of the
+    # place are separate facts ("my strongbox, in our shared cellar"), so the
+    # owner stays required and the place is a nullable link, to either a parcel
+    # or a building, never both. A not-carried item with neither set is stashed
+    # somewhere unnamed: the state every not-carried item was in before
+    # parcels/buildings existed, still wanted for "left it at an inn".
+    location_parcel = models.ForeignKey(
+        "Parcel",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stored_items",
+    )
+    location_building = models.ForeignKey(
+        "Building",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stored_items",
+    )
     is_worn = models.BooleanField(default=False)
     quantity = models.IntegerField(default=1)
     props = models.JSONField(default=dict, blank=True)
@@ -524,10 +544,72 @@ class Item(models.Model):
                 | models.Q(weight__isnull=True, is_container=False),
                 name="item_money_no_weight_no_container",
             ),
+            models.CheckConstraint(
+                condition=models.Q(location_parcel__isnull=True)
+                | models.Q(location_building__isnull=True),
+                name="item_at_most_one_location",
+            ),
+            # An item at a parcel/building is by definition not on the character.
+            models.CheckConstraint(
+                condition=models.Q(is_carried=False)
+                | models.Q(
+                    location_parcel__isnull=True, location_building__isnull=True
+                ),
+                name="item_carried_has_no_location",
+            ),
         ]
+
+    # The two locations that are not a parcel/building, as the keys the
+    # sheet's Location control posts; a parcel/building is keyed "<kind>-<pk>".
+    CARRIED = "carried"
+    STASHED = "stashed"
 
     def __str__(self):
         return self.name
+
+    @property
+    def location(self):
+        """The parcel or building this item is kept at, or None.
+
+        Reads the ids first so a row without a location costs no query.
+        """
+        if self.location_building_id is not None:
+            return self.location_building
+        if self.location_parcel_id is not None:
+            return self.location_parcel
+        return None
+
+    @property
+    def whereabouts(self):
+        """Where the item is, in the terms ``move_to`` takes: ``CARRIED``,
+        ``STASHED``, or the Parcel or Building it is kept at."""
+        if self.is_carried:
+            return self.CARRIED
+        return self.location or self.STASHED
+
+    @property
+    def location_key(self) -> str:
+        """Where the item is, as the sheet's Location control keys it."""
+        where = self.whereabouts
+        if isinstance(where, str):
+            return where
+        return f"{where.kind}-{where.pk}"
+
+    def move_to(self, where) -> None:
+        """Put the item on the character (``CARRIED``), somewhere unnamed
+        (``STASHED``), or at a Parcel or Building. Does not save.
+
+        Leaving the character's person also takes the item off (``is_worn``),
+        the same rule the sheet applies when Carried is unticked.
+        """
+        self.is_carried = where == self.CARRIED
+        self.location_parcel = where if isinstance(where, Parcel) else None
+        self.location_building = where if isinstance(where, Building) else None
+        if not self.is_carried:
+            self.is_worn = False
+
+    # Every column move_to may change, for save(update_fields=...).
+    LOCATION_FIELDS = ["is_carried", "is_worn", "location_parcel", "location_building"]
 
     def _get_weight_quantity(self):
         """Per-unit weight as a Pint Quantity, handling string values.

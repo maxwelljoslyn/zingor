@@ -367,7 +367,8 @@ def _item_status(item):
     if item.is_worn:
         parts.append("worn")
     if not item.is_carried:
-        parts.append("not carried")
+        location = item.location
+        parts.append(f"at {location.name}" if location else "not carried")
     status = ", ".join(parts) if parts else "carried"
     # Plain text, not a ZMF record: items are never parsed back from the wiki,
     # and the invention mark is local sheet state that must not round-trip.

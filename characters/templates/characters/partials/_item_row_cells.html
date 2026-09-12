@@ -99,14 +99,20 @@
     </form>
   </td>
   <td>
+    {# Where the item is: on the character, stashed somewhere unnamed, or at a recorded parcel/building. #}
+    {# Moving a container moves its contents with it, so the whole section re-renders. #}
     <form hx-post="/item/{{ item.pk }}/update-field/"
           hx-target="#section-inventory"
           hx-swap="outerHTML"
           hx-trigger="change"
           class="inline">
       {% csrf_token %}
-      <input type="hidden" name="field_name" value="is_carried">
-      <input type="checkbox" name="value" aria-label="Carried" {% if item.is_carried %}checked{% endif %}>
+      <input type="hidden" name="field_name" value="location">
+      <select name="value" aria-label="Location" class="location-select">
+        {% for key, label in location_choices %}
+        <option value="{{ key }}"{% if key == item.location_key %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
     </form>
   </td>
   <td>
@@ -150,6 +156,6 @@
   </td>
   {% else %}
   <td>{% if item.is_worn %}Yes{% else %}—{% endif %}</td>
-  <td>{% if item.is_carried %}Yes{% else %}No{% endif %}</td>
+  <td>{% include "characters/partials/item_location.html" %}</td>
   {% endif %}
 </tr>

@@ -1,9 +1,11 @@
 """Tests for parcels and buildings: the party's real estate (#196)."""
 
 from django.contrib.auth.models import AnonymousUser, User
+from django.db import IntegrityError
 from django.test import TestCase
 
-from characters.models import Building, Character, Parcel
+from characters.models import Building, Character, Item, Parcel
+from characters.units import D, u
 
 
 class RealEstateBase(TestCase):
@@ -305,3 +307,227 @@ class RealEstatePermissionTests(RealEstateBase):
             f"/parcel/{self.parcel.pk}/update/", {"name": "Ours", "notes": ""}
         )
         self.assertRedirects(response, f"/parcel/{self.parcel.pk}/")
+
+
+class ItemLocationModelTests(RealEstateBase):
+    """Item.location: where a not-carried item is kept (#196)."""
+
+    def setUp(self):
+        super().setUp()
+        self.mill = Building.objects.create(name="Mill", parcel=self.parcel)
+        self.chest = Item.objects.create(owner=self.bela, name="Chest", weight="10 lb")
+
+    def test_new_item_is_carried_with_no_location(self):
+        self.assertTrue(self.chest.is_carried)
+        self.assertIsNone(self.chest.location)
+        self.assertEqual(self.chest.location_key, "carried")
+
+    def test_move_to_a_building(self):
+        self.chest.move_to(self.mill)
+        self.chest.save()
+        self.chest.refresh_from_db()
+        self.assertFalse(self.chest.is_carried)
+        self.assertEqual(self.chest.location, self.mill)
+        self.assertEqual(self.chest.location_key, f"building-{self.mill.pk}")
+
+    def test_move_to_a_parcel(self):
+        self.chest.move_to(self.parcel)
+        self.assertEqual(self.chest.location, self.parcel)
+        self.assertEqual(self.chest.location_key, f"parcel-{self.parcel.pk}")
+
+    def test_move_between_parcel_and_building_clears_the_other_link(self):
+        self.chest.move_to(self.parcel)
+        self.chest.move_to(self.mill)
+        self.assertIsNone(self.chest.location_parcel)
+        self.assertEqual(self.chest.location_building, self.mill)
+
+    def test_stashed_is_not_carried_and_nowhere_in_particular(self):
+        self.chest.move_to(Item.STASHED)
+        self.assertFalse(self.chest.is_carried)
+        self.assertIsNone(self.chest.location)
+        self.assertEqual(self.chest.location_key, "stashed")
+
+    def test_picking_up_again_clears_the_location(self):
+        self.chest.move_to(self.mill)
+        self.chest.move_to(Item.CARRIED)
+        self.assertTrue(self.chest.is_carried)
+        self.assertIsNone(self.chest.location)
+
+    def test_leaving_the_character_takes_the_item_off(self):
+        self.chest.is_worn = True
+        self.chest.move_to(self.mill)
+        self.assertFalse(self.chest.is_worn)
+
+    def test_item_at_a_building_does_not_count_toward_encumbrance(self):
+        self.chest.move_to(self.mill)
+        self.chest.save()
+        self.assertEqual(self.bela.current_encumbrance.to(u.lb).magnitude, D(0))
+
+    def test_cannot_be_at_a_parcel_and_a_building_at_once(self):
+        with self.assertRaises(IntegrityError):
+            Item.objects.create(
+                owner=self.bela,
+                name="Impossible",
+                is_carried=False,
+                location_parcel=self.parcel,
+                location_building=self.mill,
+            )
+
+    def test_cannot_be_carried_and_at_a_building_at_once(self):
+        with self.assertRaises(IntegrityError):
+            Item.objects.create(
+                owner=self.bela,
+                name="Impossible",
+                is_carried=True,
+                location_building=self.mill,
+            )
+
+    def test_deleting_the_building_leaves_the_item_stashed(self):
+        self.chest.move_to(self.mill)
+        self.chest.save()
+        self.mill.delete()
+        self.chest.refresh_from_db()
+        self.assertFalse(self.chest.is_carried)
+        self.assertIsNone(self.chest.location)
+
+    def test_building_lists_what_is_kept_there(self):
+        self.chest.move_to(self.mill)
+        self.chest.save()
+        self.assertEqual(list(self.mill.stored_items.all()), [self.chest])
+
+
+class ItemLocationViewTests(RealEstateBase):
+    """The inventory row's Location control and its knock-on effects."""
+
+    def setUp(self):
+        super().setUp()
+        self.mill = Building.objects.create(name="Mill", parcel=self.parcel)
+        self.mill.owners.set([self.bela])
+        self.chest = Item.objects.create(
+            owner=self.bela, name="Chest", weight="10 lb", is_container=True
+        )
+        self.coins = Item.objects.create(
+            owner=self.bela,
+            name="gold pieces",
+            weight=None,
+            currency="gp",
+            quantity=40,
+            container=self.chest,
+        )
+        self.client.login(username="alice", password="pass")
+
+    def _set_location(self, item, key):
+        return self.client.post(
+            f"/item/{item.pk}/update-field/", {"field_name": "location", "value": key}
+        )
+
+    def test_row_offers_every_parcel_and_building_as_a_location(self):
+        response = self.client.get(f"/character/{self.bela.pk}/")
+        self.assertContains(response, 'value="carried" selected')
+        self.assertContains(response, 'value="stashed"')
+        self.assertContains(response, f'value="parcel-{self.parcel.pk}"')
+        self.assertContains(
+            response, f'value="building-{self.mill.pk}">Mill (Home Parcel)'
+        )
+
+    def test_leave_at_a_building(self):
+        response = self._set_location(self.chest, f"building-{self.mill.pk}")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="section-inventory"')
+        self.assertContains(response, 'id="section-abilities" hx-swap-oob="outerHTML"')
+        self.chest.refresh_from_db()
+        self.assertEqual(self.chest.location, self.mill)
+        self.assertFalse(self.chest.is_carried)
+
+    def test_leave_at_a_parcel_anyone_owns(self):
+        """Any parcel/building will do, not only the character's own."""
+        field = Parcel.objects.create(name="Gizi's Field")
+        field.owners.set([self.gizi])
+        self._set_location(self.chest, f"parcel-{field.pk}")
+        self.chest.refresh_from_db()
+        self.assertEqual(self.chest.location, field)
+
+    def test_a_container_takes_its_contents_along(self):
+        self._set_location(self.chest, f"building-{self.mill.pk}")
+        self.coins.refresh_from_db()
+        self.assertEqual(self.coins.location, self.mill)
+        self.assertFalse(self.coins.is_carried)
+        self._set_location(self.chest, "carried")
+        self.coins.refresh_from_db()
+        self.assertTrue(self.coins.is_carried)
+        self.assertIsNone(self.coins.location)
+
+    def test_wearing_brings_the_item_back(self):
+        cloak = Item.objects.create(owner=self.bela, name="Cloak")
+        self._set_location(cloak, f"building-{self.mill.pk}")
+        self.client.post(
+            f"/item/{cloak.pk}/update-field/", {"field_name": "is_worn", "value": "on"}
+        )
+        cloak.refresh_from_db()
+        self.assertTrue(cloak.is_worn)
+        self.assertTrue(cloak.is_carried)
+        self.assertIsNone(cloak.location)
+
+    def test_unknown_location_is_refused(self):
+        for bad in ("", "castle-1", f"building-{self.mill.pk + 99}", "building-x"):
+            response = self._set_location(self.chest, bad)
+            self.assertEqual(response.status_code, 400, bad)
+        self.chest.refresh_from_db()
+        self.assertTrue(self.chest.is_carried)
+
+    def test_putting_an_item_in_a_container_takes_it_where_the_container_is(self):
+        self._set_location(self.chest, f"building-{self.mill.pk}")
+        rope = Item.objects.create(owner=self.bela, name="Rope", weight="5 lb")
+        self.client.post(
+            f"/item/{self.chest.pk}/put-in-container/", {"item_id": rope.pk}
+        )
+        rope.refresh_from_db()
+        self.assertEqual(rope.container, self.chest)
+        self.assertEqual(rope.location, self.mill)
+        self.assertFalse(rope.is_carried)
+
+    def test_split_keeps_the_location(self):
+        rope = Item.objects.create(
+            owner=self.bela, name="Rope", weight="5 lb", quantity=3
+        )
+        self._set_location(rope, f"parcel-{self.parcel.pk}")
+        self.client.post(f"/item/{rope.pk}/split/", {"count": 1})
+        new = Item.objects.filter(name="Rope").exclude(pk=rope.pk).get()
+        self.assertEqual(new.location, self.parcel)
+        self.assertFalse(new.is_carried)
+
+    def test_only_the_owner_moves_an_item(self):
+        self.client.login(username="bob", password="pass")
+        response = self._set_location(self.chest, f"building-{self.mill.pk}")
+        self.assertEqual(response.status_code, 403)
+
+    def test_building_page_shows_what_is_kept_there(self):
+        self._set_location(self.chest, f"building-{self.mill.pk}")
+        response = self.client.get(f"/building/{self.mill.pk}/")
+        self.assertContains(response, "Kept Here")
+        self.assertContains(response, "Chest")
+        # The coins are inside the chest: shown as its contents, once, not as a second root.
+        self.assertContains(response, f'data-item-id="{self.coins.pk}"', count=1)
+        self.assertContains(response, f'data-parent-id="{self.chest.pk}"')
+
+    def test_parcel_page_with_nothing_kept(self):
+        response = self.client.get(f"/parcel/{self.parcel.pk}/")
+        self.assertContains(response, "Nothing is kept here")
+
+    def test_other_players_see_the_location_as_a_link(self):
+        self._set_location(self.chest, f"building-{self.mill.pk}")
+        self.client.login(username="bob", password="pass")
+        response = self.client.get(f"/character/{self.bela.pk}/")
+        self.assertContains(response, f'href="/building/{self.mill.pk}/"')
+        self.assertNotContains(response, 'name="field_name" value="location"')
+
+    def test_party_inventory_names_the_location(self):
+        self._set_location(self.chest, f"building-{self.mill.pk}")
+        response = self.client.get("/")
+        self.assertContains(response, "<th>Location</th>")
+        self.assertContains(response, f'href="/building/{self.mill.pk}/"')
+
+    def test_wiki_export_names_the_building(self):
+        self._set_location(self.chest, f"building-{self.mill.pk}")
+        response = self.client.get(f"/character/{self.bela.pk}/wiki-export/")
+        self.assertContains(response, "at Mill")

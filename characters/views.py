@@ -200,13 +200,15 @@ def _stitch_container_tree(items):
     at every node makes those walks cache-served regardless of nesting depth.
 
     `items` must already cover every depth in scope (no `container__isnull`
-    filter). Returns the top-level items (`container` is null) in input order.
+    filter). Returns the roots in input order: the top-level items (`container`
+    is null) and, when the scope is not a whole inventory (the items kept at
+    one parcel/building, say), those whose container lies outside it.
     """
     items = list(items)
     items_by_id = {item.id: item for item in items}
     children_by_container = defaultdict(list)
     for item in items:
-        if item.container_id is not None:
+        if item.container_id in items_by_id:
             children_by_container[item.container_id].append(item)
     for item in items:
         # Prime the reverse relation (contents.all() during the recursive walk)
@@ -217,9 +219,9 @@ def _stitch_container_tree(items):
                 item.contents, children_by_container.get(item.id, [])
             )
         }
-        if item.container_id is not None:
+        if item.container_id in items_by_id:
             item.container = items_by_id[item.container_id]
-    return [item for item in items if item.container_id is None]
+    return [item for item in items if item.container_id not in items_by_id]
 
 
 def _sheet_context(character, user):
@@ -238,7 +240,9 @@ def _sheet_context(character, user):
     # for the item table, then prime the character's inventory cache with the
     # same instances so encumbrance (weight_of_carried_items) reuses them
     # instead of re-querying every container.
-    inventory = list(character.inventory.all())
+    inventory = list(
+        character.inventory.select_related("location_parcel", "location_building")
+    )
     items = _stitch_container_tree(inventory)
     if not hasattr(character, "_prefetched_objects_cache"):
         character._prefetched_objects_cache = {}
@@ -269,6 +273,7 @@ def _sheet_context(character, user):
         "spells_by_level": spells_by_level,
         "unmemorized_memorize_minutes": unmemorized_memorize_minutes,
         "item_weight_units": PINT_UNIT_CHOICES["item_weight"],
+        "location_choices": _location_choices(),
         "section_order": layout.section_order(user),
         "notes_blocks": _build_notes_blocks(character, layout.order_for(user, "notes")),
         # Shown next to the picture upload control, so the limits are known
@@ -287,6 +292,39 @@ NOTES_FIELDS = {
     "appearance": "Appearance",
     "notes": "Notes",
 }
+
+
+def _location_choices() -> list[tuple[str, str]]:
+    """Options for an item row's Location control: (key, label) pairs.
+
+    On the character, somewhere unnamed, then every parcel and building in the
+    campaign — any parcel/building, not only ones the character owns, since a
+    henchman may well leave gear at the master's manor.
+    """
+    choices = [(Item.CARRIED, "Carried"), (Item.STASHED, "Stashed elsewhere")]
+    for parcel in Parcel.objects.all():
+        choices.append((f"parcel-{parcel.pk}", parcel.name))
+    for building in Building.objects.select_related("parcel"):
+        label = building.name
+        if building.parcel_id is not None:
+            label += f" ({building.parcel.name})"
+        choices.append((f"building-{building.pk}", label))
+    return choices
+
+
+def _location_from_key(key: str):
+    """The `where` a Location control's posted key names, for Item.move_to.
+
+    Returns Item.CARRIED, Item.STASHED, a Parcel or a Building; None for a key
+    that names nothing (malformed, or a parcel/building deleted since the page loaded).
+    """
+    if key in (Item.CARRIED, Item.STASHED):
+        return key
+    kind, _, pk = key.partition("-")
+    model = REAL_ESTATE_MODELS.get(kind)
+    if model is None or not pk.isdigit():
+        return None
+    return model.objects.filter(pk=pk).first()
 
 
 def _build_notes_blocks(character, order):
@@ -424,8 +462,7 @@ SECTION_DEPENDENCIES = {
     # action-point stats shown in the abilities section (the inventory encumbrance
     # header is refreshed separately, in update_item_field).
     "item": {
-        field: ["abilities"]
-        for field in ("weight", "quantity", "is_carried", "is_worn")
+        field: ["abilities"] for field in ("weight", "quantity", "location", "is_worn")
     },
 }
 
@@ -600,7 +637,9 @@ def _party_inventory_context(query: str) -> dict:
     # tree in Python (see _stitch_container_tree) so contents.all() is
     # cache-served at any nesting depth instead of an N+1 per container.
     items = list(
-        Item.objects.select_related("owner", "owner__user")
+        Item.objects.select_related(
+            "owner", "owner__user", "location_parcel", "location_building"
+        )
         .filter(owner__is_active=True)
         .order_by("owner__name", "name")
     )
@@ -1032,6 +1071,7 @@ def _item_row_html(request, item) -> str:
         "is_owner": True,
         "depth": _item_depth(item),
         "collapsible": True,
+        "location_choices": _location_choices(),
     }
     return render(
         request, "characters/partials/_item_row_cells.html", ctx
@@ -1140,15 +1180,17 @@ def update_item_field(request, item_id):
         q = u(full)
         item.weight = str(D(q.magnitude) * q.units)
     elif field_name == "is_worn":
+        # Wearing an item implies carrying it, so it leaves wherever it was
+        # kept; taking it off leaves it carried.
+        if raw_value == "on":
+            item.move_to(Item.CARRIED)
         item.is_worn = raw_value == "on"
-        # Wearing an item implies carrying it; taking it off leaves it carried.
-        if item.is_worn:
-            item.is_carried = True
-    elif field_name == "is_carried":
-        item.is_carried = raw_value == "on"
-        # An item that isn't carried can't be worn.
-        if not item.is_carried:
-            item.is_worn = False
+    elif field_name == "location":
+        where = _location_from_key(raw_value)
+        if where is None:
+            return HttpResponse("Unknown location", status=400)
+        # A container's contents go where the container goes (see _relocate).
+        _relocate(item, where)
     elif field_name == "quantity":
         try:
             quantity = int(raw_value)
@@ -1185,9 +1227,9 @@ def update_item_field(request, item_id):
     else:
         return HttpResponse("Invalid field", status=400)
 
-    # is_worn and is_carried can each adjust the other, so persist both together.
-    if field_name in {"is_worn", "is_carried"}:
-        save_fields = ["is_worn", "is_carried"]
+    # Wearing and location each adjust the other's columns, so persist them all.
+    if field_name in {"is_worn", "location"}:
+        save_fields = Item.LOCATION_FIELDS
     else:
         save_fields = [field_name]
     item.save(update_fields=save_fields)
@@ -1222,6 +1264,26 @@ def update_item_field(request, item_id):
 # --- Container operations ---
 
 
+def _descendants(item):
+    """Every item nested inside `item`, at any depth."""
+    for content in item.contents.all():
+        yield content
+        yield from _descendants(content)
+
+
+def _relocate(item, where) -> None:
+    """Move `item` to `where` (see Item.move_to) along with everything in it.
+
+    The contents are saved here; the item itself is left for the caller, which
+    may have other columns of its own to persist. A chest left at the manor
+    takes its contents with it, and a chest picked up again brings them back.
+    """
+    item.move_to(where)
+    for content in _descendants(item):
+        content.move_to(where)
+        content.save(update_fields=Item.LOCATION_FIELDS)
+
+
 def _would_create_cycle(container, item):
     current = container
     while current is not None:
@@ -1245,7 +1307,9 @@ def put_in_container(request, container_id):
     if _would_create_cycle(container, item):
         return HttpResponse("Cannot create container cycle", status=400)
     item.container = container
-    item.save(update_fields=["container"])
+    # Whatever goes into the chest is wherever the chest is.
+    _relocate(item, container.whereabouts)
+    item.save(update_fields=["container"] + Item.LOCATION_FIELDS)
     return _render_section(request, container.owner, "inventory")
 
 
@@ -1295,6 +1359,8 @@ def split_item(request, item_id):
         currency=item.currency,
         container=item.container,
         is_carried=item.is_carried,
+        location_parcel=item.location_parcel,
+        location_building=item.location_building,
         is_worn=item.is_worn,
         quantity=count,
         props=dict(item.props or {}),
@@ -1516,6 +1582,15 @@ def real_estate_detail(request, kind, pk):
         ctx["buildings"] = real_estate.buildings.prefetch_related("owners__user")
     else:
         ctx["parcels"] = Parcel.objects.all() if can_edit else []
+    # Everything kept here, as a container tree: a chest's contents are stored
+    # here too (see _relocate), so the roots are the items whose container is
+    # not itself among them.
+    stored = list(
+        real_estate.stored_items.select_related(
+            "owner", "owner__user", "location_parcel", "location_building"
+        ).order_by("owner__name", "name")
+    )
+    ctx["stored_items"] = _stitch_container_tree(stored)
     return render(request, "characters/real_estate_detail.html", ctx)
 
 

@@ -1466,13 +1466,13 @@ class SplitStackTests(TestCase):
         self.assertTrue(item.is_carried)
 
     def test_uncarrying_item_unwears_it(self):
-        """Marking an item not carried also takes it off."""
+        """Moving an item off the character also takes it off."""
         item = Item.objects.create(
             owner=self.character, name="Helm", is_carried=True, is_worn=True
         )
         self.client.post(
             f"/item/{item.pk}/update-field/",
-            {"field_name": "is_carried", "value": ""},
+            {"field_name": "location", "value": "stashed"},
         )
         item.refresh_from_db()
         self.assertFalse(item.is_carried)
@@ -1526,8 +1526,8 @@ class SplitStackTests(TestCase):
         self.assertContains(response, "Torch")
         self.assertNotContains(response, 'id="section-inventory"')
 
-    def test_carried_toggle_rerenders_whole_section(self):
-        """Regression (#116 QA): toggling carried changes carried weight, so it must
+    def test_location_change_rerenders_whole_section(self):
+        """Regression (#116 QA): a location change alters carried weight, so it must
         re-render the whole inventory section, never a bare <tr> plus <div> OOB (which
         the parser foster-parented into the table, duplicating the header)."""
         item = Item.objects.create(
@@ -1535,7 +1535,7 @@ class SplitStackTests(TestCase):
         )
         response = self.client.post(
             f"/item/{item.pk}/update-field/",
-            {"field_name": "is_carried", "value": ""},
+            {"field_name": "location", "value": "stashed"},
         )
         self.assertEqual(response.status_code, 200)
         # A <div> section response, not a bare row: the body starts with the section div.
