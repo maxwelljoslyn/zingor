@@ -142,7 +142,7 @@ A study can be listed under more than one field heading on your page (e.g. Beast
 
 #### Sage Concentrations
 
-Sage concentrations are Zingor's catchall term for the subareas to which some sage studies' points must be allocated, such as one of the Outer Planes or a locus of Geography. Concentrations are records of their own, `zingor-sage-concentration`, with subfields `-study` (required), `-name` (required), `-points` (optional), and `-granted` (optional). They sit alongside your study records rather than inside them, so each one names the study it belongs to:
+**Sage concentrations** is Zingor's catchall term for the subareas to which some sage studies' points must be allocated, such as one of the Outer Planes or a locus of Geography. Concentrations are records of their own, `zingor-sage-concentration`, with subfields `-study` (required), `-name` (required), `-points` (optional), and `-granted` (optional). They sit alongside your study records rather than inside them, so each one names the study it belongs to:
 
 ```html
 <tr class="zingor-sage-study">
@@ -164,6 +164,10 @@ Sage concentrations are Zingor's catchall term for the subareas to which some sa
 
 The study record still carries your overall total, and it may exceed the sum of your concentrations: the difference is points you hold but haven't committed anywhere yet, which your sheet shows as an "unallocated" line. If you list concentrations for a study you never list on its own, Zingor works the total out from them and says so in a warning.
 
+:::{warning}
+If you include a concentration under a study that doesn't use them (e.g. Faith), the external sync parser will ignore it, and display a warning on your character sheet. Concentrations under the Athletics study will also produce a warning: Athletics are sage abilities in their own right (see `zingor-sage-ability-from-study` under [Sage Abilities](#sage-abilities], below).
+:::
+
 Some studies have a fixed set of concentrations and some don't, and Zingor treats the two differently:
 
 - **History, the Outer Planes, and Heraldry** have complete lists: History's twelve period-and-sphere pairs, Heraldry's four mega-cultures, and the outer planes themselves. Zingor will correct your spelling of any of them, but a name that isn't on the list is ignored with a warning, because it isn't an allocation the rules allow. On your sheet these appear as a dropdown rather than a text box.
@@ -172,18 +176,22 @@ Some studies have a fixed set of concentrations and some don't, and Zingor treat
 For some studies a concentration has no number of its own, and you can leave the `-points` cell empty:
 
 - **Beasts and Artifacts** grant you one studied subject per ten points, so every subject is worth the same ten. Writing a different number gets you a warning and the rule is applied anyway.
-- **Law & Policy and Politics** don't divide their points at all: each of their concentrations is worth the study's *whole* total. A character with 22 points in Politics is a 22-point authority on their chosen entity. Both studies also count you at half that everywhere else — on every other political entity, and on every body of law but your religion's and your chosen entity's — which your sheet works out for you rather than reading off your page.
-- **Steam & Gasgear** is a special case. It has no concentrations per se, nor markup of its own beyond the ordinary `zingor-sage-study` record for its knowledge points. Its built inventions are inventory items on your sheet which you mark as Steam & Gasgear inventions within that study on your character sheet. Accordingly, the maintenance points (MP) which you allocate to them day are local sheet state: like a hidden row, they are never read from your page. Zingor's wiki export mentions each built invention in the inventory table's status column, but as plain text only, so nothing about them round-trips through a sync.
+- **Law & Policy and Politics** don't divide their points at all: each of their concentrations is worth the study's *whole* total. A character with 22 points in Politics is a 22-point authority on his chosen entity. Both studies also count you at half that score "everywhere else" (other political entities, or other bodies of law); Zingor calculates and displays that number for you.
+- **Steam & Gasgear** is a special case. It has no concentrations per se, nor markup of its own beyond the ordinary `zingor-sage-study` record for its knowledge points. Its built inventions are inventory items on your sheet which you mark as Steam & Gasgear inventions within that study on your character sheet. Accordingly, the maintenance points (MP) which you allocate daily are local data only on your character sheet: they are never read from your page. Zingor's wiki export includes each built invention in the inventory table's status column, but as plain text only, so nothing about them round-trips through external sync.
+- **Athletics** is also a special case, since its concentrations are actually sage abilities. See [Sage Abilities](#sage-abilities) for how to mark those up.
 
-##### Granted Concentrations
+The Law & Policy study requires special treatment has three concentrations: knowledge of a single chosen political entity; your religion's theological law; and all other legal codes. Each of the latter two concentrations is called a **granted concentration** because it is gained automatically.
 
-The Law & Policy study has three concentrations: knowledge of a single chosen political entity; your religion's theological law; and all other legal codes. Each of the latter two concentrations is called a **granted concentration** because it is gained automatically.
+To mark up the theological law and political entity concentrations, add an additional HTML element with the ZMF attribute `zingor-sage-concentration-granted`:
+
+- The religious concentration **must** include a `-granted` element with an `X`, `✓`, `yes`, or other indicator (for a list of allowed indicators, see "Yes/No Fields" under [How Values are Read](#how-values-are-read).)
+- The political entity concentration **must** either not include a `-granted` element at all, or else include a `-granted` element which is empty. Whichever concentration you mark becomes the granted one, so incorrectly including the indicator on your political entity concentration would cause Zingor to treat that as your concentration in theological law.
 
 The "all other legal codes" concentration does not need to be marked up in your external sheet: its points are automatically calculated by Zingor.
 
-To mark up the theological law and political entity concentrations, add an additional HTML element with the ZMF attribute `zingor-sage-concentration-granted`. For the religious concentration, you **must** fill in the `-granted` element with an `X`, `✓`, `yes`, or other indicator (for a list of allowed indicators, see "Yes/No Fields" under [How Values are Read](#how-values-are-read).) The other concentration **must not** carry that indicator: leave its `-granted` element empty, or omit it entirely. Whichever concentration you mark becomes the granted one, so marking the political entity tells Zingor that *it* is your theological law.
-
-Take care, though: including the `-granted` element but marking nobody is the page stating that no concentration is the conferred one, and the grant is taken away. To leave the grant as your sheet has it, omit the `-granted` element from every concentration under the study.
+:::{warning}
+If you include one or more `-granted` elements, but none of them include the aforementioned indicator, Zingor will interpret your external page to mean that *no* concentration is the religious one. This is almost certainly not what you want. On the other hand, if you want to exclude Law & Policy concentrations from external sync altogether, remove the entire `-granted` element (not just its value) from **every** concentration in the study.
+:::
 
 ```html
 <tr class="zingor-sage-concentration">
@@ -196,13 +204,8 @@ Take care, though: including the `-granted` element but marking nobody is the pa
   <td class="zingor-sage-concentration-study">Law &amp; Policy</td>
   <td class="zingor-sage-concentration-name">The Duchy of Brabant</td>
   <td class="zingor-sage-concentration-points">30</td>
-  <td class="zingor-sage-concentration-granted"></td>
 </tr>
 ```
-
-:::{warning}
-If you include a concentration under a study that doesn't use them (e.g. Faith), the external sync parser will ignore it, and display a warning on your character sheet. Concentrations under the Athletics study will also produce a warning: Athletics are sage abilities in their own right (see `zingor-sage-ability-from-study` under [Sage Abilities](#sage-abilities], below).
-:::
 
 #### Sage Abilities
 
