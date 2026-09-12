@@ -180,14 +180,17 @@ For some studies a concentration has no number of its own, and you can leave the
 - **Steam & Gasgear** is a special case. It has no concentrations per se, nor markup of its own beyond the ordinary `zingor-sage-study` record for its knowledge points. Its built inventions are inventory items on your sheet which you mark as Steam & Gasgear inventions within that study on your character sheet. Accordingly, the maintenance points (MP) which you allocate daily are local data only on your character sheet: they are never read from your page. Zingor's wiki export includes each built invention in the inventory table's status column, but as plain text only, so nothing about them round-trips through external sync.
 - **Athletics** is also a special case, since its concentrations are actually sage abilities. See [Sage Abilities](#sage-abilities) for how to mark those up.
 
-The Law & Policy study requires special treatment has three concentrations: knowledge of a single chosen political entity; your religion's theological law; and all other legal codes. Each of the latter two concentrations is called a **granted concentration** because it is gained automatically.
+The Law & Policy study requires some special handling, for it has three concentrations and they all work differently. The concentrations represent knowledge of:
 
-To mark up the theological law and political entity concentrations, add an additional HTML element with the ZMF attribute `zingor-sage-concentration-granted`:
+1. a single chosen political entity
+2. your religion's theological law
+3. all other legal codes.
+
+The theological law concentration is called a **granted concentration** because it is gained automatically. To mark up the theological law concentration, add an additional HTML element with the ZMF attribute `zingor-sage-concentration-granted`:
 
 - The religious concentration **must** include a `-granted` element with an `X`, `✓`, `yes`, or other indicator (for a list of allowed indicators, see "Yes/No Fields" under [How Values are Read](#how-values-are-read).)
-- The political entity concentration **must** either not include a `-granted` element at all, or else include a `-granted` element which is empty. Whichever concentration you mark becomes the granted one, so incorrectly including the indicator on your political entity concentration would cause Zingor to treat that as your concentration in theological law.
-
-The "all other legal codes" concentration does not need to be marked up in your external sheet: its points are automatically calculated by Zingor.
+- The political entity concentration **must** either (a) not include a `-granted` element (b) include a `-granted` element which is empty. Incorrectly including the indicator on your political entity concentration would cause Zingor to treat that as your concentration in theological law.
+- The "all other legal codes" concentration is technically also a granted concentration, but it **must** follow the same markup rules as the political entity concentration, for the same reasons (and anyway, its points are automatically calculated by Zingor.)
 
 :::{warning}
 If you include one or more `-granted` elements, but none of them include the aforementioned indicator, Zingor will interpret your external page to mean that *no* concentration is the religious one. This is almost certainly not what you want. On the other hand, if you want to exclude Law & Policy concentrations from external sync altogether, remove the entire `-granted` element (not just its value) from **every** concentration in the study.
