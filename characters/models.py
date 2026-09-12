@@ -634,6 +634,66 @@ class Item(models.Model):
         return total
 
 
+class RealEstate(models.Model):
+    """Shared shape of a parcel and a building: a named place the party owns.
+
+    Ownership is a set of characters, not of users: "Bela owns the mill" is a
+    fact about Bela, and one player may run two characters. The right to edit
+    the real estate is derived from that set (see ``can_edit``) rather than
+    stored. Joint ownership is a plain set — no shares or percentages.
+
+    Abstract: parcels and buildings are two distinct concepts for the player,
+    not one self-parenting "real estate" model (see #196).
+    """
+
+    name = models.CharField(max_length=200)
+    notes = models.TextField(blank=True, default="")
+    # Never filtered by Character.is_active: a character's death must not
+    # silently lock the co-owners out of a shared parcel/building.
+    owners = models.ManyToManyField(Character, related_name="%(class)ss")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def editors(self) -> set:
+        """The users who may change this parcel/building: the owning characters' players."""
+        return {owner.user for owner in self.owners.all()}
+
+    def can_edit(self, user) -> bool:
+        """Whether `user` plays one of the owning characters."""
+        return getattr(user, "is_authenticated", False) and user in self.editors()
+
+
+class Parcel(RealEstate):
+    """A piece of land. Buildings may stand on it (``Building.parcel``)."""
+
+    kind = "parcel"
+
+
+class Building(RealEstate):
+    """A structure, optionally standing on a parcel.
+
+    Not a special kind of Item: a building is not carried, weighed, or
+    stacked, and routing it through ``Item.container`` would entangle real
+    estate with encumbrance for good.
+    """
+
+    kind = "building"
+    parcel = models.ForeignKey(
+        Parcel,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="buildings",
+    )
+
+
 class SageChosenField(models.Model):
     """One sage field the character has chosen.
 

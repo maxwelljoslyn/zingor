@@ -1,11 +1,13 @@
 from django.contrib import admin
 
 from .models import (
+    Building,
     Character,
     Condition,
     HitDie,
     InventionMaintenance,
     Item,
+    Parcel,
     SageAbilityPoints,
     SageChosenField,
     SageConcentration,
@@ -88,3 +90,34 @@ class CharacterAdmin(admin.ModelAdmin):
         SageStudyPointsInline,
         SageAbilityPointsInline,
     ]
+
+
+class BuildingInline(admin.TabularInline):
+    model = Building
+    extra = 0
+    fields = ["name"]
+    show_change_link = True
+
+
+@admin.register(Parcel)
+class ParcelAdmin(admin.ModelAdmin):
+    list_display = ["name", "owner_names"]
+    search_fields = ["name", "owners__name"]
+    filter_horizontal = ["owners"]
+    inlines = [BuildingInline]
+
+    @admin.display(description="Owners")
+    def owner_names(self, parcel):
+        return ", ".join(str(owner) for owner in parcel.owners.all())
+
+
+@admin.register(Building)
+class BuildingAdmin(admin.ModelAdmin):
+    list_display = ["name", "parcel", "owner_names"]
+    list_filter = ["parcel"]
+    search_fields = ["name", "owners__name"]
+    filter_horizontal = ["owners"]
+
+    @admin.display(description="Owners")
+    def owner_names(self, building):
+        return ", ".join(str(owner) for owner in building.owners.all())
