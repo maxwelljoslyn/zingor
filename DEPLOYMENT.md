@@ -155,3 +155,19 @@ To exercise a sync by hand without waiting for the schedule:
 ```
 uv run python manage.py sync_wiki
 ```
+
+## The trade table
+
+Prices come from Alexis's per-town price spreadsheets, one workbook per
+market. The Budapest one is checked in at
+`characters/spreadsheets/price-table-budapest.xlsx`. Load it, or a newer copy, with:
+
+```
+uv run python manage.py import_trade_table characters/spreadsheets/price-table-budapest.xlsx --market Budapest
+```
+
+Each run records a new dated price list for that market and keeps the
+earlier ones, so re-running with a fresh spreadsheet is the way to update
+prices. The command reports any cells it could not read (a `#REF!` price,
+say) and skips those rows. Imported lists are browsable in the Django admin
+under Price lists and Prices.

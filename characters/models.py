@@ -926,3 +926,151 @@ class SageAbilityPoints(models.Model):
 
     def __str__(self):
         return f"{self.ability}: {self.points} pts"
+
+
+class Market(models.Model):
+    """A town whose trade table has been imported (#9).
+
+    Prices differ by town: the same catalogue of goods is priced separately
+    for Budapest, Miskolc and Sopron.
+    """
+
+    name = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def latest_price_list(self):
+        """The most recent import for this market, or None before the first."""
+        return self.price_lists.first()
+
+
+class Vendor(models.Model):
+    """A seller in the trade table: the key the sheet sorts by ("abattoir")
+    and the title it shows over that vendor's block ("Abbatoir")."""
+
+    name = models.CharField(max_length=100, unique=True)
+    title = models.CharField(max_length=200, blank=True, default="")
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.title or self.name
+
+
+class TradeGood(models.Model):
+    """One line of the trade table, shared by every market and import.
+
+    Identified by vendor, name, description and weight together. The sheet
+    repeats (vendor, item) for goods that differ only in description (two
+    sizes of window frame) and for goods that differ only in weight (a
+    calfskin by the piece and as a whole hide), so all four are the key. A
+    later spreadsheet that corrects a weight therefore starts a new good;
+    the importer, not the database, guarantees uniqueness where the weight
+    is NULL, since SQL treats NULLs as distinct.
+    """
+
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="goods")
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default="")
+    weight = PintField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["vendor__name", "name", "description"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["vendor", "name", "description", "weight"],
+                name="uniq_trade_good_vendor_name_description_weight",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.vendor.name}: {self.name}"
+
+    @property
+    def key(self) -> tuple[str, str, str, str]:
+        """The identity the importer matches sheet rows on (see characters.trade)."""
+        return (
+            self.vendor.name,
+            self.name,
+            self.description,
+            "" if self.weight is None else str(self.weight),
+        )
+
+    def current_price(self, market):
+        """This good's price in `market`'s latest list, or None if unpriced there."""
+        price_list = market.latest_price_list()
+        if price_list is None:
+            return None
+        return self.prices.filter(price_list=price_list).first()
+
+
+class PriceList(models.Model):
+    """One import of a market's trade table.
+
+    Every import is kept, so how a town's prices moved between spreadsheets
+    stays visible; the newest is the market's current list.
+    """
+
+    market = models.ForeignKey(
+        Market, on_delete=models.CASCADE, related_name="price_lists"
+    )
+    imported_at = models.DateTimeField(auto_now_add=True)
+    # The workbook file name, for tracing a price back to its spreadsheet.
+    source = models.CharField(max_length=200, blank=True, default="")
+
+    class Meta:
+        ordering = ["-imported_at", "-pk"]
+
+    def __str__(self):
+        return f"{self.market.name} prices of {self.imported_at:%Y-%m-%d}"
+
+
+class Price(models.Model):
+    """What one good costs in one price list.
+
+    `amount` is the sheet's value as it stands, a long fraction of a coin;
+    what a buyer is charged is derived from it by the rounding in
+    characters.trade (see `listed` and `cost`).
+    """
+
+    COIN_CHOICES = [("gp", "gp"), ("sp", "sp"), ("cp", "cp")]
+
+    price_list = models.ForeignKey(
+        PriceList, on_delete=models.CASCADE, related_name="prices"
+    )
+    good = models.ForeignKey(TradeGood, on_delete=models.CASCADE, related_name="prices")
+    amount = models.DecimalField(max_digits=24, decimal_places=12)
+    coin = models.CharField(max_length=2, choices=COIN_CHOICES)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["price_list", "good"], name="uniq_price_list_good"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.good}: {self.listed:~}"
+
+    @property
+    def unit(self):
+        """The coin as a pint unit, for building money Quantities."""
+        return getattr(u, self.coin)
+
+    @property
+    def listed(self):
+        """The price as the table shows it, to the nearest quarter coin."""
+        from .trade import listed_price
+
+        return listed_price(self.amount) * self.unit
+
+    def cost(self, quantity: int = 1):
+        """Whole coins charged for `quantity` of this good."""
+        from .trade import purchase_cost
+
+        return purchase_cost(self.amount, quantity) * self.unit

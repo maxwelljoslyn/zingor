@@ -7,12 +7,17 @@ from .models import (
     HitDie,
     InventionMaintenance,
     Item,
+    Market,
     Parcel,
+    Price,
+    PriceList,
     SageAbilityPoints,
     SageChosenField,
     SageConcentration,
     SageStudyPoints,
     Spell,
+    TradeGood,
+    Vendor,
 )
 
 # The "extra" field on Inline classes controls how many blank/empty forms Django shows for adding new related objects.
@@ -121,3 +126,48 @@ class BuildingAdmin(admin.ModelAdmin):
     @admin.display(description="Owners")
     def owner_names(self, building):
         return ", ".join(str(owner) for owner in building.owners.all())
+
+
+# --- Trade table ---
+
+
+@admin.register(Market)
+class MarketAdmin(admin.ModelAdmin):
+    list_display = ["name", "latest_import"]
+
+    @admin.display(description="Latest import")
+    def latest_import(self, market):
+        price_list = market.latest_price_list()
+        return None if price_list is None else price_list.imported_at
+
+
+@admin.register(Vendor)
+class VendorAdmin(admin.ModelAdmin):
+    list_display = ["name", "title"]
+    search_fields = ["name", "title"]
+
+
+@admin.register(TradeGood)
+class TradeGoodAdmin(admin.ModelAdmin):
+    list_display = ["name", "vendor", "weight", "description"]
+    list_filter = ["vendor"]
+    search_fields = ["name", "description"]
+
+
+@admin.register(PriceList)
+class PriceListAdmin(admin.ModelAdmin):
+    list_display = ["market", "imported_at", "source", "price_count"]
+    list_filter = ["market"]
+
+    @admin.display(description="Prices")
+    def price_count(self, price_list):
+        return price_list.prices.count()
+
+
+@admin.register(Price)
+class PriceAdmin(admin.ModelAdmin):
+    list_display = ["good", "price_list", "listed", "amount", "coin"]
+    list_filter = ["price_list__market", "price_list", "coin"]
+    search_fields = ["good__name", "good__description", "good__vendor__name"]
+    raw_id_fields = ["good"]
+    list_select_related = ["good", "good__vendor", "price_list", "price_list__market"]
