@@ -3,6 +3,7 @@
 from django import template
 from django.core.exceptions import ObjectDoesNotExist
 
+from characters.units import display_magnitude
 from characters.wiki_links import linkify_field, linkify_spell, linkify_study
 
 register = template.Library()
@@ -41,10 +42,15 @@ def format_pct(value):
 
 @register.filter
 def short_units(quantity):
-    """Format a Pint Quantity with abbreviated units: "5 lb" rather than "5 pound"."""
+    """Format a Pint Quantity with abbreviated units: "5 lb" rather than "5 pound".
+
+    The magnitude is shortened for display (see units.display_magnitude), so
+    a total that carries a long fraction from a unit conversion reads as
+    "0.04624 oz" rather than the full 28 digits.
+    """
     try:
-        return format(quantity, "~")
-    except (TypeError, ValueError):
+        return display_magnitude(quantity.magnitude) + " " + format(quantity.units, "~")
+    except (AttributeError, TypeError, ValueError):
         return quantity
 
 

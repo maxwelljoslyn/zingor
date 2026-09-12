@@ -11,7 +11,9 @@ from characters.templatetags.character_tags import (
     format_duration,
     format_modifier,
     format_pct,
+    short_units,
 )
+from characters.units import D, u
 
 
 class FormatModifierTests(SimpleTestCase):
@@ -92,3 +94,21 @@ class DisplayNameFilterTests(TestCase):
         user = User.objects.create_user(username="blank", password="x")
         Profile.objects.create(user=user, display_name="")
         self.assertEqual(display_name(user), "blank")
+
+
+class ShortUnitsTests(SimpleTestCase):
+    def test_abbreviates_the_unit(self):
+        self.assertEqual(short_units(D("12.5") * u.lb), "12.5 lb")
+        self.assertEqual(short_units(D(3) * u.oz), "3 oz")
+
+    def test_shortens_a_long_fraction(self):
+        """A pennyweight item converted to ounces carries a repeating fraction."""
+        weight = (D("0.843") * u.dwt).to(u.oz)
+        self.assertEqual(short_units(weight), "0.04624 oz")
+
+    def test_keeps_every_integer_digit(self):
+        self.assertEqual(short_units(D("12345.678") * u.lb), "12346 lb")
+
+    def test_non_quantities_pass_through(self):
+        self.assertEqual(short_units("—"), "—")
+        self.assertIsNone(short_units(None))

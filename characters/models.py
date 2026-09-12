@@ -296,8 +296,13 @@ class Character(models.Model):
 
     @property
     def money(self):
-        """Total money across all currencies (convertible, e.g. .to(u.cp))."""
-        return self.gp + self.sp + self.cp
+        """Total money across all currencies, in copper (convertible, e.g. .to(u.gp)).
+
+        Summed in the smallest coin so every conversion is a whole-number
+        multiplication: adding 5 cp to a gold total would divide by 192 and
+        leave a repeating fraction behind.
+        """
+        return self.gp.to(u.cp) + self.sp.to(u.cp) + self.cp
 
     # --- Encumbrance ---
 
