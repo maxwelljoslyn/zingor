@@ -12,7 +12,14 @@ cd /home/maxwell/zingor
 
 if [[ "${1:-}" != "--no-pull" ]]; then
   REF="${1:-origin/master}"
-  git fetch --tags origin
+  # --force lets a release tag that moved on the remote overwrite the copy
+  # already here. Without it git refuses the tag ("would clobber existing
+  # tag") and exits nonzero, which set -e turns into a failed deploy -- and
+  # not only for the moved tag: one rejected tag fails the whole fetch, so
+  # every later deploy breaks too until the stale tag is cleared by hand.
+  # This is separate from the checkout --force below, which forces past
+  # working-tree edits rather than ref conflicts.
+  git fetch --tags --force origin
   # --detach handles branches, tags, and remote-tracking refs uniformly;
   # every deploy starts with a fresh checkout, so detached HEAD is fine.
   # --force discards server-local edits to tracked files, which would
