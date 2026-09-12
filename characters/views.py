@@ -25,7 +25,7 @@ from django.http import (
     HttpResponseForbidden,
 )
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_GET, require_POST
@@ -37,12 +37,14 @@ from .hoard import HoardError, parse_hoard
 from .limits import MAX_PICTURE_MB, MAX_PICTURE_PIXELS
 from .models import (
     BonusHitPoints,
+    Building,
     Character,
     Condition,
     HitDie,
     InventionMaintenance,
     Item,
     LayoutOrder,
+    Parcel,
     Profile,
     SageAbilityPoints,
     SageChosenField,
@@ -1399,6 +1401,190 @@ def delete_item(request, item_id):
     item.contents.update(container=None)
     item.delete()
     return _render_section(request, character, "inventory", oob_sections=oob or None)
+
+
+# --- Real estate ---
+
+# URL kind segment -> model. The kind is part of every real estate URL
+# (/parcel/3/, /building/5/update/) so one set of views serves both models;
+# RealEstateKindConverter in urls.py restricts the segment to these keys.
+REAL_ESTATE_MODELS = {"parcel": Parcel, "building": Building}
+
+
+def _real_estate_or_404(kind: str, pk: int):
+    """The parcel or building at `pk`, owners and their players preloaded."""
+    model = REAL_ESTATE_MODELS[kind]
+    return get_object_or_404(model.objects.prefetch_related("owners__user"), pk=pk)
+
+
+def real_estate_editor_required(view_func):
+    """Reject requests from anyone who plays none of the parcel/building's owners.
+
+    Wraps views whose URL has `kind` and `pk` kwargs naming a parcel or a
+    building. It is fetched once here and handed to the view in place of
+    those kwargs, so the view need not look it up again.
+    """
+
+    @functools.wraps(view_func)
+    def wrapper(request, kind, pk, *args, **kwargs):
+        real_estate = _real_estate_or_404(kind, pk)
+        if not real_estate.can_edit(request.user):
+            return HttpResponseForbidden("You do not own this parcel/building.")
+        return view_func(request, real_estate, *args, **kwargs)
+
+    return wrapper
+
+
+def _real_estate_redirect(request, url: str) -> HttpResponse:
+    """Send the browser to `url` after a real estate change.
+
+    An htmx request (the confirmed Delete button) would swap a plain redirect's
+    target page into the button's spot; the HX-Redirect header makes it a full
+    navigation instead.
+    """
+    if request.headers.get("HX-Request"):
+        return HttpResponse(headers={"HX-Redirect": url})
+    return redirect(url)
+
+
+def _owner_choices(exclude=()) -> list[Character]:
+    """Characters offered as a new owner: everyone's, minus those already owning."""
+    return list(
+        Character.objects.select_related("user", "user__profile")
+        .exclude(pk__in=[c.pk for c in exclude])
+        .order_by("user__username", "name")
+    )
+
+
+@login_required
+def real_estate_list(request):
+    """Every parcel and building the party has recorded, plus the create forms."""
+    parcels = Parcel.objects.prefetch_related("owners__user", "buildings__owners__user")
+    buildings = Building.objects.select_related("parcel").prefetch_related(
+        "owners__user"
+    )
+    return render(
+        request,
+        "characters/real_estate.html",
+        {
+            "parcels": parcels,
+            "buildings": buildings,
+            # The first owner of a new parcel/building must be one of the creator's
+            # own characters; the whole roster (retired included) is offered, since
+            # a dead character's estate is still an estate.
+            "my_characters": request.user.characters.order_by("name"),
+        },
+    )
+
+
+@login_required
+@require_POST
+def real_estate_create(request, kind):
+    """Record a new parcel/building, owned by one of the creator's characters."""
+    name = request.POST.get("name", "").strip()
+    if not name:
+        messages.error(request, "A name is required.")
+        return redirect("characters:real_estate")
+    owner = request.user.characters.filter(pk=request.POST.get("owner")).first()
+    if owner is None:
+        messages.error(request, "Choose one of your own characters as the owner.")
+        return redirect("characters:real_estate")
+    fields = {"name": name}
+    if kind == "building":
+        parcel_pk = request.POST.get("parcel", "")
+        if parcel_pk:
+            fields["parcel"] = get_object_or_404(Parcel, pk=parcel_pk)
+    real_estate = REAL_ESTATE_MODELS[kind].objects.create(**fields)
+    real_estate.owners.add(owner)
+    return redirect("characters:real_estate_detail", kind=kind, pk=real_estate.pk)
+
+
+@login_required
+def real_estate_detail(request, kind, pk):
+    """One parcel/building: its owners, notes, and what stands or lies on it."""
+    real_estate = _real_estate_or_404(kind, pk)
+    can_edit = real_estate.can_edit(request.user)
+    owners = list(real_estate.owners.all())
+    ctx = {
+        "real_estate": real_estate,
+        "kind": kind,
+        "can_edit": can_edit,
+        "owners": owners,
+        "owner_choices": _owner_choices(exclude=owners) if can_edit else [],
+    }
+    if kind == "parcel":
+        ctx["buildings"] = real_estate.buildings.prefetch_related("owners__user")
+    else:
+        ctx["parcels"] = Parcel.objects.all() if can_edit else []
+    return render(request, "characters/real_estate_detail.html", ctx)
+
+
+@login_required
+@real_estate_editor_required
+@require_POST
+def real_estate_update(request, real_estate):
+    """Change a parcel/building's name and notes, and a building's parcel."""
+    name = request.POST.get("name", "").strip()
+    if not name:
+        messages.error(request, "A name is required.")
+        return redirect(
+            "characters:real_estate_detail", kind=real_estate.kind, pk=real_estate.pk
+        )
+    real_estate.name = name
+    real_estate.notes = request.POST.get("notes", "").strip()
+    fields = ["name", "notes", "updated_at"]
+    if real_estate.kind == "building":
+        parcel_pk = request.POST.get("parcel", "")
+        real_estate.parcel = (
+            get_object_or_404(Parcel, pk=parcel_pk) if parcel_pk else None
+        )
+        fields.append("parcel")
+    real_estate.save(update_fields=fields)
+    messages.success(request, "Saved.")
+    return redirect(
+        "characters:real_estate_detail", kind=real_estate.kind, pk=real_estate.pk
+    )
+
+
+@login_required
+@real_estate_editor_required
+@require_POST
+def real_estate_owner_add(request, real_estate):
+    """Add a character to the owner set. Any character will do: the party is
+    one campaign, and a co-owner may bring in someone else's character."""
+    character = get_object_or_404(Character, pk=request.POST.get("character"))
+    real_estate.owners.add(character)
+    return redirect(
+        "characters:real_estate_detail", kind=real_estate.kind, pk=real_estate.pk
+    )
+
+
+@login_required
+@real_estate_editor_required
+@require_POST
+def real_estate_owner_remove(request, real_estate, character_pk):
+    """Drop a character from the owner set, never the last one.
+
+    Removing your own last character is allowed: it is how a parcel/building is
+    handed over, and the remaining owners can always add you back.
+    """
+    character = get_object_or_404(real_estate.owners, pk=character_pk)
+    if real_estate.owners.count() == 1:
+        messages.error(request, "A parcel/building must keep at least one owner.")
+    else:
+        real_estate.owners.remove(character)
+    return redirect(
+        "characters:real_estate_detail", kind=real_estate.kind, pk=real_estate.pk
+    )
+
+
+@login_required
+@real_estate_editor_required
+@require_POST
+def real_estate_delete(request, real_estate):
+    """Delete a parcel/building. A deleted parcel's buildings are left standing."""
+    real_estate.delete()
+    return _real_estate_redirect(request, reverse("characters:real_estate"))
 
 
 # --- Condition CRUD ---

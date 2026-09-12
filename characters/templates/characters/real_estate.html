@@ -1,0 +1,104 @@
+{% extends "characters/base.html" %}
+{% load character_tags %}
+{% block title %}Real Estate — Zingor{% endblock %}
+{% block content %}
+<h1>Real Estate</h1>
+<p class="muted">
+  The land and buildings the party owns. Any owner's player can edit a parcel/building;
+  ownership belongs to characters, so a jointly held manor stays editable by
+  everyone who holds it.
+</p>
+
+<h2 class="mt-lg">Parcels</h2>
+{% if parcels %}
+<div class="section">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Parcel</th>
+        <th>Owners</th>
+        <th>Buildings</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for parcel in parcels %}
+      <tr>
+        <td><a href="{% url 'characters:real_estate_detail' 'parcel' parcel.pk %}">{{ parcel.name }}</a></td>
+        <td>{% include "characters/partials/owner_links.html" with owners=parcel.owners.all %}</td>
+        <td>
+          {% for building in parcel.buildings.all %}<a href="{% url 'characters:real_estate_detail' 'building' building.pk %}">{{ building.name }}</a>{% if not forloop.last %}, {% endif %}{% empty %}<span class="muted">—</span>{% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty-note">No parcels yet.</p>
+{% endif %}
+
+<h2 class="mt-lg">Buildings</h2>
+{% if buildings %}
+<div class="section">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Building</th>
+        <th>Stands on</th>
+        <th>Owners</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for building in buildings %}
+      <tr>
+        <td><a href="{% url 'characters:real_estate_detail' 'building' building.pk %}">{{ building.name }}</a></td>
+        <td>{% if building.parcel %}<a href="{% url 'characters:real_estate_detail' 'parcel' building.parcel.pk %}">{{ building.parcel.name }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td>{% include "characters/partials/owner_links.html" with owners=building.owners.all %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="empty-note">No buildings yet.</p>
+{% endif %}
+
+<h2 class="mt-lg">Record a Parcel/Building</h2>
+{% if my_characters %}
+<p class="muted">The first owner must be one of your own characters; co-owners can be added on its page.</p>
+<form method="post" action="{% url 'characters:real_estate_create' 'parcel' %}" class="inline-form mb-md">
+  {% csrf_token %}
+  <input type="text" name="name" placeholder="Parcel name" required>
+  <label>owned by
+    <select name="owner" required>
+      {% for char in my_characters %}
+      <option value="{{ char.pk }}">{{ char.name|default:"Unnamed" }}{% if not char.is_active %} (inactive){% endif %}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit" class="btn btn-small">Add Parcel</button>
+</form>
+<form method="post" action="{% url 'characters:real_estate_create' 'building' %}" class="inline-form">
+  {% csrf_token %}
+  <input type="text" name="name" placeholder="Building name" required>
+  <label>owned by
+    <select name="owner" required>
+      {% for char in my_characters %}
+      <option value="{{ char.pk }}">{{ char.name|default:"Unnamed" }}{% if not char.is_active %} (inactive){% endif %}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>on
+    <select name="parcel">
+      <option value="">no parcel</option>
+      {% for parcel in parcels %}
+      <option value="{{ parcel.pk }}">{{ parcel.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button type="submit" class="btn btn-small">Add Building</button>
+</form>
+{% else %}
+<p class="empty-note">Create a character first: a parcel/building's first owner must be one of yours.</p>
+{% endif %}
+{% endblock %}

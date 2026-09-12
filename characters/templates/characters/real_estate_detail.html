@@ -1,0 +1,124 @@
+{% extends "characters/base.html" %}
+{% load character_tags %}
+{% block title %}{{ real_estate.name }} — Zingor{% endblock %}
+{% block content %}
+<div class="row-between mb-lg">
+  <h1>{{ real_estate.name }} <span class="muted text-meta">({{ kind }})</span></h1>
+  <div class="toolbar">
+    {% if can_edit %}
+    <button type="button" class="btn btn-danger btn-small"
+            hx-post="{% url 'characters:real_estate_delete' kind real_estate.pk %}"
+            hx-confirm="Delete {{ real_estate.name }}?{% if kind == 'parcel' %} Its buildings will be left standing, unattached.{% endif %}">Delete</button>
+    {% endif %}
+    <a href="{% url 'characters:real_estate' %}" class="btn btn-secondary btn-small">All Real Estate</a>
+  </div>
+</div>
+
+{% if kind == "building" %}
+<p>
+  <strong>Stands on:</strong>
+  {% if real_estate.parcel %}<a href="{% url 'characters:real_estate_detail' 'parcel' real_estate.parcel.pk %}">{{ real_estate.parcel.name }}</a>{% else %}<span class="muted">no parcel</span>{% endif %}
+</p>
+{% endif %}
+{% if real_estate.notes %}
+<div class="section">
+  <h2>Notes</h2>
+  <p>{{ real_estate.notes|linebreaksbr }}</p>
+</div>
+{% endif %}
+
+<div class="section">
+  <h2>Owners</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Character</th>
+        <th>Player</th>
+        {% if can_edit %}<th></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for owner in owners %}
+      <tr>
+        <td>
+          <a href="/character/{{ owner.pk }}/">{{ owner.name|default:"Unnamed" }}</a>
+          {% if not owner.is_active %}<span class="badge badge-inactive">Inactive</span>{% endif %}
+        </td>
+        <td><a href="{% url 'characters:user_profile' owner.user.username %}">{{ owner.user|display_name }}</a></td>
+        {% if can_edit %}
+        <td>
+          {# The last owner cannot be removed: the view refuses, so hide the button rather than offer a dead end. #}
+          {% if owners|length > 1 %}
+          <form method="post" action="{% url 'characters:real_estate_owner_remove' kind real_estate.pk owner.pk %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-secondary btn-small">Remove</button>
+          </form>
+          {% endif %}
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if can_edit and owner_choices %}
+  <form method="post" action="{% url 'characters:real_estate_owner_add' kind real_estate.pk %}" class="inline-form mt-md">
+    {% csrf_token %}
+    <select name="character" required aria-label="Character to add as an owner">
+      {% for char in owner_choices %}
+      <option value="{{ char.pk }}">{{ char.name|default:"Unnamed" }} ({{ char.user|display_name }})</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-small">Add Owner</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if kind == "parcel" %}
+<div class="section">
+  <h2>Buildings</h2>
+  {% if buildings %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Building</th>
+        <th>Owners</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for building in buildings %}
+      <tr>
+        <td><a href="{% url 'characters:real_estate_detail' 'building' building.pk %}">{{ building.name }}</a></td>
+        <td>{% include "characters/partials/owner_links.html" with owners=building.owners.all %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-note">Nothing built here yet. Record a building on the <a href="{% url 'characters:real_estate' %}">Real Estate</a> page and choose this parcel.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if can_edit %}
+<div class="section">
+  <h2>Edit</h2>
+  <form method="post" action="{% url 'characters:real_estate_update' kind real_estate.pk %}">
+    {% csrf_token %}
+    <p><label>Name <input type="text" name="name" value="{{ real_estate.name }}" maxlength="200" required class="w-min-14"></label></p>
+    {% if kind == "building" %}
+    <p><label>Stands on
+      <select name="parcel">
+        <option value="">no parcel</option>
+        {% for parcel in parcels %}
+        <option value="{{ parcel.pk }}"{% if parcel.pk == real_estate.parcel_id %} selected{% endif %}>{{ parcel.name }}</option>
+        {% endfor %}
+      </select>
+    </label></p>
+    {% endif %}
+    <p><label for="real-estate-notes">Notes</label><br>
+    <textarea id="real-estate-notes" name="notes" rows="5" class="w-full">{{ real_estate.notes }}</textarea></p>
+    <button type="submit" class="btn">Save</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

@@ -9,6 +9,7 @@ Read the source code at [https://github.com/maxwelljoslyn/zingor](https://github
 :maxdepth: 2
 
 inventory
+real-estate
 wiki-export
 external-synchronization
 display-names

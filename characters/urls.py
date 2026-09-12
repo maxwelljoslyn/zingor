@@ -1,9 +1,29 @@
 """URL configuration for characters app."""
 
 from django.contrib.auth import views as auth_views
-from django.urls import path, reverse_lazy
+from django.urls import path, register_converter, reverse_lazy
 
 from . import views
+
+
+class RealEstateKindConverter:
+    """The `parcel` or `building` segment that starts every real estate URL.
+
+    One set of views serves both models (views.REAL_ESTATE_MODELS), keyed by this
+    segment. Restricting it to the two words keeps /<kind>/<pk>/ from shadowing
+    the character URLs.
+    """
+
+    regex = "|".join(views.REAL_ESTATE_MODELS)
+
+    def to_python(self, value: str) -> str:
+        return value
+
+    def to_url(self, value: str) -> str:
+        return value
+
+
+register_converter(RealEstateKindConverter, "kind")
 
 app_name = "characters"
 
@@ -64,6 +84,30 @@ urlpatterns = [
     path("treasure/", views.treasure, name="treasure"),
     path("treasure/split/", views.treasure_split, name="treasure_split"),
     path("treasure/move/", views.treasure_move, name="treasure_move"),
+    # Real estate: parcels and buildings
+    path("real-estate/", views.real_estate_list, name="real_estate"),
+    path("<kind:kind>/create/", views.real_estate_create, name="real_estate_create"),
+    path("<kind:kind>/<int:pk>/", views.real_estate_detail, name="real_estate_detail"),
+    path(
+        "<kind:kind>/<int:pk>/update/",
+        views.real_estate_update,
+        name="real_estate_update",
+    ),
+    path(
+        "<kind:kind>/<int:pk>/owners/add/",
+        views.real_estate_owner_add,
+        name="real_estate_owner_add",
+    ),
+    path(
+        "<kind:kind>/<int:pk>/owners/<int:character_pk>/remove/",
+        views.real_estate_owner_remove,
+        name="real_estate_owner_remove",
+    ),
+    path(
+        "<kind:kind>/<int:pk>/delete/",
+        views.real_estate_delete,
+        name="real_estate_delete",
+    ),
     # Character sheet
     path("character/<int:pk>/", views.character_sheet, name="character_sheet"),
     path(

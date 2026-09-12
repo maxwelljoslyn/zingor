@@ -1,0 +1,2 @@
+{# Comma-separated links to a parcel/building's owning characters. Include with owners=<iterable of Character>. #}
+{% for owner in owners %}<a href="/character/{{ owner.pk }}/">{{ owner.name|default:"Unnamed" }}</a>{% if not forloop.last %}, {% endif %}{% empty %}<span class="muted">nobody</span>{% endfor %}
