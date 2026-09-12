@@ -181,7 +181,9 @@ The Law & Policy study has three concentrations: knowledge of a single chosen po
 
 The "all other legal codes" concentration does not need to be marked up in your external sheet: its points are automatically calculated by Zingor.
 
-To mark up the theological law and political entity concentrations, add an additional HTML element with the ZMF attribute `zingor-sage-concentration-granted`. For the religious concentration, you **must** fill in the `-granted` element with an `X`, `✓`, `yes`, or other indicator (for a list of allowed indicators, see "Yes/No Fields" under [How Values are Read](#how-values-are-read).) The other concentration **must** contain j
+To mark up the theological law and political entity concentrations, add an additional HTML element with the ZMF attribute `zingor-sage-concentration-granted`. For the religious concentration, you **must** fill in the `-granted` element with an `X`, `✓`, `yes`, or other indicator (for a list of allowed indicators, see "Yes/No Fields" under [How Values are Read](#how-values-are-read).) The other concentration **must not** carry that indicator: leave its `-granted` element empty, or omit it entirely. Whichever concentration you mark becomes the granted one, so marking the political entity tells Zingor that *it* is your theological law.
+
+Take care, though: including the `-granted` element but marking nobody is the page stating that no concentration is the conferred one, and the grant is taken away. To leave the grant as your sheet has it, omit the `-granted` element from every concentration under the study.
 
 ```html
 <tr class="zingor-sage-concentration">
