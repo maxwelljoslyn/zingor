@@ -177,9 +177,11 @@ For some studies a concentration has no number of its own, and you can leave the
 
 ##### Granted Concentrations
 
-The Law & Policy study has two concentrations: your religion's theological law, and knowledge of a single chosen political entity. The former concentration is called a **granted concentration** because it is gained automatically.
+The Law & Policy study has three concentrations: knowledge of a single chosen political entity; your religion's theological law; and all other legal codes. Each of the latter two concentrations is called a **granted concentration** because it is gained automatically.
 
-To include those concentrations in external sync, add an additional HTML element with the ZMF attribute `zingor-sage-concentration-granted`. For the religious concentration, you **must** fill in the `-granted` element with an `X`, `✓`, `yes`, or other indicator (for a list of allowed indicators, see "Yes/No Fields" under [How Values are Read](#how-values-are-read).) The other concentration **must** contain j
+The "all other legal codes" concentration does not need to be marked up in your external sheet: its points are automatically calculated by Zingor.
+
+To mark up the theological law and political entity concentrations, add an additional HTML element with the ZMF attribute `zingor-sage-concentration-granted`. For the religious concentration, you **must** fill in the `-granted` element with an `X`, `✓`, `yes`, or other indicator (for a list of allowed indicators, see "Yes/No Fields" under [How Values are Read](#how-values-are-read).) The other concentration **must** contain j
 
 ```html
 <tr class="zingor-sage-concentration">
