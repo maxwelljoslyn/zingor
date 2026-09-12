@@ -1074,3 +1074,64 @@ class Price(models.Model):
         from .trade import purchase_cost
 
         return purchase_cost(self.amount, quantity) * self.unit
+
+
+class BuildingMaterial(models.Model):
+    """A catalogue entry a building design's shapes are made of (#197).
+
+    Carries no price: it names the trade good that supplies it and how many
+    of its own BOM units one of that good covers (`units_per_good`), so a
+    limestone wall sold as a 6 ft × 8 ft section is 48 ft² per good. Design
+    documents refer to a material by `key`, which must therefore never change
+    once a version uses it. Seeded by characters.building_materials.
+    """
+
+    WALL = "wall"
+    FLOOR = "floor"
+    ROOF = "roof"
+    SOLID = "solid"
+    OPENING = "opening"
+    STAIR = "stair"
+    USAGE_CHOICES = [
+        (WALL, "wall"),
+        (FLOOR, "floor or ceiling"),
+        (ROOF, "roof"),
+        (SOLID, "solid volume"),
+        (OPENING, "door or window"),
+        (STAIR, "stair"),
+    ]
+    CUBIC_FEET = "cuft"
+    SQUARE_FEET = "sqft"
+    EACH = "each"
+    UNIT_CHOICES = [(CUBIC_FEET, "ft³"), (SQUARE_FEET, "ft²"), (EACH, "each")]
+
+    key = models.SlugField(max_length=60, unique=True)
+    name = models.CharField(max_length=100)
+    usage = models.CharField(max_length=10, choices=USAGE_CHOICES)
+    unit = models.CharField(max_length=4, choices=UNIT_CHOICES)
+    good = models.ForeignKey(
+        TradeGood, on_delete=models.PROTECT, related_name="building_materials"
+    )
+    units_per_good = models.DecimalField(
+        max_digits=12,
+        decimal_places=6,
+        validators=[MinValueValidator(Decimal("0.000001"))],
+    )
+    # How units_per_good was read off the sheet, for whoever checks it.
+    basis = models.TextField(blank=True, default="")
+    # Sizes in feet the sheet states for the good, offered as editor defaults.
+    nominal_thickness = models.DecimalField(
+        max_digits=8, decimal_places=4, null=True, blank=True
+    )
+    nominal_width = models.DecimalField(
+        max_digits=8, decimal_places=4, null=True, blank=True
+    )
+    nominal_height = models.DecimalField(
+        max_digits=8, decimal_places=4, null=True, blank=True
+    )
+
+    class Meta:
+        ordering = ["usage", "name"]
+
+    def __str__(self):
+        return self.name

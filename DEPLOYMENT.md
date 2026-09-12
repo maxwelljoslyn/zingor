@@ -171,3 +171,17 @@ earlier ones, so re-running with a fresh spreadsheet is the way to update
 prices. The command reports any cells it could not read (a `#REF!` price,
 say) and skips those rows. Imported lists are browsable in the Django admin
 under Price lists and Prices.
+
+### The building materials catalogue
+
+The building design editor prices its bill of materials through a catalogue
+of materials, each pointing at a trade good. After the first trade table
+import, create it with:
+
+```
+uv run python manage.py seed_building_materials
+```
+
+It writes nothing if any of the goods it needs is missing, and says which.
+Re-running leaves existing materials alone (so edits made in the admin under
+Building materials survive); `--refresh` overwrites them from the seed.

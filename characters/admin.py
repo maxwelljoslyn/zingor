@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import (
     Building,
+    BuildingMaterial,
     Character,
     Condition,
     HitDie,
@@ -171,3 +172,15 @@ class PriceAdmin(admin.ModelAdmin):
     search_fields = ["good__name", "good__description", "good__vendor__name"]
     raw_id_fields = ["good"]
     list_select_related = ["good", "good__vendor", "price_list", "price_list__market"]
+
+
+# --- Building designs ---
+
+
+@admin.register(BuildingMaterial)
+class BuildingMaterialAdmin(admin.ModelAdmin):
+    list_display = ["key", "name", "usage", "unit", "good", "units_per_good"]
+    list_filter = ["usage", "unit"]
+    search_fields = ["key", "name", "good__name"]
+    raw_id_fields = ["good"]
+    list_select_related = ["good", "good__vendor"]
