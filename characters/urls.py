@@ -108,6 +108,32 @@ urlpatterns = [
         views.real_estate_delete,
         name="real_estate_delete",
     ),
+    # Building designs (#197)
+    path(
+        "building/<int:pk>/design/<int:design_pk>/document/",
+        views.building_design_document,
+        name="building_design_document",
+    ),
+    path(
+        "building/<int:pk>/design/<int:design_pk>/draft/",
+        views.building_design_draft,
+        name="building_design_draft",
+    ),
+    path(
+        "building/<int:pk>/design/<int:design_pk>/draft/discard/",
+        views.building_design_draft_discard,
+        name="building_design_draft_discard",
+    ),
+    path(
+        "building/<int:pk>/design/<int:design_pk>/commit/",
+        views.building_design_commit,
+        name="building_design_commit",
+    ),
+    path(
+        "building/<int:pk>/design/<int:design_pk>/bom/",
+        views.building_design_bom,
+        name="building_design_bom",
+    ),
     # Character sheet
     path("character/<int:pk>/", views.character_sheet, name="character_sheet"),
     path(

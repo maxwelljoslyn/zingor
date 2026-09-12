@@ -24,6 +24,7 @@ from django.http import (
     HttpResponse,
     HttpResponseBadRequest,
     HttpResponseForbidden,
+    JsonResponse,
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -32,6 +33,16 @@ from django.utils.http import urlsafe_base64_decode
 from django.views.decorators.http import require_GET, require_POST
 
 from . import layout, rules
+from .bill_of_materials import bill_of_materials, cost_bill, default_market
+from .design_document import (
+    LAYER_HEIGHT,
+    SCHEMA_VERSION,
+    SINGULAR,
+    check_structure,
+    material_specs,
+    overlap_problems,
+)
+from .designs import DesignRejected, commit, save_draft
 from .auth_emails import EmailSendError, send_confirmation_email
 from .forms import CharacterPictureForm, FeedbackForm, RegistrationForm
 from .hoard import HoardError, parse_hoard
@@ -40,7 +51,10 @@ from .models import (
     BonusHitPoints,
     Building,
     Character,
+    BuildingMaterial,
     Condition,
+    Design,
+    DesignDraft,
     HitDie,
     InventionMaintenance,
     Item,
@@ -55,7 +69,7 @@ from .models import (
     Spell,
 )
 from .treasure import split_treasure_by_share
-from .units import D, u
+from .units import D, display_magnitude, u
 
 logger = logging.getLogger(__name__)
 
@@ -1683,6 +1697,246 @@ def real_estate_delete(request, real_estate):
     """Delete a parcel/building. A deleted parcel's buildings are left standing."""
     real_estate.delete()
     return _real_estate_redirect(request, reverse("characters:real_estate"))
+
+
+# --- Building designs (#197) ---
+#
+# The editor is one page of vanilla JS talking JSON to these views. Anyone
+# logged in may look at a design and its cost; only a player of one of the
+# building's owners may save a draft or commit.
+
+
+def _design_or_404(pk: int, design_pk: int) -> Design:
+    """Design `design_pk` of building `pk`, the building's owners preloaded."""
+    return get_object_or_404(
+        Design.objects.select_related("building", "head__author").prefetch_related(
+            "building__owners__user"
+        ),
+        pk=design_pk,
+        building_id=pk,
+    )
+
+
+def design_editor_required(view_func):
+    """Refuse, as JSON, anyone who plays none of the design's building's owners.
+
+    Hands the view the Design in place of the `pk` and `design_pk` kwargs.
+    """
+
+    @functools.wraps(view_func)
+    def wrapper(request, pk, design_pk, *args, **kwargs):
+        design = _design_or_404(pk, design_pk)
+        if not design.building.can_edit(request.user):
+            return JsonResponse(
+                {"problems": ["You do not own this building."]}, status=403
+            )
+        return view_func(request, design, *args, **kwargs)
+
+    return wrapper
+
+
+def _json_body(request) -> dict:
+    """The request's JSON object body, or DesignRejected."""
+    try:
+        body = json.loads(request.body)
+    except (ValueError, UnicodeDecodeError):
+        raise DesignRejected(["the request is not JSON"])
+    if not isinstance(body, dict):
+        raise DesignRejected(["the request is not a JSON object"])
+    return body
+
+
+def _rejected(exc: DesignRejected) -> JsonResponse:
+    return JsonResponse({"problems": exc.problems}, status=400)
+
+
+def _money(quantity) -> str:
+    """A cost for the readout, in gold: "116.4 gp"."""
+    return display_magnitude(quantity.to(u.gp).magnitude) + " gp"
+
+
+def _material_json(material: BuildingMaterial) -> dict:
+    def feet(value):
+        return None if value is None else float(value)
+
+    return {
+        "key": material.key,
+        "name": material.name,
+        "usage": material.usage,
+        "unit": material.unit,
+        "unit_label": material.get_unit_display(),
+        "thickness": feet(material.nominal_thickness),
+        "width": feet(material.nominal_width),
+        "height": feet(material.nominal_height),
+    }
+
+
+def _version_json(version) -> dict | None:
+    if version is None:
+        return None
+    return {
+        "id": version.pk,
+        "parent": version.parent_id,
+        "document": version.read_document(),
+        "message": version.message,
+        "author": version.author.username if version.author_id else None,
+        "created_at": version.created_at.isoformat(),
+    }
+
+
+@login_required
+@require_GET
+def building_design_document(request, pk, design_pk):
+    """Everything the editor loads: the head version, the viewer's draft, the catalogue."""
+    design = _design_or_404(pk, design_pk)
+    can_edit = design.building.can_edit(request.user)
+    draft = None
+    if can_edit:
+        found = DesignDraft.objects.filter(design=design, user=request.user).first()
+        if found is not None:
+            draft = {
+                "document": found.read_document(),
+                "base_version": found.base_version_id,
+                "updated_at": found.updated_at.isoformat(),
+            }
+    return JsonResponse(
+        {
+            "design": {"id": design.pk, "name": design.name},
+            "building": {"id": design.building_id, "name": design.building.name},
+            "can_edit": can_edit,
+            "schema_version": SCHEMA_VERSION,
+            "layer_height": LAYER_HEIGHT,
+            "head": _version_json(design.head),
+            "draft": draft,
+            "materials": [_material_json(m) for m in BuildingMaterial.objects.all()],
+        }
+    )
+
+
+@login_required
+@require_POST
+@design_editor_required
+def building_design_draft(request, design):
+    """Autosave the player's working copy: `{document, base_version}`."""
+    try:
+        body = _json_body(request)
+        draft = save_draft(
+            design, request.user, body.get("document"), body.get("base_version")
+        )
+    except DesignRejected as exc:
+        return _rejected(exc)
+    return JsonResponse({"updated_at": draft.updated_at.isoformat()})
+
+
+@login_required
+@require_POST
+@design_editor_required
+def building_design_draft_discard(request, design):
+    """Throw away the player's draft, going back to the design's head."""
+    DesignDraft.objects.filter(design=design, user=request.user).delete()
+    return JsonResponse({})
+
+
+@login_required
+@require_POST
+@design_editor_required
+def building_design_commit(request, design):
+    """Commit `{document, parent, message}` as a new version and move the head to it."""
+    try:
+        body = _json_body(request)
+        message = body.get("message") or ""
+        if not isinstance(message, str):
+            raise DesignRejected(["the message must be text"])
+        result = commit(
+            design, body.get("document"), body.get("parent"), request.user, message
+        )
+    except DesignRejected as exc:
+        return _rejected(exc)
+    return JsonResponse(
+        {
+            "version": _version_json(result.version),
+            "sibling": result.sibling,
+            "rooms": {str(old): new for old, new in result.rooms.items()},
+        }
+    )
+
+
+@login_required
+@require_POST
+def building_design_bom(request, pk, design_pk):
+    """The bill of materials and cost of `{document}`, with anything wrong with it.
+
+    Every sound shape is priced. A shape with a structure problem cannot be
+    (the bill's arithmetic needs its numbers and material), so it is listed
+    under `broken` instead, to be priced once fixed. Overlaps are reported
+    but still priced: they block a commit, not a running total.
+    """
+    _design_or_404(pk, design_pk)
+    try:
+        document = _json_body(request).get("document")
+    except DesignRejected as exc:
+        return _rejected(exc)
+    materials = material_specs()
+    report = check_structure(document, materials)
+    sound = report.sound_document(document)
+    found = report.problems + overlap_problems(sound)
+    market = default_market()
+    costing = cost_bill(bill_of_materials(sound, materials), market)
+    lines = []
+    for line in costing.lines:
+        material = line.material
+        # A material counted one by one reads "1", not "1 each".
+        each = material.unit == BuildingMaterial.EACH
+        unit = "" if each else " " + material.get_unit_display()
+        lines.append(
+            {
+                "material": material.key,
+                "name": material.name,
+                "quantity": display_magnitude(line.quantity) + unit,
+                # How much of the material one trade good covers, and why.
+                "sale_unit": "each"
+                if each
+                else display_magnitude(material.units_per_good) + unit,
+                "basis": material.basis,
+                "units": display_magnitude(line.goods),
+                "good": str(material.good),
+                "price": None
+                if line.price is None
+                else display_magnitude(line.price.listed.magnitude)
+                + " "
+                + line.price.coin,
+                "cost": None if line.cost is None else _money(line.cost),
+            }
+        )
+    names = dict(BuildingMaterial.objects.values_list("key", "name"))
+    broken = []
+    for (kind, index), shape_problems in sorted(report.broken.items()):
+        if kind == "rooms":
+            # A room costs nothing, so there is no price to hold back.
+            continue
+        shape = document[kind][index]
+        if isinstance(shape, dict):
+            label = f"{SINGULAR[kind]} {shape.get('id')}"
+            key = shape.get("product" if kind == "openings" else "material")
+        else:
+            label, key = f"{kind}[{index}]", None
+        name = (
+            names.get(key, "Unknown material")
+            if isinstance(key, str)
+            else "No material"
+        )
+        broken.append({"shape": label, "name": name, "problems": shape_problems})
+    return JsonResponse(
+        {
+            "problems": found,
+            "market": None if market is None else market.name,
+            "lines": lines,
+            "broken": broken,
+            "total": _money(costing.total),
+            "total_cp": str(costing.total.magnitude),
+            "unpriced": [line.material.name for line in costing.unpriced],
+        }
+    )
 
 
 # --- Condition CRUD ---
