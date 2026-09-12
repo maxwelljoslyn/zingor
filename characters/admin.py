@@ -5,6 +5,9 @@ from .models import (
     BuildingMaterial,
     Character,
     Condition,
+    Design,
+    DesignDraft,
+    DesignVersion,
     HitDie,
     InventionMaintenance,
     Item,
@@ -12,6 +15,7 @@ from .models import (
     Parcel,
     Price,
     PriceList,
+    Room,
     SageAbilityPoints,
     SageChosenField,
     SageConcentration,
@@ -184,3 +188,49 @@ class BuildingMaterialAdmin(admin.ModelAdmin):
     search_fields = ["key", "name", "good__name"]
     raw_id_fields = ["good"]
     list_select_related = ["good", "good__vendor"]
+
+
+@admin.register(Room)
+class RoomAdmin(admin.ModelAdmin):
+    list_display = ["name", "building"]
+    list_filter = ["building"]
+    search_fields = ["name", "building__name"]
+
+
+@admin.register(Design)
+class DesignAdmin(admin.ModelAdmin):
+    list_display = ["name", "building", "head", "updated_at"]
+    list_filter = ["building"]
+    raw_id_fields = ["head"]
+
+
+@admin.register(DesignVersion)
+class DesignVersionAdmin(admin.ModelAdmin):
+    """Versions are immutable, so only their built_at stamp is editable here."""
+
+    list_display = ["pk", "building", "design", "author", "created_at", "built_at"]
+    list_filter = ["building", "design"]
+    fields = [
+        "building",
+        "design",
+        "parent",
+        "author",
+        "message",
+        "schema_version",
+        "document",
+        "created_at",
+        "built_at",
+    ]
+    readonly_fields = [f for f in fields if f != "built_at"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def save_model(self, request, obj, form, change):
+        obj.save(update_fields=["built_at"])
+
+
+@admin.register(DesignDraft)
+class DesignDraftAdmin(admin.ModelAdmin):
+    list_display = ["design", "user", "base_version", "updated_at"]
+    raw_id_fields = ["base_version"]

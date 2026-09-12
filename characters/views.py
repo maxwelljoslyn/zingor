@@ -17,6 +17,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import PasswordResetConfirmView
 from django.db import transaction
+from django.db.models import Q
 from django.http import (
     FileResponse,
     Http404,
@@ -46,6 +47,7 @@ from .models import (
     LayoutOrder,
     Parcel,
     Profile,
+    Room,
     SageAbilityPoints,
     SageChosenField,
     SageConcentration,
@@ -241,7 +243,9 @@ def _sheet_context(character, user):
     # same instances so encumbrance (weight_of_carried_items) reuses them
     # instead of re-querying every container.
     inventory = list(
-        character.inventory.select_related("location_parcel", "location_building")
+        character.inventory.select_related(
+            "location_parcel", "location_building", "location_room__building"
+        )
     )
     items = _stitch_container_tree(inventory)
     if not hasattr(character, "_prefetched_objects_cache"):
@@ -299,29 +303,33 @@ def _location_choices() -> list[tuple[str, str]]:
 
     On the character, somewhere unnamed, then every parcel and building in the
     campaign — any parcel/building, not only ones the character owns, since a
-    henchman may well leave gear at the master's manor.
+    henchman may well leave gear at the master's manor. A building's rooms
+    follow it, including rooms its current design no longer draws: an item
+    left in one stays there until moved (see Room).
     """
     choices = [(Item.CARRIED, "Carried"), (Item.STASHED, "Stashed elsewhere")]
     for parcel in Parcel.objects.all():
         choices.append((f"parcel-{parcel.pk}", parcel.name))
-    for building in Building.objects.select_related("parcel"):
+    for building in Building.objects.select_related("parcel").prefetch_related("rooms"):
         label = building.name
         if building.parcel_id is not None:
             label += f" ({building.parcel.name})"
         choices.append((f"building-{building.pk}", label))
+        for room in building.rooms.all():
+            choices.append((f"room-{room.pk}", f"{building.name}: {room.name}"))
     return choices
 
 
 def _location_from_key(key: str):
     """The `where` a Location control's posted key names, for Item.move_to.
 
-    Returns Item.CARRIED, Item.STASHED, a Parcel or a Building; None for a key
-    that names nothing (malformed, or a parcel/building deleted since the page loaded).
+    Returns Item.CARRIED, Item.STASHED, a Parcel, a Building or a Room; None for
+    a key that names nothing (malformed, or a place deleted since the page loaded).
     """
     if key in (Item.CARRIED, Item.STASHED):
         return key
     kind, _, pk = key.partition("-")
-    model = REAL_ESTATE_MODELS.get(kind)
+    model = Room if kind == Room.kind else REAL_ESTATE_MODELS.get(kind)
     if model is None or not pk.isdigit():
         return None
     return model.objects.filter(pk=pk).first()
@@ -638,7 +646,11 @@ def _party_inventory_context(query: str) -> dict:
     # cache-served at any nesting depth instead of an N+1 per container.
     items = list(
         Item.objects.select_related(
-            "owner", "owner__user", "location_parcel", "location_building"
+            "owner",
+            "owner__user",
+            "location_parcel",
+            "location_building",
+            "location_room__building",
         )
         .filter(owner__is_active=True)
         .order_by("owner__name", "name")
@@ -1361,6 +1373,7 @@ def split_item(request, item_id):
         is_carried=item.is_carried,
         location_parcel=item.location_parcel,
         location_building=item.location_building,
+        location_room=item.location_room,
         is_worn=item.is_worn,
         quantity=count,
         props=dict(item.props or {}),
@@ -1584,10 +1597,20 @@ def real_estate_detail(request, kind, pk):
         ctx["parcels"] = Parcel.objects.all() if can_edit else []
     # Everything kept here, as a container tree: a chest's contents are stored
     # here too (see _relocate), so the roots are the items whose container is
-    # not itself among them.
+    # not itself among them. A building's rooms are part of the building.
+    if kind == "building":
+        stored = Item.objects.filter(
+            Q(location_building=real_estate) | Q(location_room__building=real_estate)
+        )
+    else:
+        stored = real_estate.stored_items.all()
     stored = list(
-        real_estate.stored_items.select_related(
-            "owner", "owner__user", "location_parcel", "location_building"
+        stored.select_related(
+            "owner",
+            "owner__user",
+            "location_parcel",
+            "location_building",
+            "location_room__building",
         ).order_by("owner__name", "name")
     )
     ctx["stored_items"] = _stitch_container_tree(stored)

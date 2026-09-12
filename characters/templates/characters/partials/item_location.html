@@ -1,2 +1,2 @@
-{# Read-only statement of where an item is, linking a parcel/building to its page. #}
-{% if item.is_carried %}Carried{% elif item.location %}<a href="{% url 'characters:real_estate_detail' item.location.kind item.location.pk %}">{{ item.location.name }}</a>{% else %}Stashed{% endif %}
+{# Read-only statement of where an item is, linking a parcel/building (or a room's building) to its page. #}
+{% if item.is_carried %}Carried{% elif item.location_room %}<a href="{% url 'characters:real_estate_detail' 'building' item.location_room.building_id %}">{{ item.location_room.building.name }}: {{ item.location_room.name }}</a>{% elif item.location %}<a href="{% url 'characters:real_estate_detail' item.location.kind item.location.pk %}">{{ item.location.name }}</a>{% else %}Stashed{% endif %}

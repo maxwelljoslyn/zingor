@@ -510,7 +510,8 @@ class Item(models.Model):
     # owner stays required and the place is a nullable link, to either a parcel
     # or a building, never both. A not-carried item with neither set is stashed
     # somewhere unnamed: the state every not-carried item was in before
-    # parcels/buildings existed, still wanted for "left it at an inn".
+    # parcels/buildings existed, still wanted for "left it at an inn". A room
+    # of a building (see Room) is a third place, set instead of the building.
     location_parcel = models.ForeignKey(
         "Parcel",
         on_delete=models.SET_NULL,
@@ -520,6 +521,13 @@ class Item(models.Model):
     )
     location_building = models.ForeignKey(
         "Building",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stored_items",
+    )
+    location_room = models.ForeignKey(
+        "Room",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -550,15 +558,20 @@ class Item(models.Model):
                 name="item_money_no_weight_no_container",
             ),
             models.CheckConstraint(
-                condition=models.Q(location_parcel__isnull=True)
-                | models.Q(location_building__isnull=True),
+                condition=models.Q(
+                    location_parcel__isnull=True, location_building__isnull=True
+                )
+                | models.Q(location_parcel__isnull=True, location_room__isnull=True)
+                | models.Q(location_building__isnull=True, location_room__isnull=True),
                 name="item_at_most_one_location",
             ),
             # An item at a parcel/building is by definition not on the character.
             models.CheckConstraint(
                 condition=models.Q(is_carried=False)
                 | models.Q(
-                    location_parcel__isnull=True, location_building__isnull=True
+                    location_parcel__isnull=True,
+                    location_building__isnull=True,
+                    location_room__isnull=True,
                 ),
                 name="item_carried_has_no_location",
             ),
@@ -574,10 +587,12 @@ class Item(models.Model):
 
     @property
     def location(self):
-        """The parcel or building this item is kept at, or None.
+        """The parcel, building or room this item is kept at, or None.
 
         Reads the ids first so a row without a location costs no query.
         """
+        if self.location_room_id is not None:
+            return self.location_room
         if self.location_building_id is not None:
             return self.location_building
         if self.location_parcel_id is not None:
@@ -587,7 +602,7 @@ class Item(models.Model):
     @property
     def whereabouts(self):
         """Where the item is, in the terms ``move_to`` takes: ``CARRIED``,
-        ``STASHED``, or the Parcel or Building it is kept at."""
+        ``STASHED``, or the Parcel, Building or Room it is kept at."""
         if self.is_carried:
             return self.CARRIED
         return self.location or self.STASHED
@@ -602,7 +617,7 @@ class Item(models.Model):
 
     def move_to(self, where) -> None:
         """Put the item on the character (``CARRIED``), somewhere unnamed
-        (``STASHED``), or at a Parcel or Building. Does not save.
+        (``STASHED``), or at a Parcel, Building or Room. Does not save.
 
         Leaving the character's person also takes the item off (``is_worn``),
         the same rule the sheet applies when Carried is unticked.
@@ -610,11 +625,18 @@ class Item(models.Model):
         self.is_carried = where == self.CARRIED
         self.location_parcel = where if isinstance(where, Parcel) else None
         self.location_building = where if isinstance(where, Building) else None
+        self.location_room = where if isinstance(where, Room) else None
         if not self.is_carried:
             self.is_worn = False
 
     # Every column move_to may change, for save(update_fields=...).
-    LOCATION_FIELDS = ["is_carried", "is_worn", "location_parcel", "location_building"]
+    LOCATION_FIELDS = [
+        "is_carried",
+        "is_worn",
+        "location_parcel",
+        "location_building",
+        "location_room",
+    ]
 
     def _get_weight_quantity(self):
         """Per-unit weight as a Pint Quantity, handling string values.
@@ -779,6 +801,180 @@ class Building(RealEstate):
         blank=True,
         related_name="buildings",
     )
+
+
+class Room(models.Model):
+    """A room of a building: the lasting identity behind a design's room shapes (#197).
+
+    A room shape in a design document carries this row's pk as its id. Items
+    are left in rooms, and where an item is left is not versioned while the
+    design is, so a room's identity has to live outside any one version:
+    moving its walls, or a later version leaving it out, must not change
+    which room an item is in. Kept as its own table, rather than an id known
+    only to documents, so that Item.location_room is a foreign key the
+    database checks. The name is the one most recently committed; each
+    version keeps the name it was committed with.
+    """
+
+    kind = "room"
+    building = models.ForeignKey(
+        Building, on_delete=models.CASCADE, related_name="rooms"
+    )
+    name = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name", "pk"]
+
+    def __str__(self):
+        return self.name
+
+
+class Design(models.Model):
+    """A named line of work on a building's design: a branch, in git terms (#197).
+
+    `head` is the newest version on the line. Versions belong to the building
+    rather than to one design, so a design may start from any version (an
+    east wing drawn onto the building as built), and moving `head` back to an
+    ancestor then committing forks the tree with no branch operation at all.
+    """
+
+    building = models.ForeignKey(
+        Building, on_delete=models.CASCADE, related_name="designs"
+    )
+    name = models.CharField(max_length=200)
+    head = models.ForeignKey(
+        "DesignVersion",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["building", "name"], name="uniq_design_building_name"
+            )
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class DesignVersion(models.Model):
+    """One committed state of a building's design, immutable like a git commit (#197).
+
+    Holds the whole document (see characters.design_document), never a
+    delta: documents are small, and deltas buy only replay bugs. `parent` is
+    the version it was edited from, so two players committing from the same
+    parent make siblings rather than one overwriting the other. `built_at`
+    records when this version was built, and is the one field that may
+    change once the version is saved.
+    """
+
+    building = models.ForeignKey(
+        Building, on_delete=models.CASCADE, related_name="design_versions"
+    )
+    parent = models.ForeignKey(
+        "self",
+        # RESTRICT, not PROTECT: a parent cannot be deleted from under its
+        # children, but deleting the building may still take the whole tree.
+        on_delete=models.RESTRICT,
+        null=True,
+        blank=True,
+        related_name="children",
+    )
+    # The design it was committed on, for the history; not what it belongs to.
+    design = models.ForeignKey(
+        Design,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="versions",
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="design_versions",
+    )
+    message = models.CharField(max_length=500, blank=True, default="")
+    schema_version = models.PositiveSmallIntegerField()
+    document = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    built_at = models.DateTimeField(null=True, blank=True)
+
+    MUTABLE_FIELDS = frozenset({"built_at"})
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+
+    def __str__(self):
+        return f"{self.building.name} version {self.pk}"
+
+    def save(self, *args, **kwargs):
+        """Refuse to change a saved version, apart from its `built_at` stamp."""
+        if not self._state.adding:
+            update_fields = kwargs.get("update_fields")
+            if update_fields is None or not set(update_fields) <= self.MUTABLE_FIELDS:
+                raise ValueError(
+                    "A design version cannot be changed; only built_at may be set."
+                )
+        super().save(*args, **kwargs)
+
+    def read_document(self) -> dict:
+        """The document, brought up to the current schema."""
+        from .design_document import upgrade
+
+        return upgrade(self.document, self.schema_version)
+
+
+class DesignDraft(models.Model):
+    """One player's uncommitted work on a design, autosaved by the editor (#197).
+
+    A single mutable row per design and user, outside the version tree: it is
+    there so that a closed tab or a crash loses nothing. `base_version` is the
+    version the work started from, which becomes the parent on commit. Its
+    document is not checked, since work in progress may be half drawn.
+    """
+
+    design = models.ForeignKey(Design, on_delete=models.CASCADE, related_name="drafts")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="design_drafts",
+    )
+    base_version = models.ForeignKey(
+        DesignVersion,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    schema_version = models.PositiveSmallIntegerField()
+    document = models.JSONField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["design", "user"], name="uniq_design_draft_design_user"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user} draft of {self.design}"
+
+    def read_document(self) -> dict:
+        """The document, brought up to the current schema."""
+        from .design_document import upgrade
+
+        return upgrade(self.document, self.schema_version)
 
 
 class SageChosenField(models.Model):
