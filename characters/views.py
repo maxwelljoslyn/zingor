@@ -1609,6 +1609,8 @@ def real_estate_detail(request, kind, pk):
         ctx["buildings"] = real_estate.buildings.prefetch_related("owners__user")
     else:
         ctx["parcels"] = Parcel.objects.all() if can_edit else []
+        ctx["designs"] = real_estate.designs.select_related("head__author")
+        ctx["versions"] = real_estate.design_versions.select_related("design")
     # Everything kept here, as a container tree: a chest's contents are stored
     # here too (see _relocate), so the roots are the items whose container is
     # not itself among them. A building's rooms are part of the building.
@@ -1782,6 +1784,50 @@ def _version_json(version) -> dict | None:
         "author": version.author.username if version.author_id else None,
         "created_at": version.created_at.isoformat(),
     }
+
+
+@login_required
+@real_estate_editor_required
+@require_POST
+def building_design_create(request, real_estate):
+    """Start a named design on a building, from nothing or from one of its versions."""
+    name = request.POST.get("name", "").strip()
+    detail = redirect(
+        "characters:real_estate_detail", kind="building", pk=real_estate.pk
+    )
+    if not name:
+        messages.error(request, "A design needs a name.")
+        return detail
+    if real_estate.designs.filter(name=name).exists():
+        messages.error(request, f"This building already has a design called {name}.")
+        return detail
+    head = None
+    from_version = request.POST.get("from_version", "")
+    if from_version:
+        head = get_object_or_404(
+            real_estate.design_versions,
+            pk=from_version if from_version.isdigit() else 0,
+        )
+    design = Design.objects.create(building=real_estate, name=name, head=head)
+    return redirect(
+        "characters:building_design_editor", pk=real_estate.pk, design_pk=design.pk
+    )
+
+
+@login_required
+@require_GET
+def building_design_editor(request, pk, design_pk):
+    """The plan editor page; the drawing itself is loaded by building-editor.js."""
+    design = _design_or_404(pk, design_pk)
+    return render(
+        request,
+        "characters/building_design_editor.html",
+        {
+            "design": design,
+            "building": design.building,
+            "can_edit": design.building.can_edit(request.user),
+        },
+    )
 
 
 @login_required

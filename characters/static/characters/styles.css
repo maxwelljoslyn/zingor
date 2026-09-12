@@ -753,3 +753,81 @@ th.sortable:hover { color: var(--accent-hover); }
 summary {
   cursor: pointer;
 }
+
+/* Building design editor (#197). The plan is SVG; shape colours come from
+   the theme tokens so the drawing follows light/dark mode. */
+.design-toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; align-items: center; margin-bottom: 0.75rem; }
+.design-tools { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; }
+.design-tools [aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+/* The editor uses the whole window rather than the page's 1280px column, and
+   gives the side panel room for a six-column cost table. */
+.container:has(.design-editor) { max-width: none; }
+.design-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(34rem, 40%); gap: 1rem; align-items: start; }
+@media (max-width: 1100px) { .design-body { grid-template-columns: minmax(0, 1fr); } }
+.design-canvas {
+  width: 100%;
+  height: 70vh;
+  min-height: 24rem;
+  display: block;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  touch-action: none;
+  cursor: crosshair;
+  user-select: none;
+}
+.design-editor--readonly .design-canvas { cursor: grab; }
+/* The panel is exactly the canvas's height, so what is selected never changes
+   the page height (a page scrollbar coming and going nudged the layout
+   sideways; the reserved gutter guards against it too). Everything in it
+   stays put except the price table, which takes the height left over and
+   scrolls on its own, its header and total pinned. */
+html:has(.design-editor) { scrollbar-gutter: stable; }
+.design-panel { display: flex; flex-direction: column; gap: 0.5rem; height: max(70vh, 24rem); overflow: hidden; }
+.design-panel .subsection { margin-bottom: 0; }
+.design-panel h3 { margin-bottom: 0.25rem; }
+.design-saved p { margin: 0 0 0.3rem; }
+.design-save-row { display: flex; gap: 0.3rem; align-items: center; }
+.design-save-row input { flex: 1; min-width: 0; }
+.design-properties { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.25rem 0.5rem; align-items: center; font-size: 0.85rem; }
+.design-properties .design-field { display: contents; }
+.design-properties input[type="checkbox"] { justify-self: start; }
+.design-properties > p, .design-properties > button { grid-column: 1 / -1; justify-self: start; margin: 0; }
+.design-cost { flex: 1; min-height: 8rem; display: flex; flex-direction: column; }
+.design-cost p { margin: 0.25rem 0 0; }
+.design-bom-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+.design-bom thead th { position: sticky; top: 0; background: var(--surface); }
+.design-bom tfoot th { position: sticky; bottom: 0; background: var(--surface); }
+@media (max-width: 1100px) {
+  .design-panel { height: auto; overflow: visible; }
+  .design-bom-scroll { overflow: visible; }
+}
+.design-field { display: flex; flex-direction: column; gap: 0.15rem; margin-bottom: 0.4rem; font-size: 0.85rem; }
+.design-field input[type="checkbox"] { align-self: flex-start; }
+.design-bom { font-size: 0.85rem; }
+.design-bom-material { width: 40%; }
+.design-bom-broken td { color: var(--danger); }
+.design-problems { border-left: 3px solid var(--danger); padding-left: 0.6rem; }
+/* Capped so a long list cannot push the price table out of the fixed-height panel. */
+.design-problems ul { margin: 0; padding-left: 1rem; font-size: 0.85rem; max-height: 6rem; overflow-y: auto; }
+.dz-grid { stroke: var(--border); fill: none; opacity: 0.6; }
+.dz-origin { stroke: var(--text-muted); }
+.dz-wall { fill: var(--text); fill-opacity: 0.75; stroke: var(--text); }
+.dz-floor { fill: var(--secondary); fill-opacity: 0.12; stroke: var(--secondary); }
+.dz-solid { fill: var(--text-muted); fill-opacity: 0.45; stroke: var(--text-muted); }
+.dz-roof { fill: none; stroke: var(--success); }
+.dz-room { fill: var(--accent); fill-opacity: 0.08; stroke: var(--accent); }
+.dz-opening { fill: var(--surface); stroke: var(--secondary); }
+.dz-ghost { fill: none; stroke: var(--text-muted); opacity: 0.35; }
+.dz-invalid { fill: none; stroke: var(--danger); }
+.dz-selected { stroke: var(--accent); }
+.dz-wall.dz-selected { fill: var(--accent); }
+.dz-opening.dz-selected { fill: var(--accent); }
+.dz-handle { fill: var(--surface); stroke: var(--accent); }
+.dz-preview { fill: none; stroke: var(--accent); }
+.dz-cursor { fill: var(--accent); }
+.dz-preview-close { stroke: var(--accent); opacity: 0.6; }
+.dz-close-target { fill: none; stroke: var(--accent); }
+.dz-label { fill: var(--text); font-family: var(--font-body); pointer-events: none; }
+/* .btn and .flash set display, which would otherwise beat the hidden attribute the editor toggles. */
+.design-editor [hidden] { display: none !important; }

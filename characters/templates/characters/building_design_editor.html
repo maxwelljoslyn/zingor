@@ -1,0 +1,88 @@
+{% extends "characters/base.html" %}
+{% load static %}
+{% block title %}{{ design.name }} — {{ building.name }} — Zingor{% endblock %}
+{% block content %}
+<div class="row-between mb-lg">
+  <h1>{{ design.name }} <span class="muted text-meta">(design of <a href="{% url 'characters:real_estate_detail' 'building' building.pk %}">{{ building.name }}</a>)</span></h1>
+  <a href="{% url 'characters:real_estate_detail' 'building' building.pk %}" class="btn btn-secondary btn-small">Back to {{ building.name }}</a>
+</div>
+{% csrf_token %}
+<div class="design-editor" data-design-editor
+     data-document-url="{% url 'characters:building_design_document' building.pk design.pk %}"
+     data-draft-url="{% url 'characters:building_design_draft' building.pk design.pk %}"
+     data-discard-url="{% url 'characters:building_design_draft_discard' building.pk design.pk %}"
+     data-commit-url="{% url 'characters:building_design_commit' building.pk design.pk %}"
+     data-bom-url="{% url 'characters:building_design_bom' building.pk design.pk %}">
+  <div class="design-toolbar">
+    <div class="design-tools" role="group" aria-label="Tools">
+      <button type="button" class="btn btn-secondary btn-small" data-tool="select" data-shortcut="v" aria-keyshortcuts="V" title="Select (V)">Select</button>
+      {% if can_edit %}
+      <button type="button" class="btn btn-secondary btn-small" data-tool="wall" data-shortcut="w" aria-keyshortcuts="W" title="Wall (W)">Wall</button>
+      <button type="button" class="btn btn-secondary btn-small" data-tool="floor" data-shortcut="f" aria-keyshortcuts="F" title="Floor (F)">Floor</button>
+      <button type="button" class="btn btn-secondary btn-small" data-tool="opening" data-shortcut="d" aria-keyshortcuts="D" title="Door/Window (D)">Door/Window</button>
+      <button type="button" class="btn btn-secondary btn-small" data-tool="room">Room</button>
+      <button type="button" class="btn btn-secondary btn-small" data-tool="solid">Solid</button>
+      <button type="button" class="btn btn-secondary btn-small" data-tool="roof">Roof</button>
+      {% endif %}
+    </div>
+    <div class="design-tools" role="group" aria-label="Layer">
+      <button type="button" class="btn btn-secondary btn-small" data-layer-step="-1" aria-label="Layer down">▼</button>
+      <span data-layer-label class="nowrap"></span>
+      <button type="button" class="btn btn-secondary btn-small" data-layer-step="1" aria-label="Layer up">▲</button>
+    </div>
+    <div class="design-tools">
+      {% if can_edit %}
+      <button type="button" class="btn btn-secondary btn-small" data-action="undo" title="Undo (⌘Z or Ctrl+Z)">Undo</button>
+      <button type="button" class="btn btn-secondary btn-small" data-action="redo" title="Redo (⌘Y or Ctrl+Y)">Redo</button>
+      {% else %}
+      <span hidden><button type="button" data-action="undo"></button><button type="button" data-action="redo"></button></span>
+      {% endif %}
+      <button type="button" class="btn btn-secondary btn-small" data-action="fit">Fit</button>
+    </div>
+  </div>
+  <div class="flash" data-notice hidden>
+    <span data-notice-text></span>
+    {% if can_edit %}<button type="button" class="btn btn-secondary btn-small" data-action="discard" hidden>Discard draft</button>{% endif %}
+  </div>
+  <div class="design-body">
+    <svg class="design-canvas" data-canvas xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Plan of {{ design.name }}"></svg>
+    <aside class="design-panel">
+      <div class="subsection design-saved">
+        <h3>Saved</h3>
+        <p class="text-sm" data-version></p>
+        {% if can_edit %}
+        <div class="design-save-row">
+          <input type="text" maxlength="500" data-commit-message placeholder="Note for this version, e.g. added the cellar" aria-label="Note for this version">
+          <button type="button" class="btn btn-small" data-action="commit">Save Version</button>
+        </div>
+        <span class="muted text-sm" data-save-status></span>
+        {% endif %}
+      </div>
+      <div class="subsection">
+        <h3 data-properties-heading>Properties</h3>
+        <div class="design-properties" data-properties></div>
+      </div>
+      <div class="subsection design-problems" data-problems-block hidden>
+        <h3 data-problems-heading></h3>
+        <ul data-problems></ul>
+      </div>
+      {# Everything above stays put; only the price table scrolls, inside design-bom-scroll. #}
+      <div class="subsection design-cost">
+        <h3>Cost</h3>
+        <div class="design-bom-scroll">
+          <table class="data-table design-bom">
+            <thead><tr><th class="design-bom-material">Material</th><th>Amount</th><th title="How much of the material one trade good covers">Sale unit</th><th title="How many sale units the amount comes to">Units</th><th>Unit price</th><th>Cost</th></tr></thead>
+            <tbody data-bom-lines></tbody>
+            <tfoot><tr><th colspan="5" data-bom-total-label>Total</th><th data-bom-total class="nowrap"></th></tr></tfoot>
+          </table>
+        </div>
+        <p class="muted text-sm" data-bom-legend hidden>⚠ Not priced: that shape has a problem (see above, or hover the row). Its cost joins the total once the problem is fixed.</p>
+        <p class="muted text-sm" data-bom-market></p>
+        <p class="muted text-sm" data-bom-unpriced hidden></p>
+      </div>
+    </aside>
+  </div>
+  <p class="muted text-sm">Walls, floors, solids, rooms and roofs are drawn by clicking corner points: click the first point again, press Enter or double-click to finish, Backspace removes the last point, Escape cancels. Points snap to the 5 ft grid, to 45° and to nearby corners; hold Shift to place a point freely. Click again on the same spot to select a shape underneath another. Scroll to zoom, drag empty space to pan, PageUp/PageDown to change layer. Shortcuts: V select, W wall, F floor, D door/window, ⌘Z/Ctrl+Z undo, ⌘Y/Ctrl+Y redo.</p>
+</div>
+<script src="{% static 'characters/building-editor.js' %}" defer></script>
+{% endblock %}

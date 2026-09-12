@@ -110,6 +110,17 @@ urlpatterns = [
     ),
     # Building designs (#197)
     path(
+        "building/<int:pk>/designs/create/",
+        views.building_design_create,
+        {"kind": "building"},
+        name="building_design_create",
+    ),
+    path(
+        "building/<int:pk>/design/<int:design_pk>/",
+        views.building_design_editor,
+        name="building_design_editor",
+    ),
+    path(
         "building/<int:pk>/design/<int:design_pk>/document/",
         views.building_design_document,
         name="building_design_document",
