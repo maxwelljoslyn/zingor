@@ -3,36 +3,38 @@
 {% load character_tags %}
 {% block title %}{{ character.name|default:"Unnamed" }} — Zingor{% endblock %}
 {% block content %}
-<div class="row-between mb-lg">
-  <h1>
-    {{ character.name|default:"Unnamed Character" }}
-    {% if not is_owner %}
-      <span class="owner-tag">(<a href="{% url 'characters:user_profile' character.user.username %}">{{ character.user|display_name }}</a>'s character)</span>
-    {% endif %}
-  </h1>
-  <div class="toolbar">
-    {% include "characters/partials/wiki_controls.html" %}
-    {% if user.is_authenticated %}
-    <button type="button" class="btn btn-secondary btn-small"
-            data-reorder-toggle="sections"
-            data-label-off="Reorder sections" data-label-on="Done"
-            onclick="zingorToggleReorder(this)">Reorder sections</button>
-    {% endif %}
-    <button hx-get="/character/{{ character.pk }}/wiki-export/"
-            hx-target="#wiki-modal"
-            hx-swap="innerHTML"
-            class="btn btn-secondary btn-small">Export to Wiki</button>
-    <a href="/" class="btn btn-secondary btn-small">Back to List</a>
-  </div>
-</div>
+<h1 class="mb-lg">
+  {{ character.name|default:"Unnamed Character" }}
+  {% if not is_owner %}
+    <span class="owner-tag">(<a href="{% url 'characters:user_profile' character.user.username %}">{{ character.user|display_name }}</a>'s character)</span>
+  {% endif %}
+</h1>
 <div class="sheet-layout">
   <div class="sheet-rail">
     {% include "characters/partials/portrait.html" %}
     {% include "characters/partials/toc.html" %}
   </div>
-  <div id="sheet-body"
-       data-sortable="sections" data-sortable-item="section" data-sortable-handle="h2">
-    {% include "characters/partials/sheet_body.html" %}
+  {# The toolbar acts on the sheet, so it heads the sections' column instead of sharing the title's row. #}
+  {# Beside the title it was pushed into the name on narrow screens; here it wraps over the sections. #}
+  <div class="sheet-main">
+    <div class="toolbar sheet-toolbar">
+      {% include "characters/partials/wiki_controls.html" %}
+      {% if user.is_authenticated %}
+      <button type="button" class="btn btn-secondary btn-small"
+              data-reorder-toggle="sections"
+              data-label-off="Reorder sections" data-label-on="Done"
+              onclick="zingorToggleReorder(this)">Reorder sections</button>
+      {% endif %}
+      <button hx-get="/character/{{ character.pk }}/wiki-export/"
+              hx-target="#wiki-modal"
+              hx-swap="innerHTML"
+              class="btn btn-secondary btn-small">Export to Wiki</button>
+      <a href="/" class="btn btn-secondary btn-small">Back to List</a>
+    </div>
+    <div id="sheet-body"
+         data-sortable="sections" data-sortable-item="section" data-sortable-handle="h2">
+      {% include "characters/partials/sheet_body.html" %}
+    </div>
   </div>
 </div>
 <div id="wiki-modal"></div>

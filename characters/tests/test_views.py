@@ -557,6 +557,20 @@ class CharacterSheetViewTests(TestCase):
         self.assertContains(response, "Thorn")
         self.assertContains(response, "Inactive")
 
+    def test_toolbar_heads_the_sections_column_not_the_title_row(self) -> None:
+        """The sheet's toolbar sits over the sections, not beside the character's name.
+
+        Beside the title it was squeezed into the name on narrow screens.
+        """
+        html = self.client.get(f"/character/{self.character.pk}/").content.decode()
+        title_end = html.index("</h1>")
+        main = html.index('class="sheet-main"')
+        toolbar = html.index("sheet-toolbar")
+        sections = html.index('id="sheet-body"')
+        self.assertLess(title_end, main)
+        self.assertLess(main, toolbar)
+        self.assertLess(toolbar, sections)
+
 
 class ToggleActiveTests(TestCase):
     def setUp(self):
