@@ -34,6 +34,9 @@
   --overlay: rgba(38, 34, 26, 0.55);
   --shadow: 0 1px 2px rgba(38, 34, 26, 0.10), 0 2px 10px rgba(38, 34, 26, 0.05);
   --ring: 0 0 0 3px rgba(178, 58, 46, 0.20);
+  /* The site header's height: one row of logo and small buttons, held there by
+     header's min-height. Anything placed against its bottom edge reads this. */
+  --header-height: 3.75rem;
 
   /* Type */
   --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Hoefler Text", Georgia, serif;
@@ -130,10 +133,12 @@ header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow);
+  min-height: var(--header-height);
   padding: 0.75rem 1.25rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
 }
 /* Brand wordmark — set in the display serif, inked rather than rubricated */
 .logo {
@@ -145,7 +150,64 @@ header {
   text-decoration: none;
 }
 header > a:hover { color: var(--accent); }
-nav a.btn { color: var(--on-accent); text-decoration: none; margin-left: 1rem; }
+/* The theme toggle, the menu button and the nav, sharing the header's one row. */
+.site-actions { display: flex; align-items: center; gap: 0.5rem; }
+/* Buttons don't inherit line-height, so they'd sit shorter than the link buttons beside them. */
+.site-actions button { line-height: inherit; }
+/* Wide screens: the nav is an inline row of small buttons. It carries the popover
+   attribute for the narrow-screen menu, so undo the browser's popover styling
+   (hidden, fixed, centred, bordered) to lay it out in the row like anything else. */
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: static;
+  inset: auto;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  overflow: visible;
+}
+.site-nav a.btn { color: var(--on-accent); text-decoration: none; }
+header .site-menu-toggle { display: none; }
+@media (max-width: 800px) {
+  /* Too narrow for the nav to share a row with the logo: it folds into a menu that
+     opens as a full-width panel under the header, rows sized for a thumb. The
+     popover closes itself on a tap outside it or on Escape. */
+  .theme-label { display: none; }
+  header .site-menu-toggle { display: inline-block; }
+  .site-nav:not(:popover-open) { display: none; }
+  .site-nav:popover-open {
+    position: fixed;
+    inset: var(--header-height) 0 auto 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  .site-nav:popover-open > a,
+  .site-nav:popover-open > form > button {
+    display: block;
+    width: 100%;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    background: none;
+    color: var(--text);
+    font-size: 1rem;
+    text-align: left;
+    text-decoration: none;
+  }
+  .site-nav:popover-open > a:hover,
+  .site-nav:popover-open > form > button:hover { background: var(--surface-alt); }
+  .site-nav:popover-open > form { display: block; }
+}
 /* Show the icon for the active theme; the other stays hidden. Light is the
    default (:root), dark is applied via :root[data-theme="dark"]. */
 .theme-icon-dark { display: none; }
