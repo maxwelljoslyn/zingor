@@ -134,14 +134,14 @@
   <header>
     <a class="logo" href="/">Zingor</a>
     <div class="site-actions">
-      <button type="button" class="btn-small" onclick="zingorToggleTheme()"
+      <button type="button" class="btn btn-small" onclick="zingorToggleTheme()"
               aria-label="Toggle light and dark mode" title="Toggle light and dark mode">
         <span class="theme-icon theme-icon-light"><span aria-hidden="true">☀</span><span class="theme-label"> light</span></span>
         <span class="theme-icon theme-icon-dark"><span aria-hidden="true">☾</span><span class="theme-label"> dark</span></span>
       </button>
       {# Narrow screens fold the nav into a popover this button opens; wider, the nav is inline and the button hidden. #}
       {# popovertarget can only name an id, so site-nav is a behaviour hook, never a CSS selector. #}
-      <button type="button" class="btn-small site-menu-toggle" popovertarget="site-nav">Menu</button>
+      <button type="button" class="btn btn-small site-menu-toggle" popovertarget="site-nav">Menu</button>
       <nav id="site-nav" class="site-nav" popover aria-label="Site">
         <a class="btn btn-small" href="https://zingor.readthedocs.io">Docs</a>
         {% if user.is_authenticated %}
@@ -151,7 +151,7 @@
           <a href="{% url 'characters:user_profile' user.username %}">{{ user|display_name }}</a>
           <form method="post" action="{% url 'characters:logout' %}" class="inline">
             {% csrf_token %}
-            <button type="submit" class="btn-small">Logout</button>
+            <button type="submit" class="btn btn-small">Logout</button>
           </form>
         {% else %}
           <a href="/login/">Login</a>

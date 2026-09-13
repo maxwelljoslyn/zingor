@@ -168,8 +168,6 @@ html { scroll-padding-top: var(--header-height); }
 header > a:hover { color: var(--accent); }
 /* The theme toggle, the menu button and the nav, sharing the header's one row. */
 .site-actions { display: flex; align-items: center; gap: 0.5rem; }
-/* Buttons don't inherit line-height, so they'd sit shorter than the link buttons beside them. */
-.site-actions button { line-height: inherit; }
 /* Wide screens: the nav is an inline row of small buttons. It carries the popover
    attribute for the narrow-screen menu, so undo the browser's popover styling
    (hidden, fixed, centred, bordered) to lay it out in the row like anything else. */
@@ -382,7 +380,12 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--accent);
   box-shadow: var(--ring);
 }
+/* .btn looks the same on <a> and <button>. The two start from different browser
+   defaults, so every property where those differ is set here, not left to
+   inherit: a link takes the page's line-height, a button its own "normal", and
+   side by side the link button stood taller. */
 button, .btn {
+  line-height: 1.2;
   background: var(--accent);
   color: var(--on-accent);
   border: none;
