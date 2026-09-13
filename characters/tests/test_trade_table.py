@@ -18,7 +18,9 @@ from characters.trade import (
 )
 from characters.units import D, u
 
-BUDAPEST = Path(__file__).resolve().parents[1] / "spreadsheets" / "price-table-budapest.xlsx"
+BUDAPEST = (
+    Path(__file__).resolve().parents[1] / "spreadsheets" / "price-table-budapest.xlsx"
+)
 
 HEADINGS = ("vendor", "item", "description", "price", "coin", "weight", "unit")
 
