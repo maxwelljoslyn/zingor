@@ -9,12 +9,13 @@
   var list = document.querySelector('[data-toc="sections"]');
   if (!list) return;
 
-  // How far below the sticky site header a section's start must be before it
-  // counts as the one being read. Roughly one heading's worth of slack. Measured
-  // from the header's bottom rather than the viewport top, since whatever is
-  // under the header isn't being read, and a jump lands a section just below it.
+  // How far below the top of the reading area (see readingTop) a section's start
+  // must be before it counts as the one being read. Roughly one heading's worth
+  // of slack.
   var ACTIVE_OFFSET = 96;
   var header = document.querySelector('header');
+  // The key last brought into view in the narrow-screen bar (see revealCurrent).
+  var revealedKey = null;
 
   function entries() {
     return Array.prototype.slice.call(list.querySelectorAll('[data-toc-key]'));
@@ -36,6 +37,33 @@
     });
   }
 
+  // Where the reading area starts: below the sticky site header, and below the
+  // contents too when they are a bar across the top of the sheet (narrow screens)
+  // rather than a rail beside it, told apart by whether they overlap the sections
+  // horizontally.
+  function readingTop(firstSection) {
+    var top = header ? header.getBoundingClientRect().bottom : 0;
+    var contents = list.getBoundingClientRect();
+    if (contents.right > firstSection.getBoundingClientRect().left) {
+      top = Math.max(top, contents.bottom);
+    }
+    return top;
+  }
+
+  // In the narrow-screen bar the list scrolls sideways, so keep the current entry
+  // in view, centred. Only on a change of section, so it never fights a reader
+  // scrolling the bar by hand; a no-op while the list fits, as in the rail.
+  function revealCurrent(key) {
+    if (key === revealedKey) return;
+    revealedKey = key;
+    var link = list.querySelector('a[aria-current]');
+    if (!link || list.scrollWidth <= list.clientWidth) return;
+    var box = list.getBoundingClientRect();
+    var linkBox = link.getBoundingClientRect();
+    if (linkBox.left >= box.left && linkBox.right <= box.right) return;
+    list.scrollLeft += linkBox.left - box.left - (box.width - linkBox.width) / 2;
+  }
+
   function currentKey() {
     var visible = sections();
     if (!visible.length) return null;
@@ -44,7 +72,7 @@
     var atBottom =
       window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
     if (atBottom) return visible[visible.length - 1].dataset.section;
-    var readingLine = (header ? header.getBoundingClientRect().bottom : 0) + ACTIVE_OFFSET;
+    var readingLine = readingTop(visible[0]) + ACTIVE_OFFSET;
     var key = visible[0].dataset.section;
     visible.forEach(function (el) {
       if (el.getBoundingClientRect().top <= readingLine) key = el.dataset.section;
@@ -55,7 +83,9 @@
   var pending = false;
   function update() {
     pending = false;
-    setCurrent(currentKey());
+    var key = currentKey();
+    setCurrent(key);
+    revealCurrent(key);
   }
   function schedule() {
     if (pending) return;

@@ -17,13 +17,23 @@ STYLESHEET = (STATIC_DIR / "styles.css").read_text()
 UNCOMMENTED = re.sub(r"/\*.*?\*/", "", STYLESHEET, flags=re.DOTALL)
 
 
-def declarations(selector: str) -> str:
+def declarations(selector: str, css: str = UNCOMMENTED) -> str:
     """Return the declaration block of the first rule with this exact selector."""
-    match = re.search(
-        r"(?:^|\})\s*" + re.escape(selector) + r"\s*\{([^}]*)\}", UNCOMMENTED
-    )
+    match = re.search(r"(?:^|\})\s*" + re.escape(selector) + r"\s*\{([^}]*)\}", css)
     assert match is not None, f"no rule found for selector {selector!r}"
     return match.group(1)
+
+
+def media_block(query: str) -> str:
+    """Return the rules inside the first @media block with this exact query."""
+    opener = "@media " + query + " {"
+    start = UNCOMMENTED.index(opener) + len(opener)
+    depth = 1
+    index = start
+    while depth:
+        depth += {"{": 1, "}": -1}.get(UNCOMMENTED[index], 0)
+        index += 1
+    return UNCOMMENTED[start : index - 1]
 
 
 class StickyHeaderStyleTests(TestCase):
@@ -54,3 +64,28 @@ class StickyHeaderStyleTests(TestCase):
     def test_header_height_is_set_in_rem(self) -> None:
         # rem, so the offset scales with the user's font size along with the header.
         self.assertRegex(STYLESHEET, r"--header-height:\s*[\d.]+rem")
+
+
+class NarrowSheetContentsBarTests(TestCase):
+    """On narrow screens the sheet's contents are a bar that sticks under the header."""
+
+    def setUp(self) -> None:
+        self.narrow = media_block("(max-width: 900px)")
+
+    def test_contents_bar_sticks_under_the_header(self) -> None:
+        block = declarations(".sheet-toc", self.narrow)
+        self.assertIn("position: sticky", block)
+        self.assertIn("top: var(--header-height)", block)
+
+    def test_rail_box_is_dropped_so_the_bar_sticks_for_the_whole_sheet(self) -> None:
+        # Inside the rail's box the bar would stop sticking once the rail scrolled away.
+        self.assertIn("display: contents", declarations(".sheet-rail", self.narrow))
+
+    def test_bar_is_as_tall_as_its_token(self) -> None:
+        block = declarations(".sheet-toc-list", self.narrow)
+        self.assertIn("height: var(--toc-bar-height)", block)
+
+    def test_jumps_clear_the_bar_as_well_as_the_header(self) -> None:
+        block = declarations("html:has(.sheet-toc)", self.narrow)
+        self.assertIn("var(--header-height)", block)
+        self.assertIn("var(--toc-bar-height)", block)

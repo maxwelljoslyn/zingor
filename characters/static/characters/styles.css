@@ -37,6 +37,9 @@
   /* The site header's height: one row of logo and small buttons, held there by
      header's min-height. Anything placed against its bottom edge reads this. */
   --header-height: 3.75rem;
+  /* The character sheet's contents bar on narrow screens, stuck under the header:
+     one row of jump links, each a thumb-sized target. */
+  --toc-bar-height: 2.75rem;
 
   /* Type */
   --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Hoefler Text", Georgia, serif;
@@ -290,17 +293,52 @@ h1 { color: var(--accent); letter-spacing: 0.01em; }
   background: var(--surface);
 }
 @media (max-width: 900px) {
-  /* Too narrow for a rail: the contents become a row of jump links above the sheet. */
+  /* Too narrow for a rail: the picture sits above the sheet, and the contents
+     become a bar of jump links that sticks under the header. The rail's box goes
+     (display: contents), leaving the picture and the contents as items of the
+     sheet's own grid; inside the rail, the bar could only stick while the rail
+     itself was on screen. */
   .sheet-layout { grid-template-columns: minmax(0, 1fr); }
-  .sheet-rail { position: static; max-height: none; overflow: visible; }
+  .sheet-rail { display: contents; }
   /* Without a rail to bound it, the picture would run the full page width. */
   .portrait { max-width: 11rem; }
-  .sheet-toc-list { display: flex; flex-wrap: wrap; gap: 0.15rem 0.5rem; }
-  .sheet-toc-list a { border-left: none; padding: 0.25rem 0.35rem; }
-  .sheet-toc-list a[aria-current] { background: none; }
+  /* Full-bleed across the container's side padding, so the sheet scrolling under
+     the bar doesn't show past its ends. Under the header's z-index, over the sheet's. */
+  .sheet-toc {
+    position: sticky;
+    top: var(--header-height);
+    z-index: 9;
+    margin-inline: -1rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  /* The nav's aria-label still names it; a visible heading would make the bar two rows. */
+  .sheet-toc-title { display: none; }
+  /* One row scrolling sideways rather than wrapping into rows that would cover the
+     page; sheet-toc.js scrolls the current entry into view as you read. */
+  .sheet-toc-list {
+    display: flex;
+    height: var(--toc-bar-height);
+    padding-inline: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .sheet-toc-list li { display: flex; }
+  .sheet-toc-list a {
+    display: flex;
+    align-items: center;
+    padding: 0 0.6rem;
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  .sheet-toc-list a[aria-current] { background: none; border-bottom-color: var(--accent); }
+  /* A jump to a section has to clear the bar as well as the header. */
+  html:has(.sheet-toc) { scroll-padding-top: calc(var(--header-height) + var(--toc-bar-height)); }
 }
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
+  .sheet-toc-list { scroll-behavior: smooth; }
 }
 /* The signature: rubricated section headings — vermilion small-caps over a faded rule */
 .section h2 {
