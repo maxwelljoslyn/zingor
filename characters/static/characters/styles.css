@@ -129,7 +129,14 @@ a:active {
 }
 
 .container { max-width: 1280px; margin: 0 auto; padding: 1.25rem 1rem; }
+/* The header follows the page down, so "back to the homepage" is always one
+   click away however far you've scrolled. It stays in normal flow (sticky, not
+   fixed), so nothing needs a compensating top margin; z-index only has to beat
+   the page content it scrolls over, and stays well under the modal layer. */
 header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow);
@@ -140,6 +147,12 @@ header {
   align-items: center;
   gap: 1rem;
 }
+/* Keep in-page jumps clear of the sticky header: without this the browser would
+   scroll the target flush to the viewport top, i.e. underneath the header. Set
+   on the scrolling element so every anchor and scrollIntoView (the table of
+   contents, search-pin.js) gets it, rather than repeating an offset on each
+   jump target. */
+html { scroll-padding-top: var(--header-height); }
 /* Brand wordmark — set in the display serif, inked rather than rubricated */
 .logo {
   font-family: var(--font-display);
@@ -241,8 +254,8 @@ h1 { color: var(--accent); letter-spacing: 0.01em; }
 /* The rail itself is what sticks, so the picture rides along with the contents. */
 .sheet-rail {
   position: sticky;
-  top: 1rem;
-  max-height: calc(100vh - 2rem);
+  top: calc(var(--header-height) + 1rem);
+  max-height: calc(100vh - var(--header-height) - 2rem);
   overflow-y: auto;
 }
 /* An index in the margin: quieter than a section heading, same hand. */
@@ -863,6 +876,9 @@ html:has(.design-editor) { scrollbar-gutter: stable; }
 @media (max-width: 1100px) {
   .design-panel { height: auto; overflow: visible; }
   .design-bom-scroll { overflow: visible; }
+  /* The table no longer scrolls on its own, so its header sticks to the page
+     instead, and has to clear the sticky site header to stay visible. */
+  .design-bom thead th { top: var(--header-height); }
 }
 .design-field { display: flex; flex-direction: column; gap: 0.15rem; margin-bottom: 0.4rem; font-size: 0.85rem; }
 .design-field input[type="checkbox"] { align-self: flex-start; }

@@ -9,9 +9,12 @@
   var list = document.querySelector('[data-toc="sections"]');
   if (!list) return;
 
-  // How far below the viewport top a section's start must be before it counts as
-  // the one being read. Roughly one heading's worth of slack.
+  // How far below the sticky site header a section's start must be before it
+  // counts as the one being read. Roughly one heading's worth of slack. Measured
+  // from the header's bottom rather than the viewport top, since whatever is
+  // under the header isn't being read, and a jump lands a section just below it.
   var ACTIVE_OFFSET = 96;
+  var header = document.querySelector('header');
 
   function entries() {
     return Array.prototype.slice.call(list.querySelectorAll('[data-toc-key]'));
@@ -41,9 +44,10 @@
     var atBottom =
       window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
     if (atBottom) return visible[visible.length - 1].dataset.section;
+    var readingLine = (header ? header.getBoundingClientRect().bottom : 0) + ACTIVE_OFFSET;
     var key = visible[0].dataset.section;
     visible.forEach(function (el) {
-      if (el.getBoundingClientRect().top <= ACTIVE_OFFSET) key = el.dataset.section;
+      if (el.getBoundingClientRect().top <= readingLine) key = el.dataset.section;
     });
     return key;
   }
