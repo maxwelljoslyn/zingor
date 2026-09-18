@@ -12,6 +12,9 @@ fix:
 format:
     uv run ruff format
 
+serve:
+    uv run manage.py runserver
+
 docs:
     uv run python -m sphinx -T -b html docs docs/_build/html
 
