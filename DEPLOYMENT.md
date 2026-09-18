@@ -81,6 +81,7 @@ defaults, mail is printed to the service log instead of being sent.
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
 | `REGISTRATION_ENABLED` | no | `true` | `false` hides self-serve registration. |
+| `BUILDING_DESIGNER_ENABLED` | no | `false` | `true` turns on the unfinished building design editor: the Designs section on a building's page and every design URL, which otherwise 404. |
 | `EMAIL_CONFIRMATION_REQUIRED` | no | `true` (`false` when `DEBUG`) | Whether new accounts must confirm by email before logging in. Leave it on unless mail is deliberately unconfigured. |
 | `GITHUB_FEEDBACK_REPO` | no | empty | `owner/repo` that the in-app feedback form files issues against. |
 | `GITHUB_FEEDBACK_TOKEN` | no | empty | GitHub token with issue-creation rights on that repo. If either of these is empty, the feedback form reports that it is unconfigured. |

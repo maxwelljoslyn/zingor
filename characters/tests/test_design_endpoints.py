@@ -3,7 +3,7 @@
 import json
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from characters.models import (
     Building,
@@ -44,6 +44,7 @@ def room(room_id, name="Hall") -> dict:
     }
 
 
+@override_settings(BUILDING_DESIGNER_ENABLED=True)
 class DesignEndpointBase(TestCase):
     """Alice owns the mill through Bela; Carol owns nothing."""
 

@@ -162,6 +162,11 @@ EMAIL_CONFIRMATION_REQUIRED = (
 )
 
 REGISTRATION_ENABLED = os.environ.get("REGISTRATION_ENABLED", "true").lower() == "true"
+# The building design editor (#197) is unfinished: off unless asked for, so a
+# release can ship real estate without it.
+BUILDING_DESIGNER_ENABLED = (
+    os.environ.get("BUILDING_DESIGNER_ENABLED", "false").lower() == "true"
+)
 
 GITHUB_FEEDBACK_REPO = os.environ.get("GITHUB_FEEDBACK_REPO", "")
 GITHUB_FEEDBACK_TOKEN = os.environ.get("GITHUB_FEEDBACK_TOKEN", "")

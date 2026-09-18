@@ -1,13 +1,13 @@
 """Tests for the building design pages: starting a design and the editor page (#197)."""
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from characters.design_document import SCHEMA_VERSION, empty_document
 from characters.models import Building, Character, Design, DesignVersion
 
 
-class DesignPageTests(TestCase):
+class DesignPageBase(TestCase):
     """Alice owns the mill through Bela; Carol owns nothing."""
 
     def setUp(self):
@@ -18,6 +18,37 @@ class DesignPageTests(TestCase):
         self.mill.owners.set([bela])
         self.client.login(username="alice", password="pass")
 
+
+@override_settings(BUILDING_DESIGNER_ENABLED=False)
+class DesignerDisabledTests(DesignPageBase):
+    """With the designer off, a building's page has no Designs and its URLs 404."""
+
+    def test_building_page_omits_designs(self):
+        response = self.client.get(f"/building/{self.mill.pk}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Designs")
+        self.assertNotContains(response, "New Design")
+
+    def test_design_urls_are_not_found(self):
+        design = Design.objects.create(building=self.mill, name="Main")
+        base = f"/building/{self.mill.pk}/design/{design.pk}"
+        self.assertEqual(self.client.get(base + "/").status_code, 404)
+        self.assertEqual(self.client.get(base + "/document/").status_code, 404)
+        for path in ("/draft/", "/draft/discard/", "/commit/", "/bom/"):
+            with self.subTest(path=path):
+                response = self.client.post(
+                    base + path, "{}", content_type="application/json"
+                )
+                self.assertEqual(response.status_code, 404)
+        response = self.client.post(
+            f"/building/{self.mill.pk}/designs/create/", {"name": "Other"}
+        )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(Design.objects.count(), 1)
+
+
+@override_settings(BUILDING_DESIGNER_ENABLED=True)
+class DesignPageTests(DesignPageBase):
     def test_owner_starts_a_design_and_lands_in_the_editor(self):
         response = self.client.post(
             f"/building/{self.mill.pk}/designs/create/", {"name": "Main"}

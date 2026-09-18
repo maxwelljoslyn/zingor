@@ -1602,6 +1602,7 @@ def real_estate_detail(request, kind, pk):
         "real_estate": real_estate,
         "kind": kind,
         "can_edit": can_edit,
+        "building_designer_enabled": django_settings.BUILDING_DESIGNER_ENABLED,
         "owners": owners,
         "owner_choices": _owner_choices(exclude=owners) if can_edit else [],
     }
@@ -1609,8 +1610,9 @@ def real_estate_detail(request, kind, pk):
         ctx["buildings"] = real_estate.buildings.prefetch_related("owners__user")
     else:
         ctx["parcels"] = Parcel.objects.all() if can_edit else []
-        ctx["designs"] = real_estate.designs.select_related("head__author")
-        ctx["versions"] = real_estate.design_versions.select_related("design")
+        if django_settings.BUILDING_DESIGNER_ENABLED:
+            ctx["designs"] = real_estate.designs.select_related("head__author")
+            ctx["versions"] = real_estate.design_versions.select_related("design")
     # Everything kept here, as a container tree: a chest's contents are stored
     # here too (see _relocate), so the roots are the items whose container is
     # not itself among them. A building's rooms are part of the building.
@@ -1708,6 +1710,18 @@ def real_estate_delete(request, real_estate):
 # building's owners may save a draft or commit.
 
 
+def building_designer_required(view_func):
+    """404 unless settings.BUILDING_DESIGNER_ENABLED; the editor is unfinished."""
+
+    @functools.wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not django_settings.BUILDING_DESIGNER_ENABLED:
+            raise Http404("The building designer is not enabled.")
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
+
+
 def _design_or_404(pk: int, design_pk: int) -> Design:
     """Design `design_pk` of building `pk`, the building's owners preloaded."""
     return get_object_or_404(
@@ -1786,6 +1800,7 @@ def _version_json(version) -> dict | None:
     }
 
 
+@building_designer_required
 @login_required
 @real_estate_editor_required
 @require_POST
@@ -1814,6 +1829,7 @@ def building_design_create(request, real_estate):
     )
 
 
+@building_designer_required
 @login_required
 @require_GET
 def building_design_editor(request, pk, design_pk):
@@ -1830,6 +1846,7 @@ def building_design_editor(request, pk, design_pk):
     )
 
 
+@building_designer_required
 @login_required
 @require_GET
 def building_design_document(request, pk, design_pk):
@@ -1859,6 +1876,7 @@ def building_design_document(request, pk, design_pk):
     )
 
 
+@building_designer_required
 @login_required
 @require_POST
 @design_editor_required
@@ -1874,6 +1892,7 @@ def building_design_draft(request, design):
     return JsonResponse({"updated_at": draft.updated_at.isoformat()})
 
 
+@building_designer_required
 @login_required
 @require_POST
 @design_editor_required
@@ -1883,6 +1902,7 @@ def building_design_draft_discard(request, design):
     return JsonResponse({})
 
 
+@building_designer_required
 @login_required
 @require_POST
 @design_editor_required
@@ -1907,6 +1927,7 @@ def building_design_commit(request, design):
     )
 
 
+@building_designer_required
 @login_required
 @require_POST
 def building_design_bom(request, pk, design_pk):
