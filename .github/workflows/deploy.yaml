@@ -3,9 +3,11 @@ name: test-and-deploy
 # but do NOT deploy). Deployment happens only when a version tag is
 # pushed (what `release` does after `bump`) or on a manual run from the
 # Actions tab / `gh workflow run deploy.yaml` (what `redeploy` does) —
-# and only after tests pass. Tag deploys ship the tagged commit; manual
-# deploys ship master HEAD (see deploy.sh). Requires the SSH_PRIVATE_KEY and KNOWN_HOSTS
-# repo secrets.
+# and only after tests pass. A deploying run whose commit already passed
+# its master push run skips re-running the tests: `sweet release` pushes the
+# tag only once that run is green, so the tag run would test the same commit
+# twice. Tag deploys ship the tagged commit; manual deploys ship master HEAD
+# (see deploy.sh). Requires the SSH_PRIVATE_KEY and KNOWN_HOSTS repo secrets.
 on:
   push:
     branches: [master]
@@ -16,22 +18,46 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     env:
       # settings.py requires SECRET_KEY; any value works for tests.
       SECRET_KEY: ci-only-not-a-secret
       DEBUG: "true"
     steps:
+      # Only deploying runs look for an earlier pass; a master push is the run
+      # that earns one, so it always tests. A tag pushed by hand, before its
+      # commit's master run went green, finds nothing and tests as usual.
+      - name: Check for an earlier passing run of this commit
+        id: prior
+        if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          passed=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow deploy.yaml \
+            --commit "$GITHUB_SHA" --branch master --event push --status success \
+            --json databaseId --jq length)
+          if [ "$passed" -gt 0 ]; then
+            echo "$GITHUB_SHA already passed on master; not testing it again."
+            echo "tested=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.prior.outputs.tested != 'true'
 
       - name: Install uv
+        if: steps.prior.outputs.tested != 'true'
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
 
       - name: Install dependencies
+        if: steps.prior.outputs.tested != 'true'
         run: uv sync --frozen
 
       - name: Run tests
+        if: steps.prior.outputs.tested != 'true'
         run: uv run pytest -n auto
 
   deploy:
