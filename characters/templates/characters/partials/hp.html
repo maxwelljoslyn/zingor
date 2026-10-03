@@ -4,9 +4,9 @@
   <div class="table-scroll">
     <table class="kv-table kv-table--pairs">
       <tr>
-        <th>Current HP</th>
+        <th>Current</th>
         <td>{% unknown_or_value character.current_hp "current_hp" character.pk %}</td>
-        <th>Max HP</th>
+        <th>Max</th>
         <td>{{ character.maximum_hp|default:"—" }}</td>
       </tr>
       <tr>
