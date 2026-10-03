@@ -40,7 +40,7 @@
   {% include "characters/partials/_notice.html" %}
   {% include "characters/partials/_sync_warnings.html" %}
   <div class="table-scroll">
-    <table class="kv-table">
+    <table class="kv-table kv-table--pairs">
       <tr>
         <th>Name</th>
         <td>{% unknown_or_value character.name "name" character.pk %}</td>

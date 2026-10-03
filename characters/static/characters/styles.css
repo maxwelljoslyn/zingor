@@ -515,6 +515,20 @@ ul.spell-list, ul.sheet-list { list-style: none; padding: 0; }
    label/value pairs, so cap their width rather than letting them stretch across
    the full (wide) container and open up big gaps between label and value. */
 .kv-table { width: 100%; max-width: 820px; }
+/* A key/value table holding two label/value pairs per row (identity, HP). On a
+   narrow screen four columns leave each value a sliver, wrapping onto three or
+   four lines, so there the cells reflow into one pair per row: the rows dissolve
+   (display: contents) and every label and value become items of a single
+   two-column grid, which keeps the labels aligned across the whole table. */
+@media (max-width: 600px) {
+  .kv-table--pairs tbody {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+  }
+  .kv-table--pairs tr { display: contents; }
+  /* Twice the rows now, each a single line, so they can sit closer together. */
+  .kv-table--pairs :is(th, td) { padding-block: 0.25rem; }
+}
 
 /* Every table lives in one of these. A table is only as narrow as its columns
    allow, so on a phone a wide one used to run past its section and drag the
