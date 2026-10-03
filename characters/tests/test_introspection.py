@@ -35,6 +35,9 @@ STYLESHEET = REPO_ROOT / "characters" / "static" / "characters" / "styles.css"
 TABLE_OPEN = re.compile(r"<table\b")
 SCROLL_WRAPPER = re.compile(r'<div class="table-scroll">\s*\Z')
 SCROLL_RULE = re.compile(r"\.table-scroll\s*\{[^}]*overflow-x:\s*auto")
+# A one-row .inline-form with several controls runs past its section on a phone
+# and widens the whole page (issue #201), so the rule must let it wrap.
+INLINE_FORM_WRAP_RULE = re.compile(r"\.inline-form\s*\{[^}]*flex-wrap:\s*wrap")
 
 
 def _ripgrep_cmd() -> list[str] | None:
@@ -104,4 +107,12 @@ def test_scroll_wrapper_is_styled() -> None:
     assert SCROLL_RULE.search(STYLESHEET.read_text()), (
         "styles.css defines no `.table-scroll { overflow-x: auto }` rule, so the "
         + "wrappers around every table do nothing (issue #34)."
+    )
+
+
+def test_inline_forms_wrap() -> None:
+    """`.inline-form` wraps instead of pushing the page sideways (issue #201)."""
+    assert INLINE_FORM_WRAP_RULE.search(STYLESHEET.read_text()), (
+        "styles.css's `.inline-form` rule no longer sets `flex-wrap: wrap`, so on "
+        + "a narrow screen its controls overflow the page (issue #201)."
     )

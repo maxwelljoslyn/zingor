@@ -433,7 +433,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .score-delta-total { font-size: 0.7em; font-weight: 600; }
 .score-delta-arrow { font-size: 0.9em; line-height: 1; }
 .score-modified { font-weight: 600; }
-.inline-form { display: inline-flex; gap: 0.3rem; align-items: center; }
+/* Wraps, and never outgrows its container: on a phone an add form's controls
+   would otherwise run past the section and widen the whole page (issue #201),
+   and a click-to-edit form would spill out of its table cell. */
+.inline-form { display: inline-flex; flex-wrap: wrap; max-width: 100%; gap: 0.3rem; align-items: center; }
 /* The add-condition target is an ability-score picker; target only applies to
    ability conditions, so hide it whenever another modifier type is selected.
    option:checked tracks the live selection, so this needs no JS. The backend
