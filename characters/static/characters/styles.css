@@ -321,6 +321,17 @@ h1 { color: var(--accent); letter-spacing: 0.01em; }
     overflow-x: auto;
     scrollbar-width: none;
   }
+  /* With the scrollbar hidden, a fade at each end that has more entries past it
+     is the cue that the bar scrolls; sheet-toc.js sets the data-more-* flags. */
+  .sheet-toc-list[data-more-after] {
+    mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+  }
+  .sheet-toc-list[data-more-before] {
+    mask-image: linear-gradient(to right, transparent, #000 3rem);
+  }
+  .sheet-toc-list[data-more-before][data-more-after] {
+    mask-image: linear-gradient(to right, transparent, #000 3rem, #000 calc(100% - 3rem), transparent);
+  }
   .sheet-toc-list li { display: flex; }
   .sheet-toc-list a {
     display: flex;

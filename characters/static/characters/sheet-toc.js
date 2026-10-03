@@ -64,6 +64,14 @@
     list.scrollLeft += linkBox.left - box.left - (box.width - linkBox.width) / 2;
   }
 
+  // Flag which ends of the narrow-screen bar have entries scrolled out of view,
+  // so the stylesheet can fade those ends. Both flags clear while the list fits.
+  function markEdges() {
+    var hidden = list.scrollWidth - list.clientWidth;
+    list.toggleAttribute('data-more-before', list.scrollLeft > 1);
+    list.toggleAttribute('data-more-after', list.scrollLeft < hidden - 1);
+  }
+
   function currentKey() {
     var visible = sections();
     if (!visible.length) return null;
@@ -95,6 +103,8 @@
 
   window.addEventListener('scroll', schedule, { passive: true });
   window.addEventListener('resize', schedule);
+  window.addEventListener('resize', markEdges);
+  list.addEventListener('scroll', markEdges, { passive: true });
   // A swap can change a section's height, moving every section below it.
   document.body.addEventListener('htmx:afterSwap', schedule);
   document.body.addEventListener('zingor:reorder', function (event) {
@@ -107,6 +117,10 @@
       if (entryFor[key]) list.appendChild(entryFor[key]);
     });
     schedule();
+    markEdges();
   });
   update();
+  markEdges();
+  // The display font arriving late can change how wide the entries are.
+  if (document.fonts) document.fonts.ready.then(markEdges);
 })();
