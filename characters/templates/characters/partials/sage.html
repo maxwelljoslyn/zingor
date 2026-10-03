@@ -297,7 +297,7 @@
         <option value="{{ field_name }}">{{ field_name }}</option>
       {% endfor %}
     </select>
-    <button type="submit">Add Field</button>
+    <button type="submit">Add</button>
   </form>
   {% endif %}
   {% if is_owner %}
@@ -313,7 +313,7 @@
         <option value="{{ study_name }}">{{ study_name }}</option>
       {% endfor %}
     </select>
-    <button type="submit">Add Study</button>
+    <button type="submit">Add</button>
   </form>
   {% endif %}
   <h3>Standalone Sage Abilities</h3>
@@ -390,7 +390,7 @@
     {% csrf_token %}
     <input type="text" name="ability" placeholder="Ability name" required>
     <input type="text" name="source" placeholder="Source (optional)">
-    <button type="submit">Add Ability</button>
+    <button type="submit">Add</button>
   </form>
   {% endif %}
 </div>
