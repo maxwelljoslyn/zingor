@@ -12,26 +12,28 @@
 <h2 class="mt-lg">Parcels</h2>
 {% if parcels %}
 <div class="section">
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>Parcel</th>
-        <th>Owners</th>
-        <th>Buildings</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for parcel in parcels %}
-      <tr>
-        <td><a href="{% url 'characters:real_estate_detail' 'parcel' parcel.pk %}">{{ parcel.name }}</a></td>
-        <td>{% include "characters/partials/owner_links.html" with owners=parcel.owners.all %}</td>
-        <td>
-          {% for building in parcel.buildings.all %}<a href="{% url 'characters:real_estate_detail' 'building' building.pk %}">{{ building.name }}</a>{% if not forloop.last %}, {% endif %}{% empty %}<span class="muted">—</span>{% endfor %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Parcel</th>
+          <th>Owners</th>
+          <th>Buildings</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for parcel in parcels %}
+        <tr>
+          <td><a href="{% url 'characters:real_estate_detail' 'parcel' parcel.pk %}">{{ parcel.name }}</a></td>
+          <td>{% include "characters/partials/owner_links.html" with owners=parcel.owners.all %}</td>
+          <td>
+            {% for building in parcel.buildings.all %}<a href="{% url 'characters:real_estate_detail' 'building' building.pk %}">{{ building.name }}</a>{% if not forloop.last %}, {% endif %}{% empty %}<span class="muted">—</span>{% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% else %}
 <p class="empty-note">No parcels yet.</p>
@@ -40,24 +42,26 @@
 <h2 class="mt-lg">Buildings</h2>
 {% if buildings %}
 <div class="section">
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>Building</th>
-        <th>Stands on</th>
-        <th>Owners</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for building in buildings %}
-      <tr>
-        <td><a href="{% url 'characters:real_estate_detail' 'building' building.pk %}">{{ building.name }}</a></td>
-        <td>{% if building.parcel %}<a href="{% url 'characters:real_estate_detail' 'parcel' building.parcel.pk %}">{{ building.parcel.name }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>
-        <td>{% include "characters/partials/owner_links.html" with owners=building.owners.all %}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Building</th>
+          <th>Stands on</th>
+          <th>Owners</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for building in buildings %}
+        <tr>
+          <td><a href="{% url 'characters:real_estate_detail' 'building' building.pk %}">{{ building.name }}</a></td>
+          <td>{% if building.parcel %}<a href="{% url 'characters:real_estate_detail' 'parcel' building.parcel.pk %}">{{ building.parcel.name }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td>{% include "characters/partials/owner_links.html" with owners=building.owners.all %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% else %}
 <p class="empty-note">No buildings yet.</p>

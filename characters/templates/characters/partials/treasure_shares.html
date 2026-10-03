@@ -11,35 +11,37 @@
     <h2>The division</h2>
     {# The figures the division is judged on, kept out of the prose so they can #}
     {# be read down a column rather than picked out of a sentence. #}
-    <table class="data-table treasure-summary">
-      <thead>
-        <tr>
-          <th>Hoard</th>
-          <th>Items</th>
-          <th>Shares</th>
-          <th title="What one share would be worth if treasure were divisible">Fair share</th>
-          {# The one figure that needs saying outright rather than in a tooltip: #}
-          {# it is how the division is judged, and why it is rarely zero takes #}
-          {# more room than a column head, hence the link out to the docs. #}
-          <th>
-            Spread
-            <a class="muted treasure-figure-note"
-               href="https://zingor.readthedocs.io/en/latest/splitting-treasure.html#reading-the-result">
-              Difference between the largest and smallest XP award per share
-            </a>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>{{ total_xp|floatformat:"0g" }} XP</td>
-          <td>{{ item_count }}</td>
-          <td>{{ shares_drawn }}</td>
-          <td>{{ fair_share|floatformat:"0g" }} XP</td>
-          <td>{{ spread|floatformat:"0g" }} XP</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
+      <table class="data-table treasure-summary">
+        <thead>
+          <tr>
+            <th>Hoard</th>
+            <th>Items</th>
+            <th>Shares</th>
+            <th title="What one share would be worth if treasure were divisible">Fair share</th>
+            {# The one figure that needs saying outright rather than in a tooltip: #}
+            {# it is how the division is judged, and why it is rarely zero takes #}
+            {# more room than a column head, hence the link out to the docs. #}
+            <th>
+              Spread
+              <a class="muted treasure-figure-note"
+                 href="https://zingor.readthedocs.io/en/latest/splitting-treasure.html#reading-the-result">
+                Difference between the largest and smallest XP award per share
+              </a>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{{ total_xp|floatformat:"0g" }} XP</td>
+            <td>{{ item_count }}</td>
+            <td>{{ shares_drawn }}</td>
+            <td>{{ fair_share|floatformat:"0g" }} XP</td>
+            <td>{{ spread|floatformat:"0g" }} XP</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     {% if hand_edited %}
       <p class="flash flash--danger">
         <strong>This division has been adjusted by hand.</strong>

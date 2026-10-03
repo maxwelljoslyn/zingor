@@ -29,37 +29,39 @@
 
 <div class="section">
   <h2>Owners</h2>
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>Character</th>
-        <th>Player</th>
-        {% if can_edit %}<th></th>{% endif %}
-      </tr>
-    </thead>
-    <tbody>
-      {% for owner in owners %}
-      <tr>
-        <td>
-          <a href="/character/{{ owner.pk }}/">{{ owner.name|default:"Unnamed" }}</a>
-          {% if not owner.is_active %}<span class="badge badge-inactive">Inactive</span>{% endif %}
-        </td>
-        <td><a href="{% url 'characters:user_profile' owner.user.username %}">{{ owner.user|display_name }}</a></td>
-        {% if can_edit %}
-        <td>
-          {# The last owner cannot be removed: the view refuses, so hide the button rather than offer a dead end. #}
-          {% if owners|length > 1 %}
-          <form method="post" action="{% url 'characters:real_estate_owner_remove' kind real_estate.pk owner.pk %}" class="inline">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-secondary btn-small">Remove</button>
-          </form>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Character</th>
+          <th>Player</th>
+          {% if can_edit %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for owner in owners %}
+        <tr>
+          <td>
+            <a href="/character/{{ owner.pk }}/">{{ owner.name|default:"Unnamed" }}</a>
+            {% if not owner.is_active %}<span class="badge badge-inactive">Inactive</span>{% endif %}
+          </td>
+          <td><a href="{% url 'characters:user_profile' owner.user.username %}">{{ owner.user|display_name }}</a></td>
+          {% if can_edit %}
+          <td>
+            {# The last owner cannot be removed: the view refuses, so hide the button rather than offer a dead end. #}
+            {% if owners|length > 1 %}
+            <form method="post" action="{% url 'characters:real_estate_owner_remove' kind real_estate.pk owner.pk %}" class="inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-secondary btn-small">Remove</button>
+            </form>
+            {% endif %}
+          </td>
           {% endif %}
-        </td>
-        {% endif %}
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% if can_edit and owner_choices %}
   <form method="post" action="{% url 'characters:real_estate_owner_add' kind real_estate.pk %}" class="inline-form mt-md">
     {% csrf_token %}
@@ -77,22 +79,24 @@
 <div class="section">
   <h2>Buildings</h2>
   {% if buildings %}
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>Building</th>
-        <th>Owners</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for building in buildings %}
-      <tr>
-        <td><a href="{% url 'characters:real_estate_detail' 'building' building.pk %}">{{ building.name }}</a></td>
-        <td>{% include "characters/partials/owner_links.html" with owners=building.owners.all %}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Building</th>
+          <th>Owners</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for building in buildings %}
+        <tr>
+          <td><a href="{% url 'characters:real_estate_detail' 'building' building.pk %}">{{ building.name }}</a></td>
+          <td>{% include "characters/partials/owner_links.html" with owners=building.owners.all %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% else %}
   <p class="empty-note">Nothing built here yet. Record a building on the <a href="{% url 'characters:real_estate' %}">Real Estate</a> page and choose this parcel.</p>
   {% endif %}
@@ -103,22 +107,24 @@
 <div class="section">
   <h2>Designs</h2>
   {% if designs %}
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>Design</th>
-        <th>Last saved</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for design in designs %}
-      <tr>
-        <td><a href="{% url 'characters:building_design_editor' real_estate.pk design.pk %}">{{ design.name }}</a></td>
-        <td>{% if design.head %}version {{ design.head.pk }}, {{ design.head.created_at|date:"Y-m-d H:i" }}{% if design.head.author %} by {{ design.head.author|display_name }}{% endif %}{% else %}<span class="muted">nothing yet</span>{% endif %}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Design</th>
+          <th>Last saved</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for design in designs %}
+        <tr>
+          <td><a href="{% url 'characters:building_design_editor' real_estate.pk design.pk %}">{{ design.name }}</a></td>
+          <td>{% if design.head %}version {{ design.head.pk }}, {{ design.head.created_at|date:"Y-m-d H:i" }}{% if design.head.author %} by {{ design.head.author|display_name }}{% endif %}{% else %}<span class="muted">nothing yet</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
   {% else %}
   <p class="empty-note">No designs yet.{% if can_edit %} Start one below to draw this building's plan and see what it costs to build.{% endif %}</p>
   {% endif %}
@@ -144,23 +150,25 @@
   <h2>Kept Here</h2>
   {% if stored_items %}
   <p class="muted text-sm">Items the party has left here. Each is moved from its owner's character sheet, with the Location control on the item's row.</p>
-  <table class="group-striped" data-sort-table="groups">
-    <thead>
-      <tr>
-        <th class="sortable" data-col="0" data-type="text">Owner <span class="sort-arrow"></span></th>
-        <th class="sortable" data-col="1" data-type="text">Item <span class="sort-arrow"></span></th>
-        <th class="sortable" data-col="2" data-type="number">Weight <span class="sort-arrow"></span></th>
-        <th>Worn</th>
-        <th>Location</th>
-      </tr>
-    </thead>
-    {# One tbody per root item, so sorting keeps a container's contents under it. #}
-    {% for item in stored_items %}
-    <tbody>
-      {% include "characters/partials/item_row.html" with depth=0 show_owner=True %}
-    </tbody>
-    {% endfor %}
-  </table>
+  <div class="table-scroll">
+    <table class="group-striped" data-sort-table="groups">
+      <thead>
+        <tr>
+          <th class="sortable" data-col="0" data-type="text">Owner <span class="sort-arrow"></span></th>
+          <th class="sortable" data-col="1" data-type="text">Item <span class="sort-arrow"></span></th>
+          <th class="sortable" data-col="2" data-type="number">Weight <span class="sort-arrow"></span></th>
+          <th>Worn</th>
+          <th>Location</th>
+        </tr>
+      </thead>
+      {# One tbody per root item, so sorting keeps a container's contents under it. #}
+      {% for item in stored_items %}
+      <tbody>
+        {% include "characters/partials/item_row.html" with depth=0 show_owner=True %}
+      </tbody>
+      {% endfor %}
+    </table>
+  </div>
   {% else %}
   <p class="empty-note">Nothing is kept here. On a character sheet, set an item's Location to this {{ kind }} to leave it here.</p>
   {% endif %}

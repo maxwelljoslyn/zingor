@@ -70,11 +70,13 @@
       <div class="subsection design-cost">
         <h3>Cost</h3>
         <div class="design-bom-scroll">
-          <table class="data-table design-bom">
-            <thead><tr><th class="design-bom-material">Material</th><th>Amount</th><th title="How much of the material one trade good covers">Sale unit</th><th title="How many sale units the amount comes to">Units</th><th>Unit price</th><th>Cost</th></tr></thead>
-            <tbody data-bom-lines></tbody>
-            <tfoot><tr><th colspan="5" data-bom-total-label>Total</th><th data-bom-total class="nowrap"></th></tr></tfoot>
-          </table>
+          <div class="table-scroll">
+            <table class="data-table design-bom">
+              <thead><tr><th class="design-bom-material">Material</th><th>Amount</th><th title="How much of the material one trade good covers">Sale unit</th><th title="How many sale units the amount comes to">Units</th><th>Unit price</th><th>Cost</th></tr></thead>
+              <tbody data-bom-lines></tbody>
+              <tfoot><tr><th colspan="5" data-bom-total-label>Total</th><th data-bom-total class="nowrap"></th></tr></tfoot>
+            </table>
+          </div>
         </div>
         <p class="muted text-sm" data-bom-legend hidden>⚠ Not priced: that shape has a problem (see above, or hover the row). Its cost joins the total once the problem is fixed.</p>
         <p class="muted text-sm" data-bom-market></p>

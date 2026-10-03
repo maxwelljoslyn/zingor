@@ -33,42 +33,44 @@
       Shares default to each character's current fighter equivalent level. Edit them
       to divide on the FEL the party agreed on — the one from before the fight, say.
     </p>
-    <table class="data-table treasure-holders">
-      <thead>
-        <tr>
-          <th>Draws</th>
-          <th>Character</th>
-          <th>Player</th>
-          <th title="Fighter equivalent level">F.E.L.</th>
-          <th>Shares</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for char in share_holders %}
-        <tr>
-          {# Primaries and henchmen are the party proper, so they start checked; #}
-          {# followers, hirelings and pets draw a share only when the party says so. #}
-          <td>
-            <input type="checkbox" name="recipient" value="{{ char.pk }}"
-                   id="recipient-{{ char.pk }}"{% if char.in_party %} checked{% endif %}>
-          </td>
-          <td>
-            <label for="recipient-{{ char.pk }}">{{ char.name|default:"Unnamed" }}</label>
-            {% if not char.in_party %}<span class="muted"> ({{ char.get_kind_display|lower }})</span>{% endif %}
-          </td>
-          <td>{{ char.user|display_name }}</td>
-          <td>{{ char.fel|default_if_none:"—" }}</td>
-          <td>
-            <input type="number" name="shares-{{ char.pk }}" value="{{ char.drawn }}"
-                   min="1" step="1" class="treasure-shares-input"
-                   aria-label="Shares drawn by {{ char.name|default:'Unnamed' }}">
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5" class="muted">No active characters to divide among.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="table-scroll">
+      <table class="data-table treasure-holders">
+        <thead>
+          <tr>
+            <th>Draws</th>
+            <th>Character</th>
+            <th>Player</th>
+            <th title="Fighter equivalent level">F.E.L.</th>
+            <th>Shares</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for char in share_holders %}
+          <tr>
+            {# Primaries and henchmen are the party proper, so they start checked; #}
+            {# followers, hirelings and pets draw a share only when the party says so. #}
+            <td>
+              <input type="checkbox" name="recipient" value="{{ char.pk }}"
+                     id="recipient-{{ char.pk }}"{% if char.in_party %} checked{% endif %}>
+            </td>
+            <td>
+              <label for="recipient-{{ char.pk }}">{{ char.name|default:"Unnamed" }}</label>
+              {% if not char.in_party %}<span class="muted"> ({{ char.get_kind_display|lower }})</span>{% endif %}
+            </td>
+            <td>{{ char.user|display_name }}</td>
+            <td>{{ char.fel|default_if_none:"—" }}</td>
+            <td>
+              <input type="number" name="shares-{{ char.pk }}" value="{{ char.drawn }}"
+                     min="1" step="1" class="treasure-shares-input"
+                     aria-label="Shares drawn by {{ char.name|default:'Unnamed' }}">
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="muted">No active characters to divide among.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <button type="submit" class="btn mt-md">Divide the hoard</button>

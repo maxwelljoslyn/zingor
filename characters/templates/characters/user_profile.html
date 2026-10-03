@@ -19,31 +19,33 @@
 <h2 class="mt-lg">Characters</h2>
 {% if characters %}
 <div class="section">
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Race</th>
-        <th>Class</th>
-        <th>Level</th>
-        <th>Last Updated</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for char in characters %}
-      <tr>
-        <td>
-          <a href="/character/{{ char.pk }}/">{{ char.name|default:"Unnamed" }}</a>
-          {% if not char.is_active %}<span class="badge badge-inactive">Inactive</span>{% endif %}
-        </td>
-        <td>{{ char.race|default:"—" }}</td>
-        <td>{{ char.char_class|default:"—" }}</td>
-        <td>{{ char.level|default:"—" }}</td>
-        <td><time data-localize-time datetime="{{ char.updated_at|date:'c' }}">{{ char.updated_at|date:"M d, Y H:i" }} UTC</time></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Race</th>
+          <th>Class</th>
+          <th>Level</th>
+          <th>Last Updated</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for char in characters %}
+        <tr>
+          <td>
+            <a href="/character/{{ char.pk }}/">{{ char.name|default:"Unnamed" }}</a>
+            {% if not char.is_active %}<span class="badge badge-inactive">Inactive</span>{% endif %}
+          </td>
+          <td>{{ char.race|default:"—" }}</td>
+          <td>{{ char.char_class|default:"—" }}</td>
+          <td>{{ char.level|default:"—" }}</td>
+          <td><time data-localize-time datetime="{{ char.updated_at|date:'c' }}">{{ char.updated_at|date:"M d, Y H:i" }} UTC</time></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% else %}
 <p class="muted">No characters yet.</p>

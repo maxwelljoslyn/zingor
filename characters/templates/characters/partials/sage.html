@@ -28,251 +28,253 @@
       </div>
       {% if group.entries %}
       {# fixed-cols pins the column widths so every field's table lines its Points/Status columns up with the others, instead of each table sizing itself to its own longest study name. #}
-      <table class="data-table fixed-cols">
-        <thead>
-          <tr>
-            <th class="col-study">Study</th>
-            <th class="col-points">Points</th>
-            <th class="col-status">Status</th>
-            {% if is_owner %}<th class="col-chosen">Chosen</th><th class="col-actions"></th>{% endif %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for entry in group.entries %}
+      <div class="table-scroll">
+        <table class="data-table fixed-cols">
+          <thead>
             <tr>
-              <td><a href="{{ entry.name|study_url }}" target="_blank">{{ entry.name }}</a>{% if entry.chosen %} <span class="chosen-mark" title="Chosen study">&#9733;</span>{% endif %}</td>
-              <td>
-                {% if is_owner %}
-                <input
-                  type="number"
-                  name="points"
-                  value="{{ entry.points }}"
-                  min="0"
-                  hx-post="{% url 'characters:sage_study_points' character.pk entry.pk %}"
-                  hx-target="#section-sage"
-                  hx-swap="outerHTML"
-                  hx-trigger="change"
-                  class="w-5"
-                >
-                {% else %}
-                {{ entry.points }}
-                {% endif %}
-              </td>
-              <td>{{ entry.rank }}</td>
-              {% if is_owner %}
-              <td>
-                <form
-                  hx-post="{% url 'characters:sage_study_chosen' character.pk entry.pk %}"
-                  hx-target="#section-sage"
-                  hx-swap="outerHTML"
-                  hx-trigger="change"
-                  class="inline"
-                >
-                  {% csrf_token %}
-                  <input type="checkbox" name="chosen" aria-label="Chosen study" {% if entry.chosen %}checked{% endif %}>
-                </form>
-              </td>
-              <td>
-                {% url 'characters:sage_study_hide' character.pk entry.pk as hide_url %}
-                {% include "characters/partials/_delete_button.html" with url=hide_url target="#section-sage" confirm="Delete "|add:entry.name|add:"? Your points are kept in case you re-add it." method="post" %}
-              </td>
-              {% endif %}
+              <th class="col-study">Study</th>
+              <th class="col-points">Points</th>
+              <th class="col-status">Status</th>
+              {% if is_owner %}<th class="col-chosen">Chosen</th><th class="col-actions"></th>{% endif %}
             </tr>
-            {% if entry.has_concentrations %}
-              {# A few studies commit their points to named buckets instead of holding one pool; the study's own number above stays the overall total. #}
-              {% for c in entry.concentrations %}
-                <tr class="concentration-row{% if c.derived %} concentration-row--derived{% endif %}{% if c.placeholder %} concentration-row--unnamed{% endif %}">
-                  <td class="concentration-name">
-                    {% if c.placeholder and is_owner %}
-                      {# The study confers this one, but only the player knows what it is. Naming it is what creates the row. #}
-                      <form
-                        hx-post="{% url 'characters:sage_concentration_add' character.pk entry.pk %}"
-                        hx-target="#section-sage"
-                        hx-swap="outerHTML"
-                        class="inline"
-                      >
-                        {% csrf_token %}
-                        <input type="hidden" name="granted" value="1">
-                        <input type="text" name="name" placeholder="{{ c.name }}&hellip;" aria-label="{{ c.name }}" required>
-                        <button type="submit">Name it</button>
-                      </form>
-                    {% else %}
-                      {{ c.name }}
-                    {% endif %}
-                    {% if c.is_ability %} <span class="concentration-tag" title="Tracked as a standalone sage ability">ability</span>{% endif %}
-                    {% if c.granted and not c.placeholder %} <span class="concentration-tag" title="Granted by the study rather than chosen">granted</span>{% endif %}
-                    {% if c.derived %} <span class="concentration-tag" title="Worked out from the study's points, not tracked separately">at half</span>{% endif %}
-                  </td>
-                  <td>
-                    {% if is_owner and not c.fixed_points %}
-                    <input
-                      type="number"
-                      name="points"
-                      value="{{ c.points }}"
-                      min="0"
-                      aria-label="Points in {{ c.name }}"
-                      {% if c.is_ability %}hx-post="{% url 'characters:sage_ability_points' character.pk c.pk %}"{% else %}hx-post="{% url 'characters:sage_concentration_points' character.pk c.pk %}"{% endif %}
-                      hx-target="#section-sage"
-                      hx-swap="outerHTML"
-                      hx-trigger="change"
-                      class="w-5"
-                    >
-                    {% else %}
-                    {{ c.points }}
-                    {% endif %}
-                  </td>
-                  <td>{{ c.rank }}</td>
+          </thead>
+          <tbody>
+            {% for entry in group.entries %}
+              <tr>
+                <td><a href="{{ entry.name|study_url }}" target="_blank">{{ entry.name }}</a>{% if entry.chosen %} <span class="chosen-mark" title="Chosen study">&#9733;</span>{% endif %}</td>
+                <td>
                   {% if is_owner %}
-                  <td></td>
-                  <td>
-                    {% if not c.derived and not c.placeholder %}
-                      {% if c.is_ability %}
-                        {% url 'characters:sage_ability_hide' character.pk c.pk as c_hide_url %}
-                      {% else %}
-                        {% url 'characters:sage_concentration_hide' character.pk c.pk as c_hide_url %}
-                      {% endif %}
-                      {% include "characters/partials/_delete_button.html" with url=c_hide_url target="#section-sage" confirm="Delete "|add:c.name|add:"? Your points are kept in case you re-add it." method="post" %}
-                    {% endif %}
-                  </td>
-                  {% endif %}
-                </tr>
-              {% endfor %}
-              {# Shown for allocated studies only, including at zero: points held but not yet committed to a bucket are an ordinary state, and a study with no bucket at all needs somewhere to show where its points are sitting. A mirrored study never has a remainder — every bucket holds the whole total. #}
-              {% if not entry.concentration_mirrored %}
-              <tr class="concentration-row concentration-row--unallocated">
-                <td class="concentration-name">unallocated</td>
-                <td>{{ entry.unallocated }}</td>
-                <td>{% if entry.unallocated < 0 %}over-allocated{% endif %}</td>
-                {% if is_owner %}<td></td><td></td>{% endif %}
-              </tr>
-              {% endif %}
-              {% if is_owner and entry.concentration_can_add %}
-              <tr class="concentration-row concentration-add-row">
-                <td colspan="5">
-                  <form
-                    hx-post="{% url 'characters:sage_concentration_add' character.pk entry.pk %}"
+                  <input
+                    type="number"
+                    name="points"
+                    value="{{ entry.points }}"
+                    min="0"
+                    hx-post="{% url 'characters:sage_study_points' character.pk entry.pk %}"
                     hx-target="#section-sage"
                     hx-swap="outerHTML"
+                    hx-trigger="change"
+                    class="w-5"
+                  >
+                  {% else %}
+                  {{ entry.points }}
+                  {% endif %}
+                </td>
+                <td>{{ entry.rank }}</td>
+                {% if is_owner %}
+                <td>
+                  <form
+                    hx-post="{% url 'characters:sage_study_chosen' character.pk entry.pk %}"
+                    hx-target="#section-sage"
+                    hx-swap="outerHTML"
+                    hx-trigger="change"
                     class="inline"
                   >
                     {% csrf_token %}
-                    {% if entry.concentration_closed %}
-                      {# The rules define the whole list, so a picker is the honest control: anything else would offer a freedom the study does not have. Already-taken subjects are left out rather than disabled, so what remains is exactly what can be added. #}
-                      <select name="name" aria-label="Concentration to add to {{ entry.name }}">
-                        {% for choice in entry.concentration_addable %}
-                          <option value="{{ choice }}">{{ choice }}</option>
-                        {% endfor %}
-                      </select>
-                    {% else %}
-                      {# Freetext: Geography's loci are the DM's, and the beast and artifact lists are long and still growing, so a name Zingor has not heard of is the player's to make up. #}
-                      {# The id is qualified by field because a study in two of the character's fields is listed under both, and the two listings would otherwise share it. #}
-                      <input
-                        type="text"
-                        name="name"
-                        placeholder="Add to {{ entry.name }}&hellip;"
-                        aria-label="Concentration to add to {{ entry.name }}"
-                        {% if entry.concentration_choices %}list="concentrations-{{ group.field|slugify }}-{{ entry.pk }}"{% endif %}
-                        required
-                      >
-                      {% if entry.concentration_choices %}
-                      <datalist id="concentrations-{{ group.field|slugify }}-{{ entry.pk }}">
-                        {% for choice in entry.concentration_choices %}<option value="{{ choice }}"></option>{% endfor %}
-                      </datalist>
-                      {% endif %}
-                    {% endif %}
-                    <button type="submit">Add</button>
-                    {% if entry.concentration_block %}<span class="empty-note">{{ entry.concentration_block }} points each; you can have {{ entry.concentration_affordable }}</span>{% endif %}
+                    <input type="checkbox" name="chosen" aria-label="Chosen study" {% if entry.chosen %}checked{% endif %}>
                   </form>
                 </td>
+                <td>
+                  {% url 'characters:sage_study_hide' character.pk entry.pk as hide_url %}
+                  {% include "characters/partials/_delete_button.html" with url=hide_url target="#section-sage" confirm="Delete "|add:entry.name|add:"? Your points are kept in case you re-add it." method="post" %}
+                </td>
+                {% endif %}
               </tr>
-              {% endif %}
-            {% endif %}
-            {% if entry.has_maintenance %}
-              {# This study's knowledge points double as a daily pool of maintenance points, spent on built devices. #}
-              {# The devices are the character's own inventory items, marked as built inventions; the rows here are where the day's points get aimed at them. #}
-              {# The summary leads rather than trails the device rows: those grow as inventions are marked, and the pool figure should hold its place under the study instead of drifting down. #}
-              {% if entry.maintenance_items %}
-              {# Assigning beyond the pool is legitimate — that is how hired assistants' contributions are expressed — so the overage is stated, not flagged as an error. #}
-              <tr class="concentration-row concentration-row--unallocated">
-                <td class="concentration-name">maintenance</td>
-                <td class="nowrap">{{ entry.maintenance_total }} / {{ entry.maintenance_pool }} MP</td>
-                <td class="nowrap">{% if entry.maintenance_delta > 0 %}{{ entry.maintenance_delta }} left{% elif entry.maintenance_delta == 0 %}fully assigned{% else %}{{ entry.maintenance_assist }} MP from assistants{% endif %}</td>
-                {% if is_owner %}<td></td><td></td>{% endif %}
-              </tr>
-              {% endif %}
-              {% for m in entry.maintenance_items %}
-                <tr class="concentration-row">
-                  <td class="concentration-name">
-                    {{ m.item_name }}
-                    {# The tag sits on its own line: item names run long, and the two side by side crowd the cell. The block wrapper breaks the line while the tag keeps its shrink-wrapped border. #}
-                    <span class="block"><span class="concentration-tag" title="{% if m.rank %}A built invention of {{ m.rank }} status{% else %}Not in the invention catalogue{% endif %}">&#9881; {{ m.invention }}</span></span>
-                  </td>
-                  <td>
-                    <span class="nowrap">
+              {% if entry.has_concentrations %}
+                {# A few studies commit their points to named buckets instead of holding one pool; the study's own number above stays the overall total. #}
+                {% for c in entry.concentrations %}
+                  <tr class="concentration-row{% if c.derived %} concentration-row--derived{% endif %}{% if c.placeholder %} concentration-row--unnamed{% endif %}">
+                    <td class="concentration-name">
+                      {% if c.placeholder and is_owner %}
+                        {# The study confers this one, but only the player knows what it is. Naming it is what creates the row. #}
+                        <form
+                          hx-post="{% url 'characters:sage_concentration_add' character.pk entry.pk %}"
+                          hx-target="#section-sage"
+                          hx-swap="outerHTML"
+                          class="inline"
+                        >
+                          {% csrf_token %}
+                          <input type="hidden" name="granted" value="1">
+                          <input type="text" name="name" placeholder="{{ c.name }}&hellip;" aria-label="{{ c.name }}" required>
+                          <button type="submit">Name it</button>
+                        </form>
+                      {% else %}
+                        {{ c.name }}
+                      {% endif %}
+                      {% if c.is_ability %} <span class="concentration-tag" title="Tracked as a standalone sage ability">ability</span>{% endif %}
+                      {% if c.granted and not c.placeholder %} <span class="concentration-tag" title="Granted by the study rather than chosen">granted</span>{% endif %}
+                      {% if c.derived %} <span class="concentration-tag" title="Worked out from the study's points, not tracked separately">at half</span>{% endif %}
+                    </td>
+                    <td>
+                      {% if is_owner and not c.fixed_points %}
+                      <input
+                        type="number"
+                        name="points"
+                        value="{{ c.points }}"
+                        min="0"
+                        aria-label="Points in {{ c.name }}"
+                        {% if c.is_ability %}hx-post="{% url 'characters:sage_ability_points' character.pk c.pk %}"{% else %}hx-post="{% url 'characters:sage_concentration_points' character.pk c.pk %}"{% endif %}
+                        hx-target="#section-sage"
+                        hx-swap="outerHTML"
+                        hx-trigger="change"
+                        class="w-5"
+                      >
+                      {% else %}
+                      {{ c.points }}
+                      {% endif %}
+                    </td>
+                    <td>{{ c.rank }}</td>
                     {% if is_owner %}
-                    <input
-                      type="number"
-                      name="points"
-                      value="{{ m.points }}"
-                      min="0"
-                      {% if m.cost %}max="{{ m.cost }}"{% endif %}
-                      aria-label="Maintenance points for {{ m.item_name }}"
-                      hx-post="{% url 'characters:sage_maintenance_points' character.pk entry.pk m.item_pk %}"
+                    <td></td>
+                    <td>
+                      {% if not c.derived and not c.placeholder %}
+                        {% if c.is_ability %}
+                          {% url 'characters:sage_ability_hide' character.pk c.pk as c_hide_url %}
+                        {% else %}
+                          {% url 'characters:sage_concentration_hide' character.pk c.pk as c_hide_url %}
+                        {% endif %}
+                        {% include "characters/partials/_delete_button.html" with url=c_hide_url target="#section-sage" confirm="Delete "|add:c.name|add:"? Your points are kept in case you re-add it." method="post" %}
+                      {% endif %}
+                    </td>
+                    {% endif %}
+                  </tr>
+                {% endfor %}
+                {# Shown for allocated studies only, including at zero: points held but not yet committed to a bucket are an ordinary state, and a study with no bucket at all needs somewhere to show where its points are sitting. A mirrored study never has a remainder — every bucket holds the whole total. #}
+                {% if not entry.concentration_mirrored %}
+                <tr class="concentration-row concentration-row--unallocated">
+                  <td class="concentration-name">unallocated</td>
+                  <td>{{ entry.unallocated }}</td>
+                  <td>{% if entry.unallocated < 0 %}over-allocated{% endif %}</td>
+                  {% if is_owner %}<td></td><td></td>{% endif %}
+                </tr>
+                {% endif %}
+                {% if is_owner and entry.concentration_can_add %}
+                <tr class="concentration-row concentration-add-row">
+                  <td colspan="5">
+                    <form
+                      hx-post="{% url 'characters:sage_concentration_add' character.pk entry.pk %}"
                       hx-target="#section-sage"
                       hx-swap="outerHTML"
-                      hx-trigger="change"
-                      class="w-5"
+                      class="inline"
                     >
-                    {% else %}
-                    {{ m.points }}
-                    {% endif %}
-                    {% if m.cost %}<span class="muted text-sm">/ {{ m.cost }} MP</span>{% endif %}
-                    </span>
+                      {% csrf_token %}
+                      {% if entry.concentration_closed %}
+                        {# The rules define the whole list, so a picker is the honest control: anything else would offer a freedom the study does not have. Already-taken subjects are left out rather than disabled, so what remains is exactly what can be added. #}
+                        <select name="name" aria-label="Concentration to add to {{ entry.name }}">
+                          {% for choice in entry.concentration_addable %}
+                            <option value="{{ choice }}">{{ choice }}</option>
+                          {% endfor %}
+                        </select>
+                      {% else %}
+                        {# Freetext: Geography's loci are the DM's, and the beast and artifact lists are long and still growing, so a name Zingor has not heard of is the player's to make up. #}
+                        {# The id is qualified by field because a study in two of the character's fields is listed under both, and the two listings would otherwise share it. #}
+                        <input
+                          type="text"
+                          name="name"
+                          placeholder="Add to {{ entry.name }}&hellip;"
+                          aria-label="Concentration to add to {{ entry.name }}"
+                          {% if entry.concentration_choices %}list="concentrations-{{ group.field|slugify }}-{{ entry.pk }}"{% endif %}
+                          required
+                        >
+                        {% if entry.concentration_choices %}
+                        <datalist id="concentrations-{{ group.field|slugify }}-{{ entry.pk }}">
+                          {% for choice in entry.concentration_choices %}<option value="{{ choice }}"></option>{% endfor %}
+                        </datalist>
+                        {% endif %}
+                      {% endif %}
+                      <button type="submit">Add</button>
+                      {% if entry.concentration_block %}<span class="empty-note">{{ entry.concentration_block }} points each; you can have {{ entry.concentration_affordable }}</span>{% endif %}
+                    </form>
                   </td>
-                  <td></td>
-                  {% if is_owner %}
-                  <td></td>
-                  <td>
-                    {% url 'characters:sage_invention_unflag' character.pk m.item_pk as unflag_url %}
-                    {# A worded button, not the red x: this only clears the mark — the item survives — so it must not read like the item deletions around it. #}
-                    <button type="button" hx-post="{{ unflag_url }}" hx-target="#section-sage" hx-swap="outerHTML" hx-confirm="Unmark {{ m.item_name }} as a built invention? Maintenance points aimed at it are discarded; the item itself stays in the inventory." class="btn btn-small btn-secondary">unmark</button>
-                  </td>
-                  {% endif %}
                 </tr>
-              {% endfor %}
-              {% if is_owner and entry.maintenance_flaggable %}
-              <tr class="concentration-row concentration-add-row">
-                <td colspan="5">
-                  <span class="subhead block">Mark Items as Inventions</span>
-                  <form
-                    hx-post="{% url 'characters:sage_invention_flag' character.pk entry.pk %}"
-                    hx-target="#section-sage"
-                    hx-swap="outerHTML"
-                    class="invention-mark"
-                  >
-                    {% csrf_token %}
-                    <select name="item" aria-label="Item to mark as a built invention">
-                      {% for item in entry.maintenance_flaggable %}
-                        <option value="{{ item.pk }}">{{ item.name }}</option>
-                      {% endfor %}
-                    </select>
-                    <span class="text-sm no-shrink">is a</span>
-                    <select name="invention" aria-label="Which invention it is">
-                      {% for g in entry.invention_groups %}
-                        <optgroup label="{{ g.rank }}">
-                          {% for inv in g.inventions %}<option value="{{ inv.name }}">{{ inv.name }} ({{ inv.cost }} MP)</option>{% endfor %}
-                        </optgroup>
-                      {% endfor %}
-                    </select>
-                    <button type="submit" class="no-shrink">Mark</button>
-                  </form>
-                </td>
-              </tr>
+                {% endif %}
               {% endif %}
-            {% endif %}
-          {% endfor %}
-        </tbody>
-      </table>
+              {% if entry.has_maintenance %}
+                {# This study's knowledge points double as a daily pool of maintenance points, spent on built devices. #}
+                {# The devices are the character's own inventory items, marked as built inventions; the rows here are where the day's points get aimed at them. #}
+                {# The summary leads rather than trails the device rows: those grow as inventions are marked, and the pool figure should hold its place under the study instead of drifting down. #}
+                {% if entry.maintenance_items %}
+                {# Assigning beyond the pool is legitimate — that is how hired assistants' contributions are expressed — so the overage is stated, not flagged as an error. #}
+                <tr class="concentration-row concentration-row--unallocated">
+                  <td class="concentration-name">maintenance</td>
+                  <td class="nowrap">{{ entry.maintenance_total }} / {{ entry.maintenance_pool }} MP</td>
+                  <td class="nowrap">{% if entry.maintenance_delta > 0 %}{{ entry.maintenance_delta }} left{% elif entry.maintenance_delta == 0 %}fully assigned{% else %}{{ entry.maintenance_assist }} MP from assistants{% endif %}</td>
+                  {% if is_owner %}<td></td><td></td>{% endif %}
+                </tr>
+                {% endif %}
+                {% for m in entry.maintenance_items %}
+                  <tr class="concentration-row">
+                    <td class="concentration-name">
+                      {{ m.item_name }}
+                      {# The tag sits on its own line: item names run long, and the two side by side crowd the cell. The block wrapper breaks the line while the tag keeps its shrink-wrapped border. #}
+                      <span class="block"><span class="concentration-tag" title="{% if m.rank %}A built invention of {{ m.rank }} status{% else %}Not in the invention catalogue{% endif %}">&#9881; {{ m.invention }}</span></span>
+                    </td>
+                    <td>
+                      <span class="nowrap">
+                      {% if is_owner %}
+                      <input
+                        type="number"
+                        name="points"
+                        value="{{ m.points }}"
+                        min="0"
+                        {% if m.cost %}max="{{ m.cost }}"{% endif %}
+                        aria-label="Maintenance points for {{ m.item_name }}"
+                        hx-post="{% url 'characters:sage_maintenance_points' character.pk entry.pk m.item_pk %}"
+                        hx-target="#section-sage"
+                        hx-swap="outerHTML"
+                        hx-trigger="change"
+                        class="w-5"
+                      >
+                      {% else %}
+                      {{ m.points }}
+                      {% endif %}
+                      {% if m.cost %}<span class="muted text-sm">/ {{ m.cost }} MP</span>{% endif %}
+                      </span>
+                    </td>
+                    <td></td>
+                    {% if is_owner %}
+                    <td></td>
+                    <td>
+                      {% url 'characters:sage_invention_unflag' character.pk m.item_pk as unflag_url %}
+                      {# A worded button, not the red x: this only clears the mark — the item survives — so it must not read like the item deletions around it. #}
+                      <button type="button" hx-post="{{ unflag_url }}" hx-target="#section-sage" hx-swap="outerHTML" hx-confirm="Unmark {{ m.item_name }} as a built invention? Maintenance points aimed at it are discarded; the item itself stays in the inventory." class="btn btn-small btn-secondary">unmark</button>
+                    </td>
+                    {% endif %}
+                  </tr>
+                {% endfor %}
+                {% if is_owner and entry.maintenance_flaggable %}
+                <tr class="concentration-row concentration-add-row">
+                  <td colspan="5">
+                    <span class="subhead block">Mark Items as Inventions</span>
+                    <form
+                      hx-post="{% url 'characters:sage_invention_flag' character.pk entry.pk %}"
+                      hx-target="#section-sage"
+                      hx-swap="outerHTML"
+                      class="invention-mark"
+                    >
+                      {% csrf_token %}
+                      <select name="item" aria-label="Item to mark as a built invention">
+                        {% for item in entry.maintenance_flaggable %}
+                          <option value="{{ item.pk }}">{{ item.name }}</option>
+                        {% endfor %}
+                      </select>
+                      <span class="text-sm no-shrink">is a</span>
+                      <select name="invention" aria-label="Which invention it is">
+                        {% for g in entry.invention_groups %}
+                          <optgroup label="{{ g.rank }}">
+                            {% for inv in g.inventions %}<option value="{{ inv.name }}">{{ inv.name }} ({{ inv.cost }} MP)</option>{% endfor %}
+                          </optgroup>
+                        {% endfor %}
+                      </select>
+                      <button type="submit" class="no-shrink">Mark</button>
+                    </form>
+                  </td>
+                </tr>
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% else %}
       <p class="empty-note">No studies tracked in this field yet.</p>
       {% endif %}
@@ -316,63 +318,65 @@
   {% endif %}
   <h3>Standalone Sage Abilities</h3>
   {% if sage_abilities %}
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Ability</th>
-          <th>Source</th>
-          <th>Points</th>
-          <th>Status</th>
-          {% if is_owner %}<th></th>{% endif %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for entry in sage_abilities %}
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
           <tr>
-            <td>
-              {% if is_owner %}
-                {% include "characters/partials/sage_ability_field.html" with field_name="ability" %}
-              {% else %}
-                {{ entry.name }}
-              {% endif %}
-              {# An ability that is also a study's concentration is listed in both places; this says which study's points it is drawn from. #}
-              {% if entry.study %}<a class="concentration-tag" href="{{ entry.study|study_url }}" target="_blank" title="A concentration of {{ entry.study }}">{{ entry.study }}</a>{% endif %}
-            </td>
-            <td>
-              {% if is_owner %}
-                {% include "characters/partials/sage_ability_field.html" with field_name="source" %}
-              {% else %}
-                {{ entry.source }}
-              {% endif %}
-            </td>
-            <td>
-              {% if is_owner %}
-              <input
-                type="number"
-                name="points"
-                value="{{ entry.points }}"
-                min="0"
-                hx-post="{% url 'characters:sage_ability_points' character.pk entry.pk %}"
-                hx-target="#section-sage"
-                hx-swap="outerHTML"
-                hx-trigger="change"
-                class="w-5"
-              >
-              {% else %}
-              {{ entry.points }}
-              {% endif %}
-            </td>
-            <td>{{ entry.rank }}</td>
-            {% if is_owner %}
-            <td>
-              {% url 'characters:sage_ability_hide' character.pk entry.pk as hide_url %}
-              {% include "characters/partials/_delete_button.html" with url=hide_url target="#section-sage" confirm="Delete "|add:entry.name|add:"? Your points are kept in case you re-add it." method="post" %}
-            </td>
-            {% endif %}
+            <th>Ability</th>
+            <th>Source</th>
+            <th>Points</th>
+            <th>Status</th>
+            {% if is_owner %}<th></th>{% endif %}
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {% for entry in sage_abilities %}
+            <tr>
+              <td>
+                {% if is_owner %}
+                  {% include "characters/partials/sage_ability_field.html" with field_name="ability" %}
+                {% else %}
+                  {{ entry.name }}
+                {% endif %}
+                {# An ability that is also a study's concentration is listed in both places; this says which study's points it is drawn from. #}
+                {% if entry.study %}<a class="concentration-tag" href="{{ entry.study|study_url }}" target="_blank" title="A concentration of {{ entry.study }}">{{ entry.study }}</a>{% endif %}
+              </td>
+              <td>
+                {% if is_owner %}
+                  {% include "characters/partials/sage_ability_field.html" with field_name="source" %}
+                {% else %}
+                  {{ entry.source }}
+                {% endif %}
+              </td>
+              <td>
+                {% if is_owner %}
+                <input
+                  type="number"
+                  name="points"
+                  value="{{ entry.points }}"
+                  min="0"
+                  hx-post="{% url 'characters:sage_ability_points' character.pk entry.pk %}"
+                  hx-target="#section-sage"
+                  hx-swap="outerHTML"
+                  hx-trigger="change"
+                  class="w-5"
+                >
+                {% else %}
+                {{ entry.points }}
+                {% endif %}
+              </td>
+              <td>{{ entry.rank }}</td>
+              {% if is_owner %}
+              <td>
+                {% url 'characters:sage_ability_hide' character.pk entry.pk as hide_url %}
+                {% include "characters/partials/_delete_button.html" with url=hide_url target="#section-sage" confirm="Delete "|add:entry.name|add:"? Your points are kept in case you re-add it." method="post" %}
+              </td>
+              {% endif %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   {% else %}
     <p>No standalone abilities tracked yet.</p>
   {% endif %}
