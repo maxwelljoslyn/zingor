@@ -164,14 +164,12 @@ def _build_ability_data(character, derived, order):
         derived_stats = []
         for stat_name, func in rules.abilities.get(ability, {}).items():
             value = derived.get(stat_name)
-            is_mod = "modifier" in stat_name or stat_name == "bonus HP per level"
-            is_pct = "%" in stat_name
             derived_stats.append(
                 {
                     "label": stat_name,
                     "value": value,
-                    "is_modifier": is_mod,
-                    "is_pct": is_pct,
+                    "is_modifier": stat_name in rules.SIGNED_STATS,
+                    "is_pct": stat_name in rules.PERCENT_STATS,
                 }
             )
         entry = {

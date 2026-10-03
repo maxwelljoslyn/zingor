@@ -928,6 +928,24 @@ class FieldUpdateTests(TestCase):
         response = self.client.get(f"/character/{self.character.pk}/")
         self.assertContains(response, "Follower")
 
+    def test_identity_weight_uses_short_units(self):
+        """The character's weight reads "194 lb", like item weights (#202)."""
+        self.character.weight = "194 pound"
+        self.character.save(update_fields=["weight"])
+        response = self.client.get(f"/character/{self.character.pk}/")
+        self.assertContains(response, "194 lb")
+        self.assertNotContains(response, "194 pound")
+
+    def test_short_stat_labels_keep_sign_and_percent(self):
+        """With "modifier" and "% chance" gone from the labels (#202), the
+        values still carry their sign and percent mark."""
+        self.character.dexterity = 16
+        self.character.constitution = 15
+        self.character.save(update_fields=["dexterity", "constitution"])
+        html = self.client.get(f"/character/{self.character.pk}/").content.decode()
+        self.assertRegex(html, r"\bAC:\s*<span[^>]*>\s*\+2\s*</span>")
+        self.assertRegex(html, r"system shock survival:\s*93%")
+
     def test_edit_field_returns_form(self):
         response = self.client.get(
             f"/character/{self.character.pk}/edit-field/?field=strength"

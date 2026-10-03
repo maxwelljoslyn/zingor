@@ -82,7 +82,7 @@
         <th>Height</th>
         <td>{% unknown_or_value character.height "height" character.pk character.height_display %}</td>
         <th>Weight</th>
-        <td>{% unknown_or_value character.weight "weight" character.pk %}</td>
+        <td>{% unknown_or_value character.weight "weight" character.pk character.weight|short_units %}</td>
       </tr>
       <tr>
         <th>Money</th>

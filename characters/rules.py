@@ -512,34 +512,56 @@ def cha_morale_adj(cha):
 
 abilities = {
     "strength": {
-        "melee attack modifier": lambda s, pct=None: str_attack_mod(s, pct),
-        "melee damage modifier": lambda s, pct=None: str_damage_mod(s, pct),
+        "melee attack": lambda s, pct=None: str_attack_mod(s, pct),
+        "melee damage": lambda s, pct=None: str_damage_mod(s, pct),
     },
     "dexterity": {
-        "AC modifier": dex_ac_mod,
-        "ranged attack modifier": dex_ranged_attacks_mod,
-        "initiative modifier": dex_initiative_mod,
+        "AC": dex_ac_mod,
+        "ranged attack": dex_ranged_attacks_mod,
+        "initiative": dex_initiative_mod,
     },
     "constitution": {
-        "bonus HP per level": con_max_hp_increase_adjustment,
-        "system shock survival % chance": con_system_shock_survival_chance,
-        "resurrection survival % chance": con_resurrection_survival_chance,
+        "HP per level": con_max_hp_increase_adjustment,
+        "system shock survival": con_system_shock_survival_chance,
+        "resurrection survival": con_resurrection_survival_chance,
     },
     "intelligence": {
         "max mage spell level": int_max_mage_illusionist_spell_level,
-        "mage spell capability % chance": int_spell_capability_chance,
+        "mage spell capability": int_spell_capability_chance,
         "min capable mage spells": int_min_capable_spells,
     },
     "wisdom": {
-        "Charm & Illusion save modifier": wis_charm_illusion_save_mod,
+        "charm & illusion saves": wis_charm_illusion_save_mod,
         "max cleric spell level": wis_max_cleric_spell_level,
-        "cleric spell success % chance": wis_cleric_spell_success_percent,
+        "cleric spell success": wis_cleric_spell_success_percent,
     },
     "charisma": {
         "max henchmen": cha_max_henchmen,
         "morale adjustment": cha_morale_adj,
     },
 }
+# How each derived stat's value reads on the sheet. The labels are kept short,
+# so a value's sign or % sign says what kind of number it is: these sets, not
+# the wording of the label, decide which stats get one.
+SIGNED_STATS = frozenset(
+    {
+        "melee attack",
+        "melee damage",
+        "AC",
+        "ranged attack",
+        "initiative",
+        "HP per level",
+        "charm & illusion saves",
+    }
+)
+PERCENT_STATS = frozenset(
+    {
+        "system shock survival",
+        "resurrection survival",
+        "mage spell capability",
+        "cleric spell success",
+    }
+)
 
 
 # --- Character classes ---
@@ -1250,7 +1272,7 @@ def calculate_derived_stats(char_data):
         score = char_data.get(ability_name)
         if score is not None:
             for stat_name, func in derived_stats.items():
-                if stat_name == "bonus HP per level":
+                if stat_name == "HP per level":
                     result[stat_name] = func(score, char_data.get("char_class"))
                 elif ability_name == "strength":
                     result[stat_name] = func(score, str_pct)

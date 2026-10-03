@@ -3,6 +3,9 @@
 from django.test import TestCase
 
 from characters.rules import (
+    PERCENT_STATS,
+    SIGNED_STATS,
+    abilities,
     armor_class_hit,
     calculate_derived_stats,
     cha_max_henchmen,
@@ -519,11 +522,19 @@ class SavingThrowTests(TestCase):
 
 
 class DerivedStatsTests(TestCase):
+    def test_format_sets_name_real_stats(self):
+        """A stat renamed without updating these sets would silently lose its
+        sign or percent mark on the sheet (#202)."""
+        names = {name for stats in abilities.values() for name in stats}
+        self.assertLessEqual(SIGNED_STATS, names)
+        self.assertLessEqual(PERCENT_STATS, names)
+        self.assertFalse(SIGNED_STATS & PERCENT_STATS)
+
     def test_partial_data(self):
         """Some fields None should produce None for those derived stats."""
         stats = calculate_derived_stats({"strength": 15})
-        self.assertEqual(stats["melee attack modifier"], 0)
-        self.assertIsNone(stats["AC modifier"])
+        self.assertEqual(stats["melee attack"], 0)
+        self.assertIsNone(stats["AC"])
         self.assertIsNone(stats["thac0"])
 
     def test_full_data(self):
@@ -539,7 +550,7 @@ class DerivedStatsTests(TestCase):
                 "level": 3,
             }
         )
-        self.assertEqual(stats["melee attack modifier"], 0)
+        self.assertEqual(stats["melee attack"], 0)
         self.assertEqual(stats["thac0"], 18)
         self.assertEqual(stats["xp_for_next_level"], 8001)
         self.assertEqual(stats["save_poison"], 15)
@@ -554,8 +565,8 @@ class DerivedStatsTests(TestCase):
                 "percentile_strength": 75,
             }
         )
-        self.assertEqual(stats["melee attack modifier"], 2)
-        self.assertEqual(stats["melee damage modifier"], 3)
+        self.assertEqual(stats["melee attack"], 2)
+        self.assertEqual(stats["melee damage"], 3)
 
     def test_non_fighter_percentile_ignored(self):
         """Non-fighter with 18/75 should use flat 18 row."""
@@ -567,8 +578,8 @@ class DerivedStatsTests(TestCase):
                 "percentile_strength": 75,
             }
         )
-        self.assertEqual(stats["melee attack modifier"], 1)
-        self.assertEqual(stats["melee damage modifier"], 2)
+        self.assertEqual(stats["melee attack"], 1)
+        self.assertEqual(stats["melee damage"], 2)
 
     def test_empty_data(self):
         stats = calculate_derived_stats({})
