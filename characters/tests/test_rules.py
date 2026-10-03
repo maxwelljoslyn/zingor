@@ -414,6 +414,27 @@ class XPTests(TestCase):
         )
         self.assertIsNone(derived["fighter_equivalent_level"])
 
+    def test_derived_xp_to_next_level(self):
+        derived = calculate_derived_stats(
+            {"char_class": "fighter", "level": 1, "xp": 1_500}
+        )
+        self.assertEqual(derived["xp_to_next_level"], 501)
+
+    def test_derived_xp_to_next_level_clamped_when_due(self):
+        # XP past the threshold means a level-up is due, not negative XP remaining.
+        derived = calculate_derived_stats(
+            {"char_class": "fighter", "level": 1, "xp": 2_500}
+        )
+        self.assertEqual(derived["xp_to_next_level"], 0)
+
+    def test_derived_xp_to_next_level_unknown(self):
+        unknown_xp = calculate_derived_stats({"char_class": "fighter", "level": 1})
+        self.assertIsNone(unknown_xp["xp_to_next_level"])
+        max_level = calculate_derived_stats(
+            {"char_class": "fighter", "level": 20, "xp": 3_000_001}
+        )
+        self.assertIsNone(max_level["xp_to_next_level"])
+
 
 class EncumbranceTests(TestCase):
     def test_basic_encumbrance(self):

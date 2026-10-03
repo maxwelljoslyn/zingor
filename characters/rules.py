@@ -1272,15 +1272,19 @@ def calculate_derived_stats(char_data):
         result["xp_for_next_level"] = total_xp_for_next_level(char_class, level)
     else:
         result["xp_for_next_level"] = None
+    # XP still needed to reach the next level; 0 once the threshold is met.
+    xp = char_data.get("xp")
+    if result["xp_for_next_level"] is not None and xp is not None:
+        result["xp_to_next_level"] = max(0, result["xp_for_next_level"] - xp)
+    else:
+        result["xp_to_next_level"] = None
 
     # Fighter-equivalent level: what level a fighter would be with this much XP.
     # Redundant for fighters themselves, so only computed for other classes.
     if char_class == "fighter":
         result["fighter_equivalent_level"] = None
     else:
-        result["fighter_equivalent_level"] = fighter_equivalent_level(
-            char_data.get("xp")
-        )
+        result["fighter_equivalent_level"] = fighter_equivalent_level(xp)
 
     # Saving throws
     if level is not None:
